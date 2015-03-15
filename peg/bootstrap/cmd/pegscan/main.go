@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/PuerkitoBio/exp/peg/bootstrap/parser"
+	"github.com/PuerkitoBio/exp/peg/bootstrap"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 	}
 	defer f.Close()
 
-	var s parser.Scanner
+	var s bootstrap.Scanner
 	s.Init(os.Args[1], f, nil)
 	for {
 		tok, ok := s.Scan()

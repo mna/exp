@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/PuerkitoBio/exp/peg/bootstrap/parser"
+	"github.com/PuerkitoBio/exp/peg/bootstrap"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 	}
 	defer f.Close()
 
-	p := parser.New()
+	p := bootstrap.New()
 	if _, err := p.Parse(os.Args[1], f); err != nil {
 		log.Fatal(err)
 	}
