@@ -1,9 +1,11 @@
 package parser
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"unicode/utf8"
 
 	"github.com/PuerkitoBio/exp/peg/ast"
 )
@@ -24,21 +26,64 @@ import (
 // 	return parseUsingAST(filename, r, g)
 // }
 
+type errList []error
+
+func (e *errList) add(err error) {
+	*e = append(*e, err)
+}
+
+func (e *errList) err() error {
+	if len(*e) == 0 {
+		return nil
+	}
+	return e
+}
+
+func (e *errList) Error() string {
+	switch len(*e) {
+	case 0:
+		return ""
+	case 1:
+		return (*e)[0].Error()
+	default:
+		var buf bytes.Buffer
+
+		for i, err := range *e {
+			if i > 0 {
+				buf.WriteRune('\n')
+			}
+			buf.WriteString(err.Error())
+		}
+		return buf.String()
+	}
+}
+
 func parseUsingAST(filename string, r io.Reader, g *ast.Grammar) (interface{}, error) {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
 
-	p := &parser{filename: filename, data: b, cur: 0}
+	p := &parser{filename: filename, errs: new(errList), data: b}
 	return p.parse(g)
 }
 
 type parser struct {
 	filename string
+	errs     *errList
 	data     []byte
-	cur      int
+	i        int
+	rn       rune
 	rules    map[string]*ast.Rule
+
+	peekDepth int
+}
+
+// read advances the parser to the next rune.
+func (p *parser) read() {
+	rn, n := utf8.DecodeRune(p.data[p.i:])
+	p.i += n
+	p.rn = rn
 }
 
 func (p *parser) buildRulesTable(g *ast.Grammar) {
@@ -57,18 +102,18 @@ func (p *parser) parse(g *ast.Grammar) (interface{}, error) {
 	p.buildRulesTable(g)
 
 	// start rule is rule [0]
-	return p.parseRule(g.Rules[0])
-}
-
-func (p *parser) parseRule(rule *ast.Rule) (interface{}, error) {
-	v, err := p.parseExpr(rule.Expr)
-	if err != nil {
-		// TODO : wrap in error with DisplayName?
+	val, ok := p.parseRule(g.Rules[0])
+	if !ok {
+		return nil, p.errs.err()
 	}
-	return v, err
+	return val, p.errs.err()
 }
 
-func (p *parser) parseExpr(expr ast.Expression) (interface{}, error) {
+func (p *parser) parseRule(rule *ast.Rule) (interface{}, bool) {
+	return p.parseExpr(rule.Expr)
+}
+
+func (p *parser) parseExpr(expr ast.Expression) (interface{}, bool) {
 	switch expr := expr.(type) {
 	case *ast.ActionExpr:
 		return p.parseActionExpr(expr)
@@ -103,4 +148,40 @@ func (p *parser) parseExpr(expr ast.Expression) (interface{}, error) {
 	default:
 		panic(fmt.Sprintf("unknown expression tye %T", expr))
 	}
+}
+
+func (p *parser) parseActionExpr(act *ast.ActionExpr) (interface{}, bool) {
+	val, ok := p.parseExpr(act.Expr)
+	if ok {
+		// TODO : invoke code function
+	}
+	return val, ok
+}
+
+func (p *parser) parseAndCodeExpr(and *ast.AndCodeExpr) (interface{}, bool) {
+	// TODO : invoke code function
+	// val, err := p.invoke(and.Code)
+	// ok := val.(bool)
+	return nil, ok
+}
+
+func (p *parser) parseAndExpr(and *ast.AndExpr) (interface{}, bool) {
+	p.peekDepth++
+	i := p.cur
+	_, ok := p.parseExpr(and.Expr)
+	p.cur = i
+	p.peekDepth--
+	return nil, ok
+}
+
+func (p *parser) parseAnyMatcher(any *ast.AnyMatcher) (interface{}, bool) {
+	if p.cur+1 < len(p.data) {
+		p.read()
+		return string(p.rn), true
+	}
+	return nil, false
+}
+
+func (p *parser) parseCharClassMatcher(chr *ast.CharClassMatcher) (interface{}, bool) {
+
 }
