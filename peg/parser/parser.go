@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -37,8 +38,69 @@ type parser struct {
 	filename string
 	data     []byte
 	cur      int
+	rules    map[string]*ast.Rule
+}
+
+func (p *parser) buildRulesTable(g *ast.Grammar) {
+	p.rules = make(map[string]*ast.Rule, len(g.Rules))
+	for _, r := range g.Rules {
+		p.rules[r.Name.Val] = r
+	}
 }
 
 func (p *parser) parse(g *ast.Grammar) (interface{}, error) {
+	if len(g.Rules) == 0 {
+		// TODO: Valid or not?
+		return nil, nil
+	}
 
+	p.buildRulesTable(g)
+
+	// start rule is rule [0]
+	return p.parseRule(g.Rules[0])
+}
+
+func (p *parser) parseRule(rule *ast.Rule) (interface{}, error) {
+	v, err := p.parseExpr(rule.Expr)
+	if err != nil {
+		// TODO : wrap in error with DisplayName?
+	}
+	return v, err
+}
+
+func (p *parser) parseExpr(expr ast.Expression) (interface{}, error) {
+	switch expr := expr.(type) {
+	case *ast.ActionExpr:
+		return p.parseActionExpr(expr)
+	case *ast.AndCodeExpr:
+		return p.parseAndCodeExpr(expr)
+	case *ast.AndExpr:
+		return p.parseAndExpr(expr)
+	case *ast.AnyMatcher:
+		return p.parseAnyMatcher(expr)
+	case *ast.CharClassMatcher:
+		return p.parseCharClassMatcher(expr)
+	case *ast.ChoiceExpr:
+		return p.parseChoiceExpr(expr)
+	case *ast.LabeledExpr:
+		return p.parseLabeledExpr(expr)
+	case *ast.LitMatcher:
+		return p.parseLitMatcher(expr)
+	case *ast.NotCodeExpr:
+		return p.parseNotCodeExpr(expr)
+	case *ast.NotExpr:
+		return p.parseNotExpr(expr)
+	case *ast.OneOrMoreExpr:
+		return p.parseOneOrMoreExpr(expr)
+	case *ast.RuleRefExpr:
+		return p.parseRuleRefExpr(expr)
+	case *ast.SeqExpr:
+		return p.parseSeqExpr(expr)
+	case *ast.ZeroOrMoreExpr:
+		return p.parseZeroOrMoreExpr(expr)
+	case *ast.ZeroOrOneExpr:
+		return p.parseZeroOrOneExpr(expr)
+	default:
+		panic(fmt.Sprintf("unknown expression tye %T", expr))
+	}
 }
