@@ -1,0 +1,4 @@
+Token = String | Number .
+String = """" `L` """" .
+Number = `N` .
+_ = `White_Space` .
