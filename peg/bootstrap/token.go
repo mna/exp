@@ -6,8 +6,6 @@ import (
 	"github.com/PuerkitoBio/exp/peg/ast"
 )
 
-// //go:generate stringer -type=tid (fails with "could not import package ast")
-
 type tid int
 
 const (
