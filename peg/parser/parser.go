@@ -366,3 +366,21 @@ func (p *parser) parseSeqExpr(seq *ast.SeqExpr) (interface{}, bool) {
 	}
 	return vals, true
 }
+
+func (p *parser) parseZeroOrMoreExpr(expr *ast.ZeroOrMoreExpr) (interface{}, bool) {
+	var vals []interface{}
+
+	for {
+		val, ok := p.parseExpr(expr.Expr)
+		if !ok {
+			return vals, true
+		}
+		vals = append(vals, val)
+	}
+}
+
+func (p *parser) parseZeroOrOneExpr(expr *ast.ZeroOrOneExpr) (interface{}, bool) {
+	val, _ := p.parseExpr(expr.Expr)
+	// whether it matched or not, consider it a match
+	return val, true
+}
