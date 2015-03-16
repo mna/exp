@@ -69,7 +69,7 @@ func (p *Parser) out(s string) {
 	}
 }
 
-func New() *Parser {
+func NewParser() *Parser {
 	return &Parser{errs: new(errList)}
 }
 

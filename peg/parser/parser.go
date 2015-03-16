@@ -87,6 +87,14 @@ type parser struct {
 	peekDepth int
 }
 
+func (p *parser) in(s string) string {
+	fmt.Printf("IN  : %s (%#U)\n", s, p.rn)
+	return s
+}
+func (p *parser) out(s string) {
+	fmt.Printf("OUT : %s (%#U)\n", s, p.rn)
+}
+
 // read advances the parser to the next rune.
 func (p *parser) read() {
 	rn, n := utf8.DecodeRune(p.data[p.i:])
@@ -141,14 +149,17 @@ func (p *parser) parse(g *ast.Grammar) (val interface{}, err error) {
 	}()
 
 	// start rule is rule [0]
+	p.read() // advance to first rune
 	val, ok := p.parseRule(g.Rules[0])
 	if !ok {
+		fmt.Println("NO MATCH")
 		return nil, p.errs.err()
 	}
 	return val, p.errs.err()
 }
 
 func (p *parser) parseRule(rule *ast.Rule) (interface{}, bool) {
+	defer p.out(p.in(rule.Name.Val))
 	return p.parseExpr(rule.Expr)
 }
 
@@ -193,6 +204,7 @@ func (p *parser) parseActionExpr(act *ast.ActionExpr) (interface{}, bool) {
 	val, ok := p.parseExpr(act.Expr)
 	if ok {
 		// TODO : invoke code function
+		fmt.Printf("MATCH: %v\n", val)
 	}
 	return val, ok
 }
