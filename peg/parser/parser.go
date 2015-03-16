@@ -198,6 +198,7 @@ func (p *parser) parseActionExpr(act *ast.ActionExpr) (interface{}, bool) {
 }
 
 func (p *parser) parseAndCodeExpr(and *ast.AndCodeExpr) (interface{}, bool) {
+	ok := true // default to true, && nothing always matches
 	// TODO : invoke code function
 	// val, err := p.invoke(and.Code)
 	// ok := val.(bool)
@@ -279,7 +280,7 @@ func (p *parser) parseLabeledExpr(lab *ast.LabeledExpr) (interface{}, bool) {
 	val, ok := p.parseExpr(lab.Expr)
 	if ok && lab.Label != nil {
 		// TODO : implement storing labeled expression's result
-		p.store(lab.Label.Val, val)
+		//p.store(lab.Label.Val, val)
 	}
 	return val, ok
 }
@@ -308,8 +309,60 @@ func (p *parser) parseLitMatcher(lit *ast.LitMatcher) (interface{}, bool) {
 }
 
 func (p *parser) parseNotCodeExpr(not *ast.NotCodeExpr) (interface{}, bool) {
+	var ok bool
 	// TODO : invoke code function
 	// val, err := p.invoke(not.Code)
 	// ok := val.(bool)
 	return nil, !ok
+}
+
+func (p *parser) parseNotExpr(not *ast.NotExpr) (interface{}, bool) {
+	i, rn, w := p.save()
+	_, ok := p.parseExpr(not.Expr)
+	p.restore(i, rn, w)
+	return nil, !ok
+}
+
+func (p *parser) parseOneOrMoreExpr(expr *ast.OneOrMoreExpr) (interface{}, bool) {
+	var vals []interface{}
+
+	for {
+		val, ok := p.parseExpr(expr.Expr)
+		if !ok {
+			if len(vals) == 0 {
+				// did not match once, no match
+				return nil, false
+			}
+			return vals, true
+		}
+		vals = append(vals, val)
+	}
+}
+
+func (p *parser) parseRuleRefExpr(ref *ast.RuleRefExpr) (interface{}, bool) {
+	if ref.Name == nil {
+		panic(fmt.Sprintf("%s: invalid rule: missing name", ref.Pos()))
+	}
+
+	rule := p.rules[ref.Name.Val]
+	if rule == nil {
+		p.errs.add(fmt.Errorf("undefined rule: %s", ref.Name.Val))
+		return nil, false
+	}
+	return p.parseRule(rule)
+}
+
+func (p *parser) parseSeqExpr(seq *ast.SeqExpr) (interface{}, bool) {
+	var vals []interface{}
+
+	i, rn, w := p.save()
+	for _, expr := range seq.Exprs {
+		val, ok := p.parseExpr(expr)
+		if !ok {
+			p.restore(i, rn, w)
+			return nil, false
+		}
+		vals = append(vals, val)
+	}
+	return vals, true
 }
