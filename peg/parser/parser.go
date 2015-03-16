@@ -233,6 +233,7 @@ func (p *parser) parseAnyMatcher(any *ast.AnyMatcher) (interface{}, bool) {
 }
 
 func (p *parser) parseCharClassMatcher(chr *ast.CharClassMatcher) (interface{}, bool) {
+	defer p.out(p.in("parseCharClassMatcher"))
 	cur := p.rn
 	if chr.IgnoreCase {
 		cur = unicode.ToLower(cur)

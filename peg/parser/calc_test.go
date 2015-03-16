@@ -10,10 +10,11 @@ import (
 var grammar = `package test
 
 start = additive
-additive = left:multiplicative "+" right:additive / multiplicative
-multiplicative = left:primary "*" right:multiplicative / primary
-primary = integer / "(" additive:additive ")" 
-integer "integer" = digits:[0123456789]+`
+additive = left:multiplicative "+" space right:additive / multiplicative
+multiplicative = left:primary "*" space right:multiplicative / primary
+primary = integer / "(" space additive:additive ")" space
+integer "integer" = digits:[0123456789]+ space
+space = ' '*`
 
 var src = `9 + 5 * (1+2)`
 
