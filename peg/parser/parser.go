@@ -306,3 +306,10 @@ func (p *parser) parseLitMatcher(lit *ast.LitMatcher) (interface{}, bool) {
 	}
 	return buf.String(), true
 }
+
+func (p *parser) parseNotCodeExpr(not *ast.NotCodeExpr) (interface{}, bool) {
+	// TODO : invoke code function
+	// val, err := p.invoke(not.Code)
+	// ok := val.(bool)
+	return nil, !ok
+}
