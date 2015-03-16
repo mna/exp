@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 // Pos represents a position in a source file.
@@ -292,7 +293,7 @@ type CharClassMatcher struct {
 	Inverted       bool
 	Chars          []rune
 	Ranges         []rune // pairs of low/high range
-	UnicodeClasses []string
+	UnicodeClasses []*unicode.RangeTable
 }
 
 func NewCharClassMatcher(p Pos, raw string) *CharClassMatcher {
@@ -348,9 +349,9 @@ outer:
 						}
 						class.WriteRune(rn)
 					}
-					c.UnicodeClasses = append(c.UnicodeClasses, class.String())
+					c.UnicodeClasses = append(c.UnicodeClasses, rangeTable(class.String()))
 				} else {
-					c.UnicodeClasses = append(c.UnicodeClasses, string(rn))
+					c.UnicodeClasses = append(c.UnicodeClasses, rangeTable(string(rn)))
 				}
 			default:
 				rn, _, _, _ := strconv.UnquoteChar("\\"+string(rn), 0)
@@ -358,9 +359,27 @@ outer:
 			}
 			// TODO : Implement range
 		default:
+			if c.IgnoreCase {
+				rn = unicode.ToLower(rn)
+			}
 			c.Chars = append(c.Chars, rn)
 		}
 	}
+}
+
+func rangeTable(class string) *unicode.RangeTable {
+	if rt, ok := unicode.Categories[class]; ok {
+		return rt
+	}
+	if rt, ok := unicode.Properties[class]; ok {
+		return rt
+	}
+	if rt, ok := unicode.Scripts[class]; ok {
+		return rt
+	}
+
+	// TODO : better would be to return an error on invalid Unicode class
+	return &unicode.RangeTable{} // empty range
 }
 
 func (c *CharClassMatcher) Pos() Pos { return c.p }

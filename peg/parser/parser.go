@@ -2,13 +2,18 @@ package parser
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/PuerkitoBio/exp/peg/ast"
 )
+
+var ErrInvalidEncoding = errors.New("invalid encoding")
 
 // Generated parser would expose the following functions:
 //
@@ -70,11 +75,14 @@ func parseUsingAST(filename string, r io.Reader, g *ast.Grammar) (interface{}, e
 
 type parser struct {
 	filename string
-	errs     *errList
 	data     []byte
-	i        int
-	rn       rune
-	rules    map[string]*ast.Rule
+
+	i  int  // starting index of the current rune
+	rn rune // current rune
+	w  int  // current rune width
+
+	errs  *errList
+	rules map[string]*ast.Rule
 
 	peekDepth int
 }
@@ -82,8 +90,25 @@ type parser struct {
 // read advances the parser to the next rune.
 func (p *parser) read() {
 	rn, n := utf8.DecodeRune(p.data[p.i:])
-	p.i += n
+	p.i += p.w
 	p.rn = rn
+	p.w = n
+
+	if rn == utf8.RuneError {
+		if n > 0 {
+			p.errs.add(ErrInvalidEncoding)
+		}
+	}
+}
+
+func (p *parser) save() (i int, rn rune, w int) {
+	p.peekDepth++
+	return p.i, p.rn, p.w
+}
+
+func (p *parser) restore(i int, rn rune, w int) {
+	p.i, p.rn, p.w = i, rn, w
+	p.peekDepth--
 }
 
 func (p *parser) buildRulesTable(g *ast.Grammar) {
@@ -93,13 +118,27 @@ func (p *parser) buildRulesTable(g *ast.Grammar) {
 	}
 }
 
-func (p *parser) parse(g *ast.Grammar) (interface{}, error) {
+func (p *parser) parse(g *ast.Grammar) (val interface{}, err error) {
 	if len(g.Rules) == 0 {
 		// TODO: Valid or not?
 		return nil, nil
 	}
 
 	p.buildRulesTable(g)
+
+	// panic can be used in action code to stop parsing immediately
+	// and return the panic as an error.
+	defer func() {
+		if e := recover(); e != nil {
+			val = nil
+			switch e := e.(type) {
+			case error:
+				err = e
+			default:
+				err = fmt.Errorf("%v", e)
+			}
+		}
+	}()
 
 	// start rule is rule [0]
 	val, ok := p.parseRule(g.Rules[0])
@@ -166,16 +205,14 @@ func (p *parser) parseAndCodeExpr(and *ast.AndCodeExpr) (interface{}, bool) {
 }
 
 func (p *parser) parseAndExpr(and *ast.AndExpr) (interface{}, bool) {
-	p.peekDepth++
-	i := p.cur
+	i, rn, w := p.save()
 	_, ok := p.parseExpr(and.Expr)
-	p.cur = i
-	p.peekDepth--
+	p.restore(i, rn, w)
 	return nil, ok
 }
 
 func (p *parser) parseAnyMatcher(any *ast.AnyMatcher) (interface{}, bool) {
-	if p.cur+1 < len(p.data) {
+	if p.rn != utf8.RuneError {
 		p.read()
 		return string(p.rn), true
 	}
@@ -183,5 +220,89 @@ func (p *parser) parseAnyMatcher(any *ast.AnyMatcher) (interface{}, bool) {
 }
 
 func (p *parser) parseCharClassMatcher(chr *ast.CharClassMatcher) (interface{}, bool) {
+	cur := p.rn
+	if chr.IgnoreCase {
+		cur = unicode.ToLower(cur)
+	}
 
+	// try to match in the list of available chars
+	for _, rn := range chr.Chars {
+		if rn == cur {
+			if chr.Inverted {
+				return nil, false
+			}
+			p.read()
+			return string(cur), true
+		}
+	}
+
+	// try to match in the list of ranges
+	for i := 0; i < len(chr.Ranges); i += 2 {
+		if cur >= chr.Ranges[i] && cur <= chr.Ranges[i+1] {
+			if chr.Inverted {
+				return nil, false
+			}
+			p.read()
+			return string(cur), true
+		}
+	}
+
+	// try to match in the list of Unicode classes
+	for _, cl := range chr.UnicodeClasses {
+		if unicode.Is(cl, cur) {
+			if chr.Inverted {
+				return nil, false
+			}
+			p.read()
+			return string(cur), true
+		}
+	}
+
+	if chr.Inverted {
+		p.read()
+		return string(cur), true
+	}
+	return nil, false
+}
+
+func (p *parser) parseChoiceExpr(ch *ast.ChoiceExpr) (interface{}, bool) {
+	for _, alt := range ch.Alternatives {
+		val, ok := p.parseExpr(alt)
+		if ok {
+			return val, ok
+		}
+	}
+	return nil, false
+}
+
+func (p *parser) parseLabeledExpr(lab *ast.LabeledExpr) (interface{}, bool) {
+	val, ok := p.parseExpr(lab.Expr)
+	if ok && lab.Label != nil {
+		// TODO : implement storing labeled expression's result
+		p.store(lab.Label.Val, val)
+	}
+	return val, ok
+}
+
+func (p *parser) parseLitMatcher(lit *ast.LitMatcher) (interface{}, bool) {
+	// TODO : do at the ast generation phase
+	if lit.IgnoreCase {
+		lit.Val = strings.ToLower(lit.Val)
+	}
+
+	var buf bytes.Buffer
+	i, rn, w := p.save()
+	for _, want := range lit.Val {
+		cur := p.rn
+		buf.WriteRune(cur)
+		if lit.IgnoreCase {
+			cur = unicode.ToLower(cur)
+		}
+		if cur != want {
+			p.restore(i, rn, w)
+			return nil, false
+		}
+		p.read()
+	}
+	return buf.String(), true
 }
