@@ -21,7 +21,7 @@ func main() {
 	}
 	defer f.Close()
 
-	p := bootstrap.New()
+	p := bootstrap.NewParser()
 	if _, err := p.Parse(os.Args[1], f); err != nil {
 		log.Fatal(err)
 	}
