@@ -9,12 +9,14 @@ import (
 
 var grammar = `package test
 
-start = additive
+start = additive eof
 additive = left:multiplicative "+" space right:additive / multiplicative
 multiplicative = left:primary "*" space right:multiplicative / primary
 primary = integer / "(" space additive:additive ")" space
-integer "integer" = digits:[0123456789]+ space
-space = ' '*`
+integer "integer" = digits:[0123456789]+ space {integer}
+space = ' '*
+eof = !. { eof }
+`
 
 var src = `9 + 5 * (1+2)`
 

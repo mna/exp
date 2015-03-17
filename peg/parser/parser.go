@@ -83,8 +83,7 @@ type parser struct {
 
 	errs  *errList
 	rules map[string]*ast.Rule
-
-	peekDepth int
+	stack []map[string]interface{}
 }
 
 func (p *parser) in(s string) string {
@@ -110,13 +109,15 @@ func (p *parser) read() {
 }
 
 func (p *parser) save() (i int, rn rune, w int) {
-	p.peekDepth++
 	return p.i, p.rn, p.w
 }
 
 func (p *parser) restore(i int, rn rune, w int) {
+	if i == p.i {
+		return
+	}
+	fmt.Println(">>>> RESTORE from ", p.i, string(p.rn), " to ", i, string(rn))
 	p.i, p.rn, p.w = i, rn, w
-	p.peekDepth--
 }
 
 func (p *parser) buildRulesTable(g *ast.Grammar) {
@@ -136,17 +137,17 @@ func (p *parser) parse(g *ast.Grammar) (val interface{}, err error) {
 
 	// panic can be used in action code to stop parsing immediately
 	// and return the panic as an error.
-	defer func() {
-		if e := recover(); e != nil {
-			val = nil
-			switch e := e.(type) {
-			case error:
-				err = e
-			default:
-				err = fmt.Errorf("%v", e)
-			}
-		}
-	}()
+	// defer func() {
+	// 	if e := recover(); e != nil {
+	// 		val = nil
+	// 		switch e := e.(type) {
+	// 		case error:
+	// 			err = e
+	// 		default:
+	// 			err = fmt.Errorf("%v", e)
+	// 		}
+	// 	}
+	// }()
 
 	// start rule is rule [0]
 	p.read() // advance to first rune
@@ -201,11 +202,16 @@ func (p *parser) parseExpr(expr ast.Expression) (interface{}, bool) {
 }
 
 func (p *parser) parseActionExpr(act *ast.ActionExpr) (interface{}, bool) {
+	defer p.out(p.in("parseActionExpr"))
+
+	p.stack = append(p.stack, make(map[string]interface{}))
 	val, ok := p.parseExpr(act.Expr)
 	if ok {
 		// TODO : invoke code function
-		fmt.Printf("MATCH: %v\n", val)
+		fmt.Printf("MATCH: %#v\n", val)
+		fmt.Printf("STACK: %#v\n", p.stack[len(p.stack)-1])
 	}
+	p.stack = p.stack[:len(p.stack)-1]
 	return val, ok
 }
 
@@ -233,7 +239,7 @@ func (p *parser) parseAnyMatcher(any *ast.AnyMatcher) (interface{}, bool) {
 }
 
 func (p *parser) parseCharClassMatcher(chr *ast.CharClassMatcher) (interface{}, bool) {
-	defer p.out(p.in("parseCharClassMatcher"))
+	defer p.out(p.in(fmt.Sprintf("parseCharClassMatcher %s", chr.Val)))
 	cur := p.rn
 	if chr.IgnoreCase {
 		cur = unicode.ToLower(cur)
@@ -291,14 +297,16 @@ func (p *parser) parseChoiceExpr(ch *ast.ChoiceExpr) (interface{}, bool) {
 
 func (p *parser) parseLabeledExpr(lab *ast.LabeledExpr) (interface{}, bool) {
 	val, ok := p.parseExpr(lab.Expr)
-	if ok && lab.Label != nil {
-		// TODO : implement storing labeled expression's result
-		//p.store(lab.Label.Val, val)
+	if ok && lab.Label != nil && len(p.stack) > 0 {
+		m := p.stack[len(p.stack)-1]
+		m[lab.Label.Val] = val
 	}
 	return val, ok
 }
 
 func (p *parser) parseLitMatcher(lit *ast.LitMatcher) (interface{}, bool) {
+	defer p.out(p.in(fmt.Sprintf("parseLitMatcher %s", lit.Val)))
+
 	// TODO : do at the ast generation phase
 	if lit.IgnoreCase {
 		lit.Val = strings.ToLower(lit.Val)
