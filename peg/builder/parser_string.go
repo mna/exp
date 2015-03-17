@@ -1,4 +1,6 @@
-package parser
+package builder
+
+var parserFile = `package parser
 
 //go:generate stringify -output=../builder/parser_string.go -package=builder -var=parserFile
 
@@ -413,3 +415,4 @@ func (p *parser) parseZeroOrOneExpr(expr *ast.ZeroOrOneExpr) (interface{}, bool)
 	// whether it matched or not, consider it a match
 	return val, true
 }
+`

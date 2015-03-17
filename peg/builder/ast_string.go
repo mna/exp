@@ -1,4 +1,6 @@
-package ast
+package builder
+
+var astFile = `package ast
 
 //go:generate stringify -output=../builder/ast_string.go -package=builder -var=astFile
 
@@ -466,3 +468,4 @@ type posValue struct {
 	p   Pos
 	Val string
 }
+`
