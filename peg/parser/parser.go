@@ -88,7 +88,9 @@ type parser struct {
 
 	errs  *errList
 	rules map[string]*ast.Rule
-	stack []map[string]interface{}
+
+	varStack  []map[string]interface{}
+	ruleStack []*ast.Rule
 }
 
 func (p *parser) in(s string) string {
@@ -169,7 +171,12 @@ func (p *parser) parse(g *ast.Grammar) (val interface{}, err error) {
 
 func (p *parser) parseRule(rule *ast.Rule) (interface{}, bool) {
 	defer p.out(p.in(rule.Name.Val))
-	return p.parseExpr(rule.Expr)
+
+	// TODO : build error messages with references to the current rule
+	p.ruleStack = append(p.ruleStack, rule)
+	val, ok := p.parseExpr(rule.Expr)
+	p.ruleStack = p.ruleStack[:len(p.ruleStack)-1]
+	return val, ok
 }
 
 func (p *parser) parseExpr(expr ast.Expression) (interface{}, bool) {
@@ -212,14 +219,14 @@ func (p *parser) parseExpr(expr ast.Expression) (interface{}, bool) {
 func (p *parser) parseActionExpr(act *ast.ActionExpr) (interface{}, bool) {
 	defer p.out(p.in("parseActionExpr"))
 
-	p.stack = append(p.stack, make(map[string]interface{}))
+	p.varStack = append(p.varStack, make(map[string]interface{}))
 	val, ok := p.parseExpr(act.Expr)
 	if ok {
 		// TODO : invoke code function
 		fmt.Printf("MATCH: %#v\n", val)
-		fmt.Printf("STACK: %#v\n", p.stack[len(p.stack)-1])
+		fmt.Printf("STACK: %#v\n", p.varStack[len(p.varStack)-1])
 	}
-	p.stack = p.stack[:len(p.stack)-1]
+	p.varStack = p.varStack[:len(p.varStack)-1]
 	return val, ok
 }
 
@@ -305,8 +312,8 @@ func (p *parser) parseChoiceExpr(ch *ast.ChoiceExpr) (interface{}, bool) {
 
 func (p *parser) parseLabeledExpr(lab *ast.LabeledExpr) (interface{}, bool) {
 	val, ok := p.parseExpr(lab.Expr)
-	if ok && lab.Label != nil && len(p.stack) > 0 {
-		m := p.stack[len(p.stack)-1]
+	if ok && lab.Label != nil && len(p.varStack) > 0 {
+		m := p.varStack[len(p.varStack)-1]
 		m[lab.Label.Val] = val
 	}
 	return val, ok
