@@ -43,7 +43,7 @@ func (b *builder) writePackage(pkg *ast.Package) {
 	if pkg == nil {
 		return
 	}
-	b.writelnf("package %s\n", pkg.Name.Val)
+	b.writelnf("package %s", pkg.Name.Val)
 }
 
 func (b *builder) writeInit(init *ast.CodeBlock) {
@@ -53,7 +53,7 @@ func (b *builder) writeInit(init *ast.CodeBlock) {
 
 	// remove opening and closing braces
 	val := init.Val[1 : len(init.Val)-1]
-	b.writelnf("%s\n", val)
+	b.writelnf("%s", val)
 }
 
 func (b *builder) writeRule(rule *ast.Rule) {
@@ -74,7 +74,7 @@ func (b *builder) writeExpr(expr ast.Expression) {
 	case *ast.ActionExpr:
 		// TODO : how/when?
 		//b.pushArgsSet()
-		b.writeExpr(expr)
+		b.writeExpr(expr.Expr)
 		b.writeActionExpr(expr)
 		//b.popArgsSet()
 
@@ -138,7 +138,14 @@ func (b *builder) writeFunc(code *ast.CodeBlock) {
 	if code == nil {
 		return
 	}
-	b.writef(funcTemplate, b.funcName(), "", code.Val)
+	val := code.Val[1 : len(code.Val)-1]
+	if val[0] == '\n' {
+		val = val[1:]
+	}
+	if val[len(val)-1] == '\n' {
+		val = val[:len(val)-1]
+	}
+	b.writelnf(funcTemplate, b.funcName(), "", val)
 }
 
 func (b *builder) funcName() string {
