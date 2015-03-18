@@ -21,7 +21,7 @@ func init() {
 start = additive eof
 additive = left:multiplicative "+" space right:additive {
 	fmt.Println(left, right)
-} / multiplicative
+} / mul:multiplicative { fmt.Println(mul) }
 multiplicative = left:primary op:"*" space right:multiplicative { fmt.Println(left, right, op) } / primary
 primary = integer / "(" space additive:additive ")" space { fmt.Println(additive) }
 integer "integer" = digits:[0123456789]+ space { fmt.Println(digits) }

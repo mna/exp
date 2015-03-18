@@ -3,6 +3,7 @@
 package builder
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strconv"
@@ -25,7 +26,7 @@ type builder struct {
 	err       error
 	ruleName  string
 	exprIndex int
-	argsStack []map[string]interface{}
+	argsStack [][]string
 }
 
 func (b *builder) buildParser(g *ast.Grammar) error {
@@ -68,15 +69,30 @@ func (b *builder) writeRule(rule *ast.Rule) {
 	b.writeExpr(rule.Expr)
 }
 
+func (b *builder) pushArgsSet() {
+	b.argsStack = append(b.argsStack, nil)
+}
+
+func (b *builder) popArgsSet() {
+	b.argsStack = b.argsStack[:len(b.argsStack)-1]
+}
+
+func (b *builder) addArg(arg *ast.Identifier) {
+	if arg == nil {
+		return
+	}
+	ix := len(b.argsStack) - 1
+	b.argsStack[ix] = append(b.argsStack[ix], arg.Val)
+}
+
 func (b *builder) writeExpr(expr ast.Expression) {
 	b.exprIndex++
 	switch expr := expr.(type) {
 	case *ast.ActionExpr:
-		// TODO : how/when?
-		//b.pushArgsSet()
+		b.pushArgsSet()
 		b.writeExpr(expr.Expr)
 		b.writeActionExpr(expr)
-		//b.popArgsSet()
+		b.popArgsSet()
 
 	case *ast.AndCodeExpr:
 		// TODO : should be able to access labeled vars too, but when to
@@ -84,7 +100,7 @@ func (b *builder) writeExpr(expr ast.Expression) {
 		b.writeAndCodeExpr(expr)
 
 	case *ast.LabeledExpr:
-		// TODO : add argument to argsset
+		b.addArg(expr.Label)
 		b.writeExpr(expr.Expr)
 
 	case *ast.NotCodeExpr:
@@ -145,7 +161,19 @@ func (b *builder) writeFunc(code *ast.CodeBlock) {
 	if val[len(val)-1] == '\n' {
 		val = val[:len(val)-1]
 	}
-	b.writelnf(funcTemplate, b.funcName(), "", val)
+	var args bytes.Buffer
+	ix := len(b.argsStack) - 1
+	for i, arg := range b.argsStack[ix] {
+		if i > 0 {
+			args.WriteString(", ")
+		}
+		args.WriteString(arg)
+	}
+	if args.Len() > 0 {
+		args.WriteString(" interface{}")
+	}
+
+	b.writelnf(funcTemplate, b.funcName(), args.String(), val)
 }
 
 func (b *builder) funcName() string {
