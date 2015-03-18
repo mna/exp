@@ -16,7 +16,7 @@ var funcTemplate = `func %s(%s) (interface{}, error) {
 }
 `
 
-func BuildParser(w io.Writer, g *ast.Grammar) error {
+func BuildParser(w io.Writer, g *ast.Grammar, imports ...string) error {
 	b := &builder{w: w}
 	return b.buildParser(g)
 }
