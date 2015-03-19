@@ -17,7 +17,7 @@ This is a hand-generated example of what the parser generator would do
 for the following grammar. Positions have been left off, but the rest is
 as close as possible to what would/should be generated.
 
-// Options: -imports=strconv,fmt
+// Options: -imports=strconv,fmt -node-type=int
 
 package main
 
@@ -70,15 +70,127 @@ var Grammar = &grammar{
 	rules: []*rule{
 		{
 			name: "start",
+			expr: &actionExpr{
+				funcName: "onstart_0",
+				args:     []string{"result"},
+				expr: &seqExpr{
+					exprs: []interface{}{
+						&labeledExpr{
+							label: "result",
+							expr: &ruleRefExpr{
+								name: "additive",
+							},
+						},
+						&ruleRefExpr{
+							name: "eof",
+						},
+					},
+				},
+			},
 		},
 		{
 			name: "additive",
+			expr: &choiceExpr{
+				alternatives: []interface{}{
+					&actionExpr{
+						funcName: "onadditive_1",
+						args:     []string{"left", "right"},
+						expr: &seqExpr{
+							exprs: []interface{}{
+								&labeledExpr{
+									label: "left",
+									expr: &ruleRefExpr{
+										name: "multiplicative",
+									},
+								},
+								&litMatcher{
+									val: "+",
+								},
+								&ruleRefExpr{
+									name: "space",
+								},
+								&labeledExpr{
+									label: "right",
+									expr: &ruleRefExpr{
+										name: "additive",
+									},
+								},
+							},
+						},
+					},
+					&ruleRefExpr{
+						name: "multiplicative",
+					},
+				},
+			},
 		},
 		{
 			name: "multiplicative",
+			expr: &choiceExpr{
+				alternatives: []interface{}{
+					&actionExpr{
+						funcName: "onmultiplicative_1",
+						args:     []string{"left", "right"},
+						expr: &seqExpr{
+							exprs: []interface{}{
+								&labeledExpr{
+									label: "left",
+									expr: &ruleRefExpr{
+										name: "primary",
+									},
+								},
+								&litMatcher{
+									val: "*",
+								},
+								&ruleRefExpr{
+									name: "space",
+								},
+								&labeledExpr{
+									label: "right",
+									expr: &ruleRefExpr{
+										name: "multiplicative",
+									},
+								},
+							},
+						},
+					},
+					&ruleRefExpr{
+						name: "primary",
+					},
+				},
+			},
 		},
 		{
 			name: "primary",
+			expr: &choiceExpr{
+				alternatives: []interface{}{
+					&ruleRefExpr{
+						name: "integer",
+					},
+					&seqExpr{
+						exprs: []interface{}{
+							&litMatcher{
+								val: "(",
+							},
+							&ruleRefExpr{
+								name: "space",
+							},
+							&labeledExpr{
+								label: "additive",
+								expr: &ruleRefExpr{
+									name: "additive",
+								},
+							},
+							&litMatcher{
+								val: ")",
+							},
+							&ruleRefExpr{
+								name: "space",
+							},
+						},
+					},
+				},
+			},
 		},
 		{
 			name: "integer",
@@ -276,6 +388,11 @@ func (p *parser) read() {
 	p.pt.offset += p.pt.w
 	p.pt.rn = rn
 	p.pt.w = n
+	p.pt.col++
+	if rn == '\n' {
+		p.pt.line++
+		p.pt.col = 0
+	}
 
 	if rn == utf8.RuneError {
 		if n > 0 {

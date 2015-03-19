@@ -12,7 +12,7 @@ var calcGrammar = `package test
 
 start = additive eof
 additive = left:multiplicative "+" space right:additive / multiplicative
-multiplicative = left:primary "*" space right:multiplicative / primary
+multiplicative = left:primary "*" space right:multiplicative {code} / primary
 primary = integer / "(" space additive:additive ")" space
 integer = digits:[0123456789]+ space {integer}
 space = ' '*
