@@ -11,8 +11,6 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
-
-	"github.com/PuerkitoBio/exp/peg/ast"
 )
 
 var (
@@ -59,14 +57,93 @@ Option to specify the receiver variable's name.
 // }
 
 type position struct {
-	filename          string
 	line, col, offset int
 }
 
-type match struct {
+type current struct {
 	pos  position // start position of the match
 	text string   // raw text of the match
 }
+
+type grammar struct {
+	pos   position
+	rules []*rule
+}
+
+type rule struct {
+	pos         position
+	name        string
+	displayName string
+	expr        interface{}
+}
+
+type choiceExpr struct {
+	pos          position
+	alternatives []interface{}
+}
+
+type actionExpr struct {
+	pos      position
+	expr     interface{}
+	funcName string
+	args     []string
+}
+
+type seqExpr struct {
+	pos   position
+	exprs []interface{}
+}
+
+type labeledExpr struct {
+	pos   position
+	label string
+	expr  interface{}
+}
+
+type expr struct {
+	pos  position
+	expr interface{}
+}
+
+type andExpr expr
+type zeroOrOneExpr expr
+type zeroOrMoreExpr expr
+type oneOrMoreExpr expr
+
+type ruleRefExpr struct {
+	pos  position
+	name string
+}
+
+type andCodeExpr struct {
+	pos      position
+	funcName string
+	args     []string
+}
+
+type notCodeExpr struct {
+	pos      position
+	funcName string
+	args     []string
+}
+
+type litMatcher struct {
+	pos        position
+	val        string
+	ignoreCase bool
+}
+
+type charClassMatcher struct {
+	pos        position
+	val        string
+	chars      []rune
+	ranges     []rune
+	classes    []*unicode.RangeTable
+	ignoreCase bool
+	inverted   bool
+}
+
+type anyMatcher position
 
 type errList []error
 
