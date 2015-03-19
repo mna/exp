@@ -1,10 +1,6 @@
 package bootstrap
 
-import (
-	"fmt"
-
-	"github.com/PuerkitoBio/exp/peg/ast"
-)
+import "fmt"
 
 type tid int
 
@@ -152,7 +148,7 @@ var blacklistedIdents = map[string]struct{}{
 type token struct {
 	id  tid
 	lit string
-	pos ast.Pos
+	pos Pos
 }
 
 var tokenStringLen = 50

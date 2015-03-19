@@ -7,17 +7,15 @@ import (
 	"io"
 	"os"
 	"unicode"
-
-	"github.com/PuerkitoBio/exp/peg/ast"
 )
 
 // Scanner tokenizes an input source for the PEG grammar.
 type Scanner struct {
 	r    io.RuneReader
-	errh func(ast.Pos, error)
+	errh func(Pos, error)
 
 	eof  bool
-	cpos ast.Pos
+	cpos Pos
 	cur  rune
 	cw   int
 
@@ -25,12 +23,12 @@ type Scanner struct {
 }
 
 // Init initializes the scanner to read and tokenize text from r.
-func (s *Scanner) Init(filename string, r io.Reader, errh func(ast.Pos, error)) {
+func (s *Scanner) Init(filename string, r io.Reader, errh func(Pos, error)) {
 	s.r = runeReader(r)
 	s.errh = errh
 
 	s.eof = false
-	s.cpos = ast.Pos{
+	s.cpos = Pos{
 		Filename: filename,
 		Line:     1,
 	}
@@ -525,7 +523,7 @@ func digitVal(r rune) int {
 }
 
 // notify the handler of an error.
-func (s *Scanner) error(p ast.Pos, err error) {
+func (s *Scanner) error(p Pos, err error) {
 	if s.errh != nil {
 		s.errh(p, err)
 		return
@@ -539,7 +537,7 @@ func (s *Scanner) errorf(f string, args ...interface{}) {
 }
 
 // helper to generate and notify of an error at a specific position.
-func (s *Scanner) errorpf(p ast.Pos, f string, args ...interface{}) {
+func (s *Scanner) errorpf(p Pos, f string, args ...interface{}) {
 	s.error(p, fmt.Errorf(f, args...))
 }
 

@@ -1,8 +1,9 @@
-package ast
+package bootstrap
 
 import (
 	"strings"
 	"testing"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -17,7 +18,7 @@ var charClasses = []string{
 	`[\a]`,
 	`[\b\nt]`,
 	`[\b\nt\pL]`,
-	`[\p{Greek}\tz\\\pD]`,
+	`[\p{Greek}\tz\\\pN]`,
 }
 
 var expChars = []string{
@@ -34,9 +35,9 @@ var expChars = []string{
 	"\tz\\",
 }
 
-var expUnicodeClasses = [][]string{
-	9:  {"L"},
-	10: {"Greek", "D"},
+var expUnicodeClasses = [][]*unicode.RangeTable{
+	9:  {unicode.Categories["L"]},
+	10: {unicode.Scripts["Greek"], unicode.Categories["N"]},
 }
 
 func TestCharClassParse(t *testing.T) {
@@ -60,11 +61,13 @@ func TestCharClassParse(t *testing.T) {
 
 		if n := len(expUnicodeClasses[i]); len(m.UnicodeClasses) != n {
 			t.Errorf("%d: want %d Unicode classes, got %d", i, n, len(m.UnicodeClasses))
-		} else {
-			want := strings.Join(expUnicodeClasses[i], "\n")
-			got := strings.Join(m.UnicodeClasses, "\n")
-			if want != got {
-				t.Errorf("%d: want %v, got %v", i, expUnicodeClasses[i], m.UnicodeClasses)
+		} else if n > 0 {
+			want := expUnicodeClasses[i]
+			got := m.UnicodeClasses
+			for j, wantClass := range want {
+				if wantClass != got[j] {
+					t.Errorf("%d: range table %d: want %v, got %v", i, j, wantClass, got[j])
+				}
 			}
 		}
 	}

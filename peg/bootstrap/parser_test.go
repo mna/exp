@@ -23,29 +23,29 @@ R3 = ( R2+ ![;] )`,
 }
 
 var parseExpRes = []string{
-	`1:1 (0): *ast.Grammar{Package: 1:1 (0): *ast.Package{Name: 1:9 (8): *ast.Identifier{Val: "a"}}, Init: <nil>, Rules: [
+	`1:1 (0): *bootstrap.Grammar{Package: 1:1 (0): *bootstrap.Package{Name: 1:9 (8): *bootstrap.Identifier{Val: "a"}}, Init: <nil>, Rules: [
 ]}`,
-	`1:1 (0): *ast.Grammar{Package: 1:1 (0): *ast.Package{Name: 1:9 (8): *ast.Identifier{Val: "a"}}, Init: 2:1 (10): *ast.CodeBlock{Val: "{code}"}, Rules: [
+	`1:1 (0): *bootstrap.Grammar{Package: 1:1 (0): *bootstrap.Package{Name: 1:9 (8): *bootstrap.Identifier{Val: "a"}}, Init: 2:1 (10): *bootstrap.CodeBlock{Val: "{code}"}, Rules: [
 ]}`,
-	`1:1 (0): *ast.Grammar{Package: 1:1 (0): *ast.Package{Name: 1:9 (8): *ast.Identifier{Val: "a"}}, Init: <nil>, Rules: [
-2:1 (10): *ast.Rule{Name: 2:1 (10): *ast.Identifier{Val: "R"}, DisplayName: <nil>, Expr: 2:6 (15): *ast.LitMatcher{Val: "c", IgnoreCase: false}},
+	`1:1 (0): *bootstrap.Grammar{Package: 1:1 (0): *bootstrap.Package{Name: 1:9 (8): *bootstrap.Identifier{Val: "a"}}, Init: <nil>, Rules: [
+2:1 (10): *bootstrap.Rule{Name: 2:1 (10): *bootstrap.Identifier{Val: "R"}, DisplayName: <nil>, Expr: 2:6 (15): *bootstrap.LitMatcher{Val: "c", IgnoreCase: false}},
 ]}`,
-	`1:1 (0): *ast.Grammar{Package: 1:1 (0): *ast.Package{Name: 1:9 (8): *ast.Identifier{Val: "a"}}, Init: <nil>, Rules: [
-4:1 (13): *ast.Rule{Name: 4:1 (13): *ast.Identifier{Val: "R"}, DisplayName: <nil>, Expr: 4:6 (18): *ast.LitMatcher{Val: "c", IgnoreCase: false}},
+	`1:1 (0): *bootstrap.Grammar{Package: 1:1 (0): *bootstrap.Package{Name: 1:9 (8): *bootstrap.Identifier{Val: "a"}}, Init: <nil>, Rules: [
+4:1 (13): *bootstrap.Rule{Name: 4:1 (13): *bootstrap.Identifier{Val: "R"}, DisplayName: <nil>, Expr: 4:6 (18): *bootstrap.LitMatcher{Val: "c", IgnoreCase: false}},
 ]}`,
-	`1:1 (0): *ast.Grammar{Package: 1:1 (0): *ast.Package{Name: 1:9 (8): *ast.Identifier{Val: "a"}}, Init: <nil>, Rules: [
-3:1 (11): *ast.Rule{Name: 3:1 (11): *ast.Identifier{Val: "A"}, DisplayName: <nil>, Expr: 3:5 (15): *ast.ChoiceExpr{Alternatives: [
-3:5 (15): *ast.LabeledExpr{Label: 3:5 (15): *ast.Identifier{Val: "ident"}, Expr: 3:11 (21): *ast.RuleRefExpr{Name: 3:11 (21): *ast.Identifier{Val: "B"}}},
-3:15 (25): *ast.OneOrMoreExpr{Expr: 3:15 (25): *ast.RuleRefExpr{Name: 3:15 (25): *ast.Identifier{Val: "C"}}},
-3:20 (30): *ast.ZeroOrOneExpr{Expr: 3:20 (30): *ast.RuleRefExpr{Name: 3:20 (30): *ast.Identifier{Val: "D"}}},
+	`1:1 (0): *bootstrap.Grammar{Package: 1:1 (0): *bootstrap.Package{Name: 1:9 (8): *bootstrap.Identifier{Val: "a"}}, Init: <nil>, Rules: [
+3:1 (11): *bootstrap.Rule{Name: 3:1 (11): *bootstrap.Identifier{Val: "A"}, DisplayName: <nil>, Expr: 3:5 (15): *bootstrap.ChoiceExpr{Alternatives: [
+3:5 (15): *bootstrap.LabeledExpr{Label: 3:5 (15): *bootstrap.Identifier{Val: "ident"}, Expr: 3:11 (21): *bootstrap.RuleRefExpr{Name: 3:11 (21): *bootstrap.Identifier{Val: "B"}}},
+3:15 (25): *bootstrap.OneOrMoreExpr{Expr: 3:15 (25): *bootstrap.RuleRefExpr{Name: 3:15 (25): *bootstrap.Identifier{Val: "C"}}},
+3:20 (30): *bootstrap.ZeroOrOneExpr{Expr: 3:20 (30): *bootstrap.RuleRefExpr{Name: 3:20 (30): *bootstrap.Identifier{Val: "D"}}},
 ]}},
 ]}`,
-	`1:1 (0): *ast.Grammar{Package: 1:1 (0): *ast.Package{Name: 1:9 (8): *ast.Identifier{Val: "a"}}, Init: 3:1 (11): *ast.CodeBlock{Val: "{ code }"}, Rules: [
-5:1 (21): *ast.Rule{Name: 5:1 (21): *ast.Identifier{Val: "R"}, DisplayName: 5:3 (23): *ast.StringLit{Val: "name"}, Expr: 5:13 (33): *ast.LitMatcher{Val: "abc", IgnoreCase: true}},
-6:1 (40): *ast.Rule{Name: 6:1 (40): *ast.Identifier{Val: "R2"}, DisplayName: <nil>, Expr: 6:6 (45): *ast.LitMatcher{Val: "d", IgnoreCase: true}},
-7:1 (50): *ast.Rule{Name: 7:1 (50): *ast.Identifier{Val: "R3"}, DisplayName: <nil>, Expr: 7:8 (57): *ast.SeqExpr{Exprs: [
-7:8 (57): *ast.OneOrMoreExpr{Expr: 7:8 (57): *ast.RuleRefExpr{Name: 7:8 (57): *ast.Identifier{Val: "R2"}}},
-7:12 (61): *ast.NotExpr{Expr: 7:13 (62): *ast.CharClassMatcher{Val: "[;]", IgnoreCase: false, Inverted: false}},
+	`1:1 (0): *bootstrap.Grammar{Package: 1:1 (0): *bootstrap.Package{Name: 1:9 (8): *bootstrap.Identifier{Val: "a"}}, Init: 3:1 (11): *bootstrap.CodeBlock{Val: "{ code }"}, Rules: [
+5:1 (21): *bootstrap.Rule{Name: 5:1 (21): *bootstrap.Identifier{Val: "R"}, DisplayName: 5:3 (23): *bootstrap.StringLit{Val: "name"}, Expr: 5:13 (33): *bootstrap.LitMatcher{Val: "abc", IgnoreCase: true}},
+6:1 (40): *bootstrap.Rule{Name: 6:1 (40): *bootstrap.Identifier{Val: "R2"}, DisplayName: <nil>, Expr: 6:6 (45): *bootstrap.LitMatcher{Val: "d", IgnoreCase: true}},
+7:1 (50): *bootstrap.Rule{Name: 7:1 (50): *bootstrap.Identifier{Val: "R3"}, DisplayName: <nil>, Expr: 7:8 (57): *bootstrap.SeqExpr{Exprs: [
+7:8 (57): *bootstrap.OneOrMoreExpr{Expr: 7:8 (57): *bootstrap.RuleRefExpr{Name: 7:8 (57): *bootstrap.Identifier{Val: "R2"}}},
+7:12 (61): *bootstrap.NotExpr{Expr: 7:13 (62): *bootstrap.CharClassMatcher{Val: "[;]", IgnoreCase: false, Inverted: false}},
 ]}},
 ]}`,
 }
