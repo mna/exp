@@ -51,7 +51,7 @@ var parseExpRes = []string{
 }
 
 func TestParseValid(t *testing.T) {
-	p := New()
+	p := NewParser()
 	for i, c := range parseValidCases {
 		g, err := p.Parse("", strings.NewReader(c))
 		if err != nil {
@@ -92,7 +92,7 @@ var parseExpErrs = [][]string{
 }
 
 func TestParseInvalid(t *testing.T) {
-	p := New()
+	p := NewParser()
 	for i, c := range parseInvalidCases {
 		_, err := p.Parse("", strings.NewReader(c))
 		el := *(err.(*errList))

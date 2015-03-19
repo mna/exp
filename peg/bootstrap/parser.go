@@ -428,10 +428,6 @@ func (p *Parser) primaryExpr() ast.Expression {
 		// rule reference expression
 		return p.ruleRefExpr()
 
-	case ampersand, exclamation:
-		// semantic predicate expression
-		return p.semanticPredExpr()
-
 	case lparen:
 		// expression in parenthesis
 		p.read()
@@ -464,26 +460,4 @@ func (p *Parser) ruleRefExpr() ast.Expression {
 	expr.Name = ast.NewIdentifier(p.tok.pos, p.tok.lit)
 	p.read()
 	return expr
-}
-
-func (p *Parser) semanticPredExpr() ast.Expression {
-	defer p.out(p.in("semanticPredExpr"))
-
-	if !p.expect(ampersand, exclamation) {
-		return nil
-	}
-	typ := p.tok
-	p.read()
-	if !p.expect(code) {
-		return nil
-	}
-
-	if typ.id == ampersand {
-		and := ast.NewAndCodeExpr(typ.pos)
-		and.Code = ast.NewCodeBlock(p.tok.pos, p.tok.lit)
-		return and
-	}
-	not := ast.NewNotCodeExpr(typ.pos)
-	not.Code = ast.NewCodeBlock(p.tok.pos, p.tok.lit)
-	return not
 }

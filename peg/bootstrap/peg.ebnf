@@ -17,11 +17,9 @@ PrefixedOp = ampersand | exclamation .
 SuffixedExpr = PrimaryExpr [ SuffixedOp ] .
 SuffixedOp = question | star | plus .
 PrimaryExpr = LiteralMatcher | CharClassMatcher | AnyMatcher | RuleRefExpr | 
-    SemanticPredExpr | lparen Expression rparen .
+    lparen Expression rparen .
 
 RuleRefExpr = ident .
-SemanticPredExpr = SemanticPredOp code .
-SemanticPredOp = ampersand | exclamation .
 
 LiteralMatcher = [ str | rstr | char ] .
 CharClassMatcher = class .
