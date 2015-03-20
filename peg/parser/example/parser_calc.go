@@ -82,8 +82,7 @@ var Grammar = &grammar{
 		{
 			name: "start",
 			expr: &actionExpr{
-				funcName: "onstart_0",
-				args:     []string{"result"},
+				run: (*parser).callonstart_0,
 				expr: &seqExpr{
 					exprs: []interface{}{
 						&labeledExpr{
@@ -104,8 +103,7 @@ var Grammar = &grammar{
 			expr: &choiceExpr{
 				alternatives: []interface{}{
 					&actionExpr{
-						funcName: "onadditive_1",
-						args:     []string{"left", "right"},
+						run: (*parser).callonadditive_1,
 						expr: &seqExpr{
 							exprs: []interface{}{
 								&labeledExpr{
@@ -140,8 +138,7 @@ var Grammar = &grammar{
 			expr: &choiceExpr{
 				alternatives: []interface{}{
 					&actionExpr{
-						funcName: "onmultiplicative_1",
-						args:     []string{"left", "right"},
+						run: (*parser).callonmultiplicative_1,
 						expr: &seqExpr{
 							exprs: []interface{}{
 								&labeledExpr{
@@ -206,6 +203,7 @@ var Grammar = &grammar{
 		{
 			name: "integer",
 			expr: &actionExpr{
+				run: (*parser).calloninteger_0,
 				expr: &seqExpr{
 					exprs: []interface{}{
 						&labeledExpr{
@@ -222,8 +220,6 @@ var Grammar = &grammar{
 						},
 					},
 				},
-				funcName: "oninteger_0",
-				args:     []string{"digits"},
 			},
 		},
 		{
@@ -247,27 +243,29 @@ type position struct {
 	line, col, offset int
 }
 
-// TODO : feed current while parsing
 type current struct {
 	pos  position // start position of the match
-	text string   // raw text of the match
+	text []byte   // raw text of the match
 }
 
 func (c *current) onstart_0(result int) (int, error) {
-	fmt.Println("result: ", result)
+	fmt.Println("onstart_0: ", result)
 	return result, nil
 }
 
 func (c *current) onadditive_1(left, right int) (int, error) {
+	fmt.Println("onadditive_1: ", left, right)
 	return left + right, nil
 }
 
 func (c *current) onmultiplicative_1(left, right int) (int, error) {
+	fmt.Println("onmultiplicative_1: ", left, right)
 	return left * right, nil
 }
 
 // type inferred to string since the label is on a litMatcher
 func (c *current) oninteger_0(digits string) (int, error) {
+	fmt.Println("oninteger_0: ", digits)
 	return strconv.Atoi(digits)
 }
 
@@ -289,10 +287,9 @@ type choiceExpr struct {
 }
 
 type actionExpr struct {
-	pos      position
-	expr     interface{}
-	funcName string
-	args     []string
+	pos  position
+	expr interface{}
+	run  func(*parser) (int, error)
 }
 
 type seqExpr struct {
@@ -413,6 +410,31 @@ type parser struct {
 	ruleStack []*rule
 }
 
+func (p *parser) callonstart_0() (int, error) {
+	stack := p.varStack[len(p.varStack)-1]
+	return p.cur.onstart_0(stack["result"].(int))
+}
+
+func (p *parser) callonadditive_1() (int, error) {
+	stack := p.varStack[len(p.varStack)-1]
+	return p.cur.onadditive_1(stack["left"].(int), stack["right"].(int))
+}
+
+func (p *parser) callonmultiplicative_1() (int, error) {
+	stack := p.varStack[len(p.varStack)-1]
+	return p.cur.onmultiplicative_1(stack["left"].(int), stack["right"].(int))
+}
+
+func (p *parser) calloninteger_0() (int, error) {
+	stack := p.varStack[len(p.varStack)-1]
+	val := stack["digits"].([]interface{})
+	var buf bytes.Buffer
+	for _, v := range val {
+		buf.WriteString(v.(string))
+	}
+	return p.cur.oninteger_0(buf.String())
+}
+
 // read advances the parser to the next rune.
 func (p *parser) read() {
 	rn, n := utf8.DecodeRune(p.data[p.pt.offset:])
@@ -441,6 +463,10 @@ func (p *parser) restore(pt savepoint) {
 		return
 	}
 	p.pt = pt
+}
+
+func (p *parser) slice(start, end position) []byte {
+	return p.data[start.offset:end.offset]
 }
 
 func (p *parser) buildRulesTable(g *grammar) {
@@ -533,11 +559,16 @@ func (p *parser) parseExpr(expr interface{}) (interface{}, bool) {
 
 func (p *parser) parseActionExpr(act *actionExpr) (interface{}, bool) {
 	p.varStack = append(p.varStack, make(map[string]interface{}))
+	start := p.save()
 	val, ok := p.parseExpr(act.expr)
 	if ok {
-		// TODO : invoke code function
-		fmt.Printf("MATCH: %#v\n", val)
-		fmt.Printf("STACK: %#v\n", p.varStack[len(p.varStack)-1])
+		p.cur.pos = start.position
+		p.cur.text = p.slice(start.position, p.save().position)
+		actVal, err := act.run(p)
+		if err != nil {
+			p.errs.add(err) // TODO : transform, or use directly?
+		}
+		val = actVal
 	}
 	p.varStack = p.varStack[:len(p.varStack)-1]
 	return val, ok
