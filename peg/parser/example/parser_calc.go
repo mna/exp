@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -17,13 +18,18 @@ This is a hand-generated example of what the parser generator would do
 for the following grammar. Positions have been left off, but the rest is
 as close as possible to what would/should be generated.
 
-// Options: -imports=strconv,fmt -node-type=int
+// Options: -imports=strconv,fmt,strings -node-type=int
 
 package main
 
 {
 func init() {
 	fmt.Println("this is in the grammar's Init code.")
+}
+
+func main() {
+	res, err := Parse("", strings.NewReader("2 + 3 * (5 +1)"))
+	fmt.Println("got ", res, err)
 }
 }
 
@@ -45,6 +51,11 @@ eof = !.
 
 func init() {
 	fmt.Println("this is in the grammar's Init code.")
+}
+
+func main() {
+	res, err := Parse("", strings.NewReader("2 + 3 * (5 +1)"))
+	fmt.Println("got ", res, err)
 }
 
 var (
@@ -236,9 +247,28 @@ type position struct {
 	line, col, offset int
 }
 
+// TODO : feed current while parsing
 type current struct {
 	pos  position // start position of the match
 	text string   // raw text of the match
+}
+
+func (c *current) onstart_0(result int) (int, error) {
+	fmt.Println("result: ", result)
+	return result, nil
+}
+
+func (c *current) onadditive_1(left, right int) (int, error) {
+	return left + right, nil
+}
+
+func (c *current) onmultiplicative_1(left, right int) (int, error) {
+	return left * right, nil
+}
+
+// type inferred to string since the label is on a litMatcher
+func (c *current) oninteger_0(digits string) (int, error) {
+	return strconv.Atoi(digits)
 }
 
 type grammar struct {
