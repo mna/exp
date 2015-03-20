@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -41,7 +42,7 @@ additive = left:multiplicative "+" space right:additive { return left + right, n
 	/ multiplicative
 multiplicative = left:primary "*" space right:multiplicative { return left * right, nil }
 	/ primary
-primary = integer / "(" space additive:additive ")" space
+primary = integer / "(" space additive:additive ")" space { return additive, nil }
 integer = digits:[0-9]+ space {
 	return strconv.Atoi(digits)
 }
@@ -54,7 +55,10 @@ func init() {
 }
 
 func main() {
-	res, err := Parse("", strings.NewReader("2 + 3 * (5 +1)"))
+	if len(os.Args) < 2 {
+		log.Fatal("usage: <cmd> EXPR")
+	}
+	res, err := Parse("", strings.NewReader(os.Args[1]))
 	fmt.Println("got ", res, err)
 }
 
@@ -175,25 +179,28 @@ var Grammar = &grammar{
 					&ruleRefExpr{
 						name: "integer",
 					},
-					&seqExpr{
-						exprs: []interface{}{
-							&litMatcher{
-								val: "(",
-							},
-							&ruleRefExpr{
-								name: "space",
-							},
-							&labeledExpr{
-								label: "additive",
-								expr: &ruleRefExpr{
-									name: "additive",
+					&actionExpr{
+						run: (*parser).callonprimary_2,
+						expr: &seqExpr{
+							exprs: []interface{}{
+								&litMatcher{
+									val: "(",
 								},
-							},
-							&litMatcher{
-								val: ")",
-							},
-							&ruleRefExpr{
-								name: "space",
+								&ruleRefExpr{
+									name: "space",
+								},
+								&labeledExpr{
+									label: "additive",
+									expr: &ruleRefExpr{
+										name: "additive",
+									},
+								},
+								&litMatcher{
+									val: ")",
+								},
+								&ruleRefExpr{
+									name: "space",
+								},
 							},
 						},
 					},
@@ -261,6 +268,11 @@ func (c *current) onadditive_1(left, right int) (int, error) {
 func (c *current) onmultiplicative_1(left, right int) (int, error) {
 	fmt.Println("onmultiplicative_1: ", left, right)
 	return left * right, nil
+}
+
+func (c *current) onprimary_2(additive int) (int, error) {
+	fmt.Println("onprimary_2: ", additive)
+	return additive, nil
 }
 
 // type inferred to string since the label is on a litMatcher
@@ -425,6 +437,11 @@ func (p *parser) callonmultiplicative_1() (int, error) {
 	return p.cur.onmultiplicative_1(stack["left"].(int), stack["right"].(int))
 }
 
+func (p *parser) callonprimary_2() (int, error) {
+	stack := p.varStack[len(p.varStack)-1]
+	return p.cur.onprimary_2(stack["additive"].(int))
+}
+
 func (p *parser) calloninteger_0() (int, error) {
 	stack := p.varStack[len(p.varStack)-1]
 	val := stack["digits"].([]interface{})
@@ -437,8 +454,8 @@ func (p *parser) calloninteger_0() (int, error) {
 
 // read advances the parser to the next rune.
 func (p *parser) read() {
-	rn, n := utf8.DecodeRune(p.data[p.pt.offset:])
 	p.pt.offset += p.pt.w
+	rn, n := utf8.DecodeRune(p.data[p.pt.offset:])
 	p.pt.rn = rn
 	p.pt.w = n
 	p.pt.col++
