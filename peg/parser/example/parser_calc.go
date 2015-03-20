@@ -403,6 +403,7 @@ type savepoint struct {
 type parser struct {
 	filename string
 	pt       savepoint
+	cur      current
 
 	data []byte
 	errs *errList
@@ -454,6 +455,7 @@ func (p *parser) parse(g *grammar) (val interface{}, err error) {
 		return nil, ErrNoRule
 	}
 
+	// TODO : not super critical but this could be generated
 	p.buildRulesTable(g)
 
 	// panic can be used in action code to stop parsing immediately
@@ -525,7 +527,7 @@ func (p *parser) parseExpr(expr interface{}) (interface{}, bool) {
 	case *zeroOrOneExpr:
 		return p.parseZeroOrOneExpr(expr)
 	default:
-		panic(fmt.Sprintf("unknown expression tye %T", expr))
+		panic(fmt.Sprintf("unknown expression type %T", expr))
 	}
 }
 
