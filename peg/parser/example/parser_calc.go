@@ -62,25 +62,6 @@ func main() {
 	fmt.Println("got ", res, err)
 }
 
-var (
-	ErrNoRule          = errors.New("grammar has no rule")
-	ErrInvalidEncoding = errors.New("invalid encoding")
-	ErrNoMatch         = errors.New("no match found")
-)
-
-func ParseFile(filename string) (interface{}, error) {
-	f, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return Parse(filename, f)
-}
-
-func Parse(filename string, r io.Reader) (interface{}, error) {
-	return parse(filename, r, Grammar)
-}
-
 var Grammar = &grammar{
 	rules: []*rule{
 		{
@@ -244,6 +225,25 @@ var Grammar = &grammar{
 			},
 		},
 	},
+}
+
+var (
+	ErrNoRule          = errors.New("grammar has no rule")
+	ErrInvalidEncoding = errors.New("invalid encoding")
+	ErrNoMatch         = errors.New("no match found")
+)
+
+func ParseFile(filename string) (interface{}, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return Parse(filename, f)
+}
+
+func Parse(filename string, r io.Reader) (interface{}, error) {
+	return parse(filename, r, Grammar)
 }
 
 type position struct {

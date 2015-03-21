@@ -30,33 +30,40 @@ var requiredImports = []string{
 
 func BuildParser(w io.Writer, g *ast.Grammar, imports ...string) error {
 	b := &builder{w: w}
-	return b.buildParser(g)
+	return b.buildParser(g, append(requiredImports, imports...))
 }
 
 type builder struct {
-	w         io.Writer
-	err       error
+	w   io.Writer
+	err error
+
 	ruleName  string
 	exprIndex int
 	argsStack [][]string
 }
 
-func (b *builder) buildParser(g *ast.Grammar) error {
-	b.writePackage(g.Package)
+func (b *builder) buildParser(g *ast.Grammar, imports []string) error {
+	b.writePackageAndImports(g.Package, imports)
 	b.writeInit(g.Init)
+	b.writeGrammar(g)
 
 	for _, rule := range g.Rules {
-		b.writeRule(rule)
+		b.writeRuleCode(rule)
 	}
 
 	return b.err
 }
 
-func (b *builder) writePackage(pkg *ast.Package) {
+func (b *builder) writePackageAndImports(pkg *ast.Package, imports []string) {
 	if pkg == nil {
 		return
 	}
 	b.writelnf("package %s", pkg.Name.Val)
+	b.writelnf("import (")
+	for _, imp := range imports {
+		b.writelnf("\t%q", imp)
+	}
+	b.writelnf(")")
 }
 
 func (b *builder) writeInit(init *ast.CodeBlock) {
@@ -69,7 +76,22 @@ func (b *builder) writeInit(init *ast.CodeBlock) {
 	b.writelnf("%s", val)
 }
 
-func (b *builder) writeRule(rule *ast.Rule) {
+func (b *builder) writeGrammar(g *ast.Grammar) {
+	// transform the ast grammar to the self-contained, no dependency version
+	// of the parser-generator grammar.
+	b.writelnf("var g = &grammar {")
+	b.writelnf("\trules = []*rule{")
+	for _, r := range g.Rules {
+		b.writeRule(r)
+	}
+	b.writelnf("\t}")
+	b.writelnf("}")
+}
+
+func (b *builder) writeRule(r *ast.Rule) {
+}
+
+func (b *builder) writeRuleCode(rule *ast.Rule) {
 	if rule == nil || rule.Name == nil {
 		return
 	}
@@ -78,7 +100,7 @@ func (b *builder) writeRule(rule *ast.Rule) {
 	// in functions named "on<RuleName><#ExprIndex>".
 	b.ruleName = rule.Name.Val
 	b.exprIndex = 0
-	b.writeExpr(rule.Expr)
+	b.writeExprCode(rule.Expr)
 }
 
 func (b *builder) pushArgsSet() {
@@ -97,65 +119,65 @@ func (b *builder) addArg(arg *ast.Identifier) {
 	b.argsStack[ix] = append(b.argsStack[ix], arg.Val)
 }
 
-func (b *builder) writeExpr(expr ast.Expression) {
+func (b *builder) writeExprCode(expr ast.Expression) {
 	b.exprIndex++
 	switch expr := expr.(type) {
 	case *ast.ActionExpr:
 		b.pushArgsSet()
-		b.writeExpr(expr.Expr)
-		b.writeActionExpr(expr)
+		b.writeExprCode(expr.Expr)
+		b.writeActionExprCode(expr)
 		b.popArgsSet()
 
 	case *ast.AndCodeExpr:
 		// TODO : should be able to access labeled vars too, but when to
 		// start a new args set?
-		b.writeAndCodeExpr(expr)
+		b.writeAndCodeExprCode(expr)
 
 	case *ast.LabeledExpr:
 		b.addArg(expr.Label)
-		b.writeExpr(expr.Expr)
+		b.writeExprCode(expr.Expr)
 
 	case *ast.NotCodeExpr:
 		// TODO : should be able to access labeled vars too, but when to
 		// start a new args set?
-		b.writeNotCodeExpr(expr)
+		b.writeNotCodeExprCode(expr)
 
 	case *ast.AndExpr:
-		b.writeExpr(expr.Expr)
+		b.writeExprCode(expr.Expr)
 	case *ast.ChoiceExpr:
 		for _, alt := range expr.Alternatives {
-			b.writeExpr(alt)
+			b.writeExprCode(alt)
 		}
 	case *ast.NotExpr:
-		b.writeExpr(expr.Expr)
+		b.writeExprCode(expr.Expr)
 	case *ast.OneOrMoreExpr:
-		b.writeExpr(expr.Expr)
+		b.writeExprCode(expr.Expr)
 	case *ast.SeqExpr:
 		for _, sub := range expr.Exprs {
-			b.writeExpr(sub)
+			b.writeExprCode(sub)
 		}
 	case *ast.ZeroOrMoreExpr:
-		b.writeExpr(expr.Expr)
+		b.writeExprCode(expr.Expr)
 	case *ast.ZeroOrOneExpr:
-		b.writeExpr(expr.Expr)
+		b.writeExprCode(expr.Expr)
 	}
 }
 
-func (b *builder) writeActionExpr(act *ast.ActionExpr) {
+func (b *builder) writeActionExprCode(act *ast.ActionExpr) {
 	if act == nil {
 		return
 	}
 	b.writeFunc(act.Code)
 }
 
-func (b *builder) writeAndCodeExpr(and *ast.AndCodeExpr) {
+func (b *builder) writeAndCodeExprCode(and *ast.AndCodeExpr) {
 	if and == nil {
 		return
 	}
 	b.writeFunc(and.Code)
 }
 
-func (b *builder) writeNotCodeExpr(not *ast.NotCodeExpr) {
+func (b *builder) writeNotCodeExprCode(not *ast.NotCodeExpr) {
 	if not == nil {
 		return
 	}
