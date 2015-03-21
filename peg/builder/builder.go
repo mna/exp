@@ -89,6 +89,41 @@ func (b *builder) writeGrammar(g *ast.Grammar) {
 }
 
 func (b *builder) writeRule(r *ast.Rule) {
+	if r == nil || r.Name == nil {
+		return
+	}
+	b.writelnf("{")
+	b.writelnf("\tname: %q,", r.Name.Val)
+	if r.DisplayName != nil && r.DisplayName.Val != "" {
+		b.writelnf("\tdisplayName: %q,", r.DisplayName.Val)
+	}
+	pos := r.Pos()
+	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
+	b.writef("\texpr: ")
+	b.writeExpr(r.Expr)
+	b.writelnf("}")
+}
+
+func (b *builder) writeExpr(expr ast.Expression) {
+	switch expr := expr.(type) {
+	case *ast.ActionExpr:
+	case *ast.AndCodeExpr:
+	case *ast.AndExpr:
+	case *ast.AnyMatcher:
+	case *ast.CharClassMatcher:
+	case *ast.ChoiceExpr:
+	case *ast.LabeledExpr:
+	case *ast.LitMatcher:
+	case *ast.NotCodeExpr:
+	case *ast.NotExpr:
+	case *ast.OneOrMoreExpr:
+	case *ast.RuleRefExpr:
+	case *ast.SeqExpr:
+	case *ast.ZeroOrMoreExpr:
+	case *ast.ZeroOrOneExpr:
+	default:
+		b.err = fmt.Errorf("builder: unknown expression type %T", expr)
+	}
 }
 
 func (b *builder) writeRuleCode(rule *ast.Rule) {
