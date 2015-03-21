@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/PuerkitoBio/exp/peg/ast"
 )
 
 var scanValidCases = []string{
@@ -188,10 +190,10 @@ var scanExpTokens = [][]string{
 
 type errsink struct {
 	errs []error
-	pos  []Pos
+	pos  []ast.Pos
 }
 
-func (e *errsink) add(p Pos, err error) {
+func (e *errsink) add(p ast.Pos, err error) {
 	e.errs = append(e.errs, err)
 	e.pos = append(e.pos, p)
 }

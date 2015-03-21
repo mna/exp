@@ -7,6 +7,8 @@ import (
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/PuerkitoBio/exp/peg/ast"
 )
 
 type errList []error
@@ -15,7 +17,7 @@ func (e *errList) reset() {
 	*e = (*e)[:0]
 }
 
-func (e *errList) add(p Pos, err error) {
+func (e *errList) add(p ast.Pos, err error) {
 	*e = append(*e, fmt.Errorf("%s: %v", p, err))
 }
 
@@ -71,7 +73,7 @@ func NewParser() *Parser {
 	return &Parser{errs: new(errList)}
 }
 
-func (p *Parser) Parse(filename string, r io.Reader) (*Grammar, error) {
+func (p *Parser) Parse(filename string, r io.Reader) (*ast.Grammar, error) {
 	p.errs.reset()
 	p.s.Init(filename, r, p.errs.add)
 
@@ -111,7 +113,7 @@ outer:
 	}
 }
 
-func (p *Parser) grammar() *Grammar {
+func (p *Parser) grammar() *ast.Grammar {
 	defer p.out(p.in("grammar"))
 
 	pkg := p.pkgDecl()
@@ -120,12 +122,12 @@ func (p *Parser) grammar() *Grammar {
 		return nil
 	}
 
-	g := NewGrammar(pkg.Pos(), pkg)
+	g := ast.NewGrammar(pkg.Pos(), pkg)
 
 	p.read()
 	p.skip(eol, semicolon)
 	if p.tok.id == code {
-		g.Init = NewCodeBlock(p.tok.pos, p.tok.lit)
+		g.Init = ast.NewCodeBlock(p.tok.pos, p.tok.lit)
 		p.read()
 		p.skip(eol, semicolon)
 	}
@@ -161,10 +163,10 @@ func (p *Parser) expect(ids ...tid) bool {
 	return false
 }
 
-func (p *Parser) pkgDecl() *Package {
+func (p *Parser) pkgDecl() *ast.Package {
 	defer p.out(p.in("pkgDecl"))
 
-	pkg := NewPackage(p.tok.pos)
+	pkg := ast.NewPackage(p.tok.pos)
 	if !p.expect(keyword) {
 		return nil
 	}
@@ -177,7 +179,7 @@ func (p *Parser) pkgDecl() *Package {
 	if !p.expect(ident) {
 		return nil
 	}
-	pkg.Name = NewIdentifier(p.tok.pos, p.tok.lit)
+	pkg.Name = ast.NewIdentifier(p.tok.pos, p.tok.lit)
 	p.read()
 	if !p.expect(eol, semicolon) {
 		return nil
@@ -185,13 +187,13 @@ func (p *Parser) pkgDecl() *Package {
 	return pkg
 }
 
-func (p *Parser) rule() *Rule {
+func (p *Parser) rule() *ast.Rule {
 	defer p.out(p.in("rule"))
 
 	if !p.expect(ident) {
 		return nil
 	}
-	r := NewRule(p.tok.pos, NewIdentifier(p.tok.pos, p.tok.lit))
+	r := ast.NewRule(p.tok.pos, ast.NewIdentifier(p.tok.pos, p.tok.lit))
 	p.read()
 
 	if p.tok.id == str || p.tok.id == rstr || p.tok.id == char {
@@ -204,7 +206,7 @@ func (p *Parser) rule() *Rule {
 			p.errs.add(p.tok.pos, err)
 			return nil
 		}
-		r.DisplayName = NewStringLit(p.tok.pos, s)
+		r.DisplayName = ast.NewStringLit(p.tok.pos, s)
 		p.read()
 	}
 
@@ -228,10 +230,10 @@ func (p *Parser) rule() *Rule {
 	return r
 }
 
-func (p *Parser) expression() Expression {
+func (p *Parser) expression() ast.Expression {
 	defer p.out(p.in("expression"))
 
-	choice := NewChoiceExpr(p.tok.pos)
+	choice := ast.NewChoiceExpr(p.tok.pos)
 	for {
 		expr := p.actionExpr()
 		if expr != nil {
@@ -253,10 +255,10 @@ func (p *Parser) expression() Expression {
 	}
 }
 
-func (p *Parser) actionExpr() Expression {
+func (p *Parser) actionExpr() ast.Expression {
 	defer p.out(p.in("actionExpr"))
 
-	act := NewActionExpr(p.tok.pos)
+	act := ast.NewActionExpr(p.tok.pos)
 	expr := p.seqExpr()
 	if expr == nil {
 		return nil
@@ -264,7 +266,7 @@ func (p *Parser) actionExpr() Expression {
 	act.Expr = expr
 
 	if p.tok.id == code {
-		act.Code = NewCodeBlock(p.tok.pos, p.tok.lit)
+		act.Code = ast.NewCodeBlock(p.tok.pos, p.tok.lit)
 		p.read()
 	}
 
@@ -274,10 +276,10 @@ func (p *Parser) actionExpr() Expression {
 	return act
 }
 
-func (p *Parser) seqExpr() Expression {
+func (p *Parser) seqExpr() ast.Expression {
 	defer p.out(p.in("seqExpr"))
 
-	seq := NewSeqExpr(p.tok.pos)
+	seq := ast.NewSeqExpr(p.tok.pos)
 	for {
 		expr := p.labeledExpr()
 		if expr == nil {
@@ -295,14 +297,14 @@ func (p *Parser) seqExpr() Expression {
 	}
 }
 
-func (p *Parser) labeledExpr() Expression {
+func (p *Parser) labeledExpr() ast.Expression {
 	defer p.out(p.in("labeledExpr"))
 
-	lab := NewLabeledExpr(p.tok.pos)
+	lab := ast.NewLabeledExpr(p.tok.pos)
 	if p.tok.id == ident {
 		peek := p.peek()
 		if peek.id == colon {
-			label := NewIdentifier(p.tok.pos, p.tok.lit)
+			label := ast.NewIdentifier(p.tok.pos, p.tok.lit)
 			lab.Label = label
 			p.read()
 			if !p.expect(colon) {
@@ -327,16 +329,16 @@ func (p *Parser) labeledExpr() Expression {
 	return expr
 }
 
-func (p *Parser) prefixedExpr() Expression {
+func (p *Parser) prefixedExpr() ast.Expression {
 	defer p.out(p.in("prefixedExpr"))
 
-	var pref Expression
+	var pref ast.Expression
 	switch p.tok.id {
 	case ampersand:
-		pref = NewAndExpr(p.tok.pos)
+		pref = ast.NewAndExpr(p.tok.pos)
 		p.read()
 	case exclamation:
-		pref = NewNotExpr(p.tok.pos)
+		pref = ast.NewNotExpr(p.tok.pos)
 		p.read()
 	}
 
@@ -348,10 +350,10 @@ func (p *Parser) prefixedExpr() Expression {
 		return nil
 	}
 	switch p := pref.(type) {
-	case *AndExpr:
+	case *ast.AndExpr:
 		p.Expr = expr
 		return p
-	case *NotExpr:
+	case *ast.NotExpr:
 		p.Expr = expr
 		return p
 	default:
@@ -359,7 +361,7 @@ func (p *Parser) prefixedExpr() Expression {
 	}
 }
 
-func (p *Parser) suffixedExpr() Expression {
+func (p *Parser) suffixedExpr() ast.Expression {
 	defer p.out(p.in("suffixedExpr"))
 
 	expr := p.primaryExpr()
@@ -372,17 +374,17 @@ func (p *Parser) suffixedExpr() Expression {
 
 	switch p.tok.id {
 	case question:
-		q := NewZeroOrOneExpr(expr.Pos())
+		q := ast.NewZeroOrOneExpr(expr.Pos())
 		q.Expr = expr
 		p.read()
 		return q
 	case star:
-		s := NewZeroOrMoreExpr(expr.Pos())
+		s := ast.NewZeroOrMoreExpr(expr.Pos())
 		s.Expr = expr
 		p.read()
 		return s
 	case plus:
-		l := NewOneOrMoreExpr(expr.Pos())
+		l := ast.NewOneOrMoreExpr(expr.Pos())
 		l.Expr = expr
 		p.read()
 		return l
@@ -391,7 +393,7 @@ func (p *Parser) suffixedExpr() Expression {
 	}
 }
 
-func (p *Parser) primaryExpr() Expression {
+func (p *Parser) primaryExpr() ast.Expression {
 	defer p.out(p.in("primaryExpr"))
 
 	switch p.tok.id {
@@ -405,20 +407,20 @@ func (p *Parser) primaryExpr() Expression {
 		if err != nil {
 			p.errs.add(p.tok.pos, err)
 		}
-		lit := NewLitMatcher(p.tok.pos, s)
+		lit := ast.NewLitMatcher(p.tok.pos, s)
 		lit.IgnoreCase = ignore
 		p.read()
 		return lit
 
 	case class:
 		// character class matcher
-		cl := NewCharClassMatcher(p.tok.pos, p.tok.lit)
+		cl := ast.NewCharClassMatcher(p.tok.pos, p.tok.lit)
 		p.read()
 		return cl
 
 	case dot:
 		// any matcher
-		any := NewAnyMatcher(p.tok.pos, p.tok.lit)
+		any := ast.NewAnyMatcher(p.tok.pos, p.tok.lit)
 		p.read()
 		return any
 
@@ -448,14 +450,14 @@ func (p *Parser) primaryExpr() Expression {
 	}
 }
 
-func (p *Parser) ruleRefExpr() Expression {
+func (p *Parser) ruleRefExpr() ast.Expression {
 	defer p.out(p.in("ruleRefExpr"))
 
 	if !p.expect(ident) {
 		return nil
 	}
-	expr := NewRuleRefExpr(p.tok.pos)
-	expr.Name = NewIdentifier(p.tok.pos, p.tok.lit)
+	expr := ast.NewRuleRefExpr(p.tok.pos)
+	expr.Name = ast.NewIdentifier(p.tok.pos, p.tok.lit)
 	p.read()
 	return expr
 }

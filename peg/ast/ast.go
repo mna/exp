@@ -1,4 +1,4 @@
-package bootstrap
+package ast
 
 import (
 	"bytes"
@@ -22,10 +22,6 @@ func (p Pos) String() string {
 		return fmt.Sprintf("%s:%d:%d (%d)", p.Filename, p.Line, p.Col, p.Off)
 	}
 	return fmt.Sprintf("%d:%d (%d)", p.Line, p.Col, p.Off)
-}
-
-type Node interface {
-	Pos() Pos
 }
 
 type Grammar struct {
@@ -72,8 +68,7 @@ func (r *Rule) String() string {
 }
 
 type Expression interface {
-	Node
-	//Eval() (interface{}, bool)
+	Pos() Pos
 }
 
 type ChoiceExpr struct {

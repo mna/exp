@@ -16,6 +16,18 @@ var funcTemplate = `func %s(%s) (interface{}, error) {
 }
 `
 
+var requiredImports = []string{
+	"bytes",
+	"errors",
+	"fmt",
+	"io",
+	"io/ioutil",
+	"os",
+	"strings",
+	"unicode",
+	"unicode/utf8",
+}
+
 func BuildParser(w io.Writer, g *ast.Grammar, imports ...string) error {
 	b := &builder{w: w}
 	return b.buildParser(g)
