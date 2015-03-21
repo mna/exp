@@ -332,15 +332,13 @@ type ruleRefExpr struct {
 }
 
 type andCodeExpr struct {
-	pos      position
-	funcName string
-	args     []string
+	pos position
+	run func(*parser) (bool, error)
 }
 
 type notCodeExpr struct {
-	pos      position
-	funcName string
-	args     []string
+	pos position
+	run func(*parser) (bool, error)
 }
 
 type litMatcher struct {

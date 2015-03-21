@@ -84,7 +84,7 @@ func (b *builder) writeGrammar(g *ast.Grammar) {
 	for _, r := range g.Rules {
 		b.writeRule(r)
 	}
-	b.writelnf("\t}")
+	b.writelnf("\t},")
 	b.writelnf("}")
 }
 
@@ -92,6 +92,10 @@ func (b *builder) writeRule(r *ast.Rule) {
 	if r == nil || r.Name == nil {
 		return
 	}
+
+	b.exprIndex = 0
+	b.ruleName = r.Name.Val
+
 	b.writelnf("{")
 	b.writelnf("\tname: %q,", r.Name.Val)
 	if r.DisplayName != nil && r.DisplayName.Val != "" {
@@ -101,14 +105,18 @@ func (b *builder) writeRule(r *ast.Rule) {
 	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
 	b.writef("\texpr: ")
 	b.writeExpr(r.Expr)
-	b.writelnf("}")
+	b.writelnf("},")
 }
 
 func (b *builder) writeExpr(expr ast.Expression) {
+	b.exprIndex++
 	switch expr := expr.(type) {
 	case *ast.ActionExpr:
+		b.writeActionExpr(expr)
 	case *ast.AndCodeExpr:
+		b.writeAndCodeExpr(expr)
 	case *ast.AndExpr:
+		b.writeAndExpr(expr)
 	case *ast.AnyMatcher:
 	case *ast.CharClassMatcher:
 	case *ast.ChoiceExpr:
@@ -124,6 +132,32 @@ func (b *builder) writeExpr(expr ast.Expression) {
 	default:
 		b.err = fmt.Errorf("builder: unknown expression type %T", expr)
 	}
+}
+
+func (b *builder) writeActionExpr(act *ast.ActionExpr) {
+	if act == nil {
+		b.writelnf("nil,")
+		return
+	}
+	b.writelnf("&actionExpr{")
+	pos := act.Pos()
+	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
+	b.writelnf("\trun: (*parser).callon%s_%d,", b.ruleName, b.exprIndex)
+	b.writef("\texpr: ")
+	b.writeExpr(act.Expr)
+	b.writelnf("},")
+}
+
+func (b *builder) writeAndCodeExpr(and *ast.AndCodeExpr) {
+	if and == nil {
+		b.writelnf("nil,")
+		return
+	}
+	b.writelnf("&andCodeExpr{")
+	pos := and.Pos()
+	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
+	b.writelnf("\trun: (*parser).callon%s_%d,", b.ruleName, b.exprIndex)
+	b.writelnf("},")
 }
 
 func (b *builder) writeRuleCode(rule *ast.Rule) {
