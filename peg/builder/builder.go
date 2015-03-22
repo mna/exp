@@ -130,6 +130,7 @@ func (b *builder) writeExpr(expr ast.Expression) {
 	case *ast.NotCodeExpr:
 		b.writeNotCodeExpr(expr)
 	case *ast.NotExpr:
+		b.writeNotExpr(expr)
 	case *ast.OneOrMoreExpr:
 	case *ast.RuleRefExpr:
 	case *ast.SeqExpr:
@@ -281,6 +282,19 @@ func (b *builder) writeNotCodeExpr(not *ast.NotCodeExpr) {
 	pos := not.Pos()
 	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
 	b.writelnf("\trun: (*parser).callon%s_%d,", b.ruleName, b.exprIndex)
+	b.writelnf("},")
+}
+
+func (b *builder) writeNotExpr(not *ast.NotExpr) {
+	if not == nil {
+		b.writelnf("nil,")
+		return
+	}
+	b.writelnf("&notExpr{")
+	pos := not.Pos()
+	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
+	b.writef("\texpr: ")
+	b.writeExpr(not.Expr)
 	b.writelnf("},")
 }
 
