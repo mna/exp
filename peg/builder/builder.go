@@ -118,7 +118,9 @@ func (b *builder) writeExpr(expr ast.Expression) {
 	case *ast.AndExpr:
 		b.writeAndExpr(expr)
 	case *ast.AnyMatcher:
+		b.writeAnyMatcher(expr)
 	case *ast.CharClassMatcher:
+		b.writeCharClassMatcher(expr)
 	case *ast.ChoiceExpr:
 	case *ast.LabeledExpr:
 	case *ast.LitMatcher:
@@ -157,6 +159,65 @@ func (b *builder) writeAndCodeExpr(and *ast.AndCodeExpr) {
 	pos := and.Pos()
 	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
 	b.writelnf("\trun: (*parser).callon%s_%d,", b.ruleName, b.exprIndex)
+	b.writelnf("},")
+}
+
+func (b *builder) writeAndExpr(and *ast.AndExpr) {
+	if and == nil {
+		b.writelnf("nil,")
+		return
+	}
+	b.writelnf("&andExpr{")
+	pos := and.Pos()
+	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
+	b.writef("\texpr: ")
+	b.writeExpr(and.Expr)
+	b.writelnf("},")
+}
+
+func (b *builder) writeAnyMatcher(any *ast.AnyMatcher) {
+	if any == nil {
+		b.writelnf("nil,")
+		return
+	}
+	b.writelnf("&anyMatcher{")
+	pos := any.Pos()
+	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
+	b.writelnf("},")
+}
+
+func (b *builder) writeCharClassMatcher(ch *ast.CharClassMatcher) {
+	if ch == nil {
+		b.writelnf("nil,")
+		return
+	}
+	b.writelnf("&charClassMatcher{")
+	pos := ch.Pos()
+	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
+	b.writelnf("\tval: %q,", ch.Val)
+	if len(ch.Chars) > 0 {
+		b.writef("\tchars: []rune{")
+		for _, rn := range ch.Chars {
+			b.writef("%q,", rn)
+		}
+		b.writelnf("},")
+	}
+	if len(ch.Ranges) > 0 {
+		b.writef("\tranges: []rune{")
+		for _, rn := range ch.Ranges {
+			b.writef("%q,", rn)
+		}
+		b.writelnf("},")
+	}
+	if len(ch.UnicodeClasses) > 0 {
+		b.writef("\tclasses: []*unicode.RangeTable{")
+		for _, cl := range ch.UnicodeClasses {
+			b.writef("rangeTable(%q),", cl)
+		}
+		b.writelnf("},")
+	}
+	b.writelnf("\tignoreCase: %t,", ch.IgnoreCase)
+	b.writelnf("\tinverted: %t,", ch.Inverted)
 	b.writelnf("},")
 }
 
