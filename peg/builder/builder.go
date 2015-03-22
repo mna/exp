@@ -136,6 +136,7 @@ func (b *builder) writeExpr(expr ast.Expression) {
 	case *ast.RuleRefExpr:
 		b.writeRuleRefExpr(expr)
 	case *ast.SeqExpr:
+		b.writeSeqExpr(expr)
 	case *ast.ZeroOrMoreExpr:
 	case *ast.ZeroOrOneExpr:
 	default:
@@ -323,6 +324,24 @@ func (b *builder) writeRuleRefExpr(ref *ast.RuleRefExpr) {
 	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
 	if ref.Name != nil && ref.Name.Val != "" {
 		b.writelnf("\tname: %q,", ref.Name.Val)
+	}
+	b.writelnf("},")
+}
+
+func (b *builder) writeSeqExpr(seq *ast.SeqExpr) {
+	if seq == nil {
+		b.writelnf("nil,")
+		return
+	}
+	b.writelnf("&seqExpr{")
+	pos := seq.Pos()
+	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
+	if len(seq.Exprs) > 0 {
+		b.writelnf("\texprs: []interface{}{")
+		for _, e := range seq.Exprs {
+			b.writeExpr(e)
+		}
+		b.writelnf("\t},")
 	}
 	b.writelnf("},")
 }
