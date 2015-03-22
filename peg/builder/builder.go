@@ -128,6 +128,7 @@ func (b *builder) writeExpr(expr ast.Expression) {
 	case *ast.LitMatcher:
 		b.writeLitMatcher(expr)
 	case *ast.NotCodeExpr:
+		b.writeNotCodeExpr(expr)
 	case *ast.NotExpr:
 	case *ast.OneOrMoreExpr:
 	case *ast.RuleRefExpr:
@@ -268,6 +269,18 @@ func (b *builder) writeLitMatcher(lit *ast.LitMatcher) {
 	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
 	b.writelnf("\tval: %q,", lit.Val)
 	b.writelnf("\tignoreCase: %t,", lit.IgnoreCase)
+	b.writelnf("},")
+}
+
+func (b *builder) writeNotCodeExpr(not *ast.NotCodeExpr) {
+	if not == nil {
+		b.writelnf("nil,")
+		return
+	}
+	b.writelnf("&notCodeExpr{")
+	pos := not.Pos()
+	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
+	b.writelnf("\trun: (*parser).callon%s_%d,", b.ruleName, b.exprIndex)
 	b.writelnf("},")
 }
 
