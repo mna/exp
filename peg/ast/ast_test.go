@@ -3,7 +3,6 @@ package ast
 import (
 	"strings"
 	"testing"
-	"unicode"
 	"unicode/utf8"
 )
 
@@ -35,9 +34,9 @@ var expChars = []string{
 	"\tz\\",
 }
 
-var expUnicodeClasses = [][]*unicode.RangeTable{
-	9:  {unicode.Categories["L"]},
-	10: {unicode.Scripts["Greek"], unicode.Categories["N"]},
+var expUnicodeClasses = [][]string{
+	9:  {"L"},
+	10: {"Greek", "N"},
 }
 
 func TestCharClassParse(t *testing.T) {

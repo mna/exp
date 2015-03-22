@@ -124,6 +124,7 @@ func (b *builder) writeExpr(expr ast.Expression) {
 	case *ast.ChoiceExpr:
 		b.writeChoiceExpr(expr)
 	case *ast.LabeledExpr:
+		b.writeLabeledExpr(expr)
 	case *ast.LitMatcher:
 	case *ast.NotCodeExpr:
 	case *ast.NotExpr:
@@ -237,6 +238,22 @@ func (b *builder) writeChoiceExpr(ch *ast.ChoiceExpr) {
 		}
 		b.writelnf("\t},")
 	}
+	b.writelnf("},")
+}
+
+func (b *builder) writeLabeledExpr(lab *ast.LabeledExpr) {
+	if lab == nil {
+		b.writelnf("nil,")
+		return
+	}
+	b.writelnf("&labeledExpr{")
+	pos := lab.Pos()
+	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
+	if lab.Label != nil && lab.Label.Val != "" {
+		b.writelnf("\tlabel: %q,", lab.Label.Val)
+	}
+	b.writef("\texpr: ")
+	b.writeExpr(lab.Expr)
 	b.writelnf("},")
 }
 
