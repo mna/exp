@@ -28,22 +28,51 @@ var requiredImports = []string{
 	"unicode/utf8",
 }
 
-func BuildParser(w io.Writer, g *ast.Grammar, imports ...string) error {
+type option func(*builder) option
+
+func Imports(imports ...string) option {
+	return func(b *builder) option {
+		prev := b.imports
+		b.imports = imports
+		return Imports(prev...)
+	}
+}
+
+func CurrentReceiverName(nm string) option {
+	return func(b *builder) option {
+		prev := b.curRecvName
+		b.curRecvName = nm
+		return CurrentReceiverName(prev)
+	}
+}
+
+func BuildParser(w io.Writer, g *ast.Grammar, opts ...option) error {
 	b := &builder{w: w}
-	return b.buildParser(g, append(requiredImports, imports...))
+	b.setOptions(opts)
+	return b.buildParser(g)
 }
 
 type builder struct {
 	w   io.Writer
 	err error
 
+	// options
+	imports     []string
+	curRecvName string
+
 	ruleName  string
 	exprIndex int
 	argsStack [][]string
 }
 
-func (b *builder) buildParser(g *ast.Grammar, imports []string) error {
-	b.writePackageAndImports(g.Package, imports)
+func (b *builder) setOptions(opts []option) {
+	for _, opt := range opts {
+		opt(b)
+	}
+}
+
+func (b *builder) buildParser(g *ast.Grammar) error {
+	b.writePackageAndImports(g.Package, append(requiredImports, b.imports...))
 	b.writeInit(g.Init)
 	b.writeGrammar(g)
 
