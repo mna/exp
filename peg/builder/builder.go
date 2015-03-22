@@ -132,6 +132,7 @@ func (b *builder) writeExpr(expr ast.Expression) {
 	case *ast.NotExpr:
 		b.writeNotExpr(expr)
 	case *ast.OneOrMoreExpr:
+		b.writeOneOrMoreExpr(expr)
 	case *ast.RuleRefExpr:
 	case *ast.SeqExpr:
 	case *ast.ZeroOrMoreExpr:
@@ -295,6 +296,19 @@ func (b *builder) writeNotExpr(not *ast.NotExpr) {
 	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
 	b.writef("\texpr: ")
 	b.writeExpr(not.Expr)
+	b.writelnf("},")
+}
+
+func (b *builder) writeOneOrMoreExpr(one *ast.OneOrMoreExpr) {
+	if one == nil {
+		b.writelnf("nil,")
+		return
+	}
+	b.writelnf("&oneOrMoreExpr{")
+	pos := one.Pos()
+	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
+	b.writef("\texpr: ")
+	b.writeExpr(one.Expr)
 	b.writelnf("},")
 }
 
