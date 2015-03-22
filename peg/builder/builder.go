@@ -122,6 +122,7 @@ func (b *builder) writeExpr(expr ast.Expression) {
 	case *ast.CharClassMatcher:
 		b.writeCharClassMatcher(expr)
 	case *ast.ChoiceExpr:
+		b.writeChoiceExpr(expr)
 	case *ast.LabeledExpr:
 	case *ast.LitMatcher:
 	case *ast.NotCodeExpr:
@@ -218,6 +219,24 @@ func (b *builder) writeCharClassMatcher(ch *ast.CharClassMatcher) {
 	}
 	b.writelnf("\tignoreCase: %t,", ch.IgnoreCase)
 	b.writelnf("\tinverted: %t,", ch.Inverted)
+	b.writelnf("},")
+}
+
+func (b *builder) writeChoiceExpr(ch *ast.ChoiceExpr) {
+	if ch == nil {
+		b.writelnf("nil,")
+		return
+	}
+	b.writelnf("&choiceExpr{")
+	pos := ch.Pos()
+	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
+	if len(ch.Alternatives) > 0 {
+		b.writelnf("\talternatives: []interface{}{")
+		for _, alt := range ch.Alternatives {
+			b.writeExpr(alt)
+		}
+		b.writelnf("\t},")
+	}
 	b.writelnf("},")
 }
 
