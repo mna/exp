@@ -140,6 +140,7 @@ func (b *builder) writeExpr(expr ast.Expression) {
 	case *ast.ZeroOrMoreExpr:
 		b.writeZeroOrMoreExpr(expr)
 	case *ast.ZeroOrOneExpr:
+		b.writeZeroOrOneExpr(expr)
 	default:
 		b.err = fmt.Errorf("builder: unknown expression type %T", expr)
 	}
@@ -353,6 +354,19 @@ func (b *builder) writeZeroOrMoreExpr(zero *ast.ZeroOrMoreExpr) {
 		return
 	}
 	b.writelnf("&zeroOrMoreExpr{")
+	pos := zero.Pos()
+	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
+	b.writef("\texpr: ")
+	b.writeExpr(zero.Expr)
+	b.writelnf("},")
+}
+
+func (b *builder) writeZeroOrOneExpr(zero *ast.ZeroOrOneExpr) {
+	if zero == nil {
+		b.writelnf("nil,")
+		return
+	}
+	b.writelnf("&zeroOrOneExpr{")
 	pos := zero.Pos()
 	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
 	b.writef("\texpr: ")
