@@ -11,7 +11,7 @@ import (
 	"github.com/PuerkitoBio/exp/peg/ast"
 )
 
-var funcTemplate = `func %s(%s) (interface{}, error) {
+var funcTemplate = `func (%s *current) %s(%s) (interface{}, error) {
 %s
 }
 `
@@ -519,7 +519,7 @@ func (b *builder) writeFunc(code *ast.CodeBlock) {
 		args.WriteString(" interface{}")
 	}
 
-	b.writelnf(funcTemplate, b.funcName(), args.String(), val)
+	b.writelnf(funcTemplate, b.curRecvName, b.funcName(), args.String(), val)
 }
 
 func (b *builder) funcName() string {
