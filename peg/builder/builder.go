@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
+	"unicode"
 
 	"github.com/PuerkitoBio/exp/peg/ast"
 )
@@ -85,6 +87,7 @@ func (b *builder) buildParser(g *ast.Grammar) error {
 	for _, rule := range g.Rules {
 		b.writeRuleCode(rule)
 	}
+	b.writeStaticCode()
 
 	return b.err
 }
@@ -243,14 +246,22 @@ func (b *builder) writeCharClassMatcher(ch *ast.CharClassMatcher) {
 	if len(ch.Chars) > 0 {
 		b.writef("\tchars: []rune{")
 		for _, rn := range ch.Chars {
-			b.writef("%q,", rn)
+			if ch.IgnoreCase {
+				b.writef("%q,", unicode.ToLower(rn))
+			} else {
+				b.writef("%q,", rn)
+			}
 		}
 		b.writelnf("},")
 	}
 	if len(ch.Ranges) > 0 {
 		b.writef("\tranges: []rune{")
 		for _, rn := range ch.Ranges {
-			b.writef("%q,", rn)
+			if ch.IgnoreCase {
+				b.writef("%q,", unicode.ToLower(rn))
+			} else {
+				b.writef("%q,", rn)
+			}
 		}
 		b.writelnf("},")
 	}
@@ -308,7 +319,11 @@ func (b *builder) writeLitMatcher(lit *ast.LitMatcher) {
 	b.writelnf("&litMatcher{")
 	pos := lit.Pos()
 	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
-	b.writelnf("\tval: %q,", lit.Val)
+	if lit.IgnoreCase {
+		b.writelnf("\tval: %q,", strings.ToLower(lit.Val))
+	} else {
+		b.writelnf("\tval: %q,", lit.Val)
+	}
 	b.writelnf("\tignoreCase: %t,", lit.IgnoreCase)
 	b.writelnf("},")
 }
@@ -536,6 +551,10 @@ func (b *builder) writeFunc(code *ast.CodeBlock) {
 		args.WriteString(fmt.Sprintf(`stack[%q]`, arg))
 	}
 	b.writelnf(callFuncTemplate, fnNm, args.String())
+}
+
+func (b *builder) writeStaticCode() {
+	b.writelnf(staticCode)
 }
 
 func (b *builder) funcName() string {
