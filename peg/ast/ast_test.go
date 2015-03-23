@@ -18,6 +18,13 @@ var charClasses = []string{
 	`[\b\nt]`,
 	`[\b\nt\pL]`,
 	`[\p{Greek}\tz\\\pN]`,
+	`[-]`,
+	`[--]`,
+	`[---]`,
+	`[a-z]`,
+	`[a-zB0-9]`,
+	`[A-Z]i`,
+	`[a-]`,
 }
 
 var expChars = []string{
@@ -32,11 +39,27 @@ var expChars = []string{
 	"\b\nt",
 	"\b\nt",
 	"\tz\\",
+	"-",
+	"--",
+	"",
+	"",
+	"B",
+	"",
+	"a-",
 }
 
 var expUnicodeClasses = [][]string{
 	9:  {"L"},
 	10: {"Greek", "N"},
+	17: nil,
+}
+
+var expRanges = []string{
+	13: "--",
+	14: "az",
+	15: "az09",
+	16: "AZ",
+	17: "",
 }
 
 func TestCharClassParse(t *testing.T) {
@@ -45,27 +68,33 @@ func TestCharClassParse(t *testing.T) {
 
 		ic := strings.HasSuffix(c, "i")
 		if m.IgnoreCase != ic {
-			t.Errorf("%d: want ignore case: %t, got %t", i, ic, m.IgnoreCase)
+			t.Errorf("%q: want ignore case: %t, got %t", c, ic, m.IgnoreCase)
 		}
 		iv := c[1] == '^'
 		if m.Inverted != iv {
-			t.Errorf("%d: want inverted: %t, got %t", i, iv, m.Inverted)
+			t.Errorf("%q: want inverted: %t, got %t", c, iv, m.Inverted)
 		}
 
 		if n := utf8.RuneCountInString(expChars[i]); len(m.Chars) != n {
-			t.Errorf("%d: want %d chars, got %d", i, n, len(m.Chars))
+			t.Errorf("%q: want %d chars, got %d", c, n, len(m.Chars))
 		} else if string(m.Chars) != expChars[i] {
-			t.Errorf("%d: want %q, got %q", i, expChars[i], string(m.Chars))
+			t.Errorf("%q: want %q, got %q", c, expChars[i], string(m.Chars))
+		}
+
+		if n := utf8.RuneCountInString(expRanges[i]); len(m.Ranges) != n {
+			t.Errorf("%q: want %d chars, got %d", c, n, len(m.Ranges))
+		} else if string(m.Ranges) != expRanges[i] {
+			t.Errorf("%q: want %q, got %q", c, expRanges[i], string(m.Ranges))
 		}
 
 		if n := len(expUnicodeClasses[i]); len(m.UnicodeClasses) != n {
-			t.Errorf("%d: want %d Unicode classes, got %d", i, n, len(m.UnicodeClasses))
+			t.Errorf("%q: want %d Unicode classes, got %d", c, n, len(m.UnicodeClasses))
 		} else if n > 0 {
 			want := expUnicodeClasses[i]
 			got := m.UnicodeClasses
 			for j, wantClass := range want {
 				if wantClass != got[j] {
-					t.Errorf("%d: range table %d: want %v, got %v", i, j, wantClass, got[j])
+					t.Errorf("%q: range table %d: want %v, got %v", c, j, wantClass, got[j])
 				}
 			}
 		}

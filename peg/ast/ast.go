@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
 // Pos represents a position in a source file.
@@ -320,6 +319,7 @@ func (c *CharClassMatcher) parse() {
 
 	// content of char class is necessarily valid, so escapes are correct
 	r := strings.NewReader(raw)
+	inRange := false
 outer:
 	for {
 		rn, _, err := r.ReadRune()
@@ -352,13 +352,28 @@ outer:
 				rn, _, _, _ := strconv.UnquoteChar("\\"+string(rn), 0)
 				c.Chars = append(c.Chars, rn)
 			}
-			// TODO : Implement range
+		case '-':
+			if !inRange && len(c.Chars) > 0 {
+				inRange = true
+				continue
+			}
+			fallthrough
 		default:
-			if c.IgnoreCase {
-				rn = unicode.ToLower(rn)
+			if inRange {
+				// remove last char, use it at range start, and use current
+				// as range end
+				last := c.Chars[len(c.Chars)-1]
+				c.Chars = c.Chars[:len(c.Chars)-1]
+				c.Ranges = append(c.Ranges, last, rn)
+				inRange = false
+				continue
 			}
 			c.Chars = append(c.Chars, rn)
 		}
+	}
+	if inRange {
+		// chars ended with a '-', add it as a valid char
+		c.Chars = append(c.Chars, '-')
 	}
 }
 
