@@ -415,33 +415,33 @@ type parser struct {
 	data []byte
 	errs *errList
 
-	rules     map[string]*rule
-	varStack  []map[string]interface{}
-	ruleStack []*rule
+	rules  map[string]*rule
+	vstack []map[string]interface{}
+	rstack []*rule
 }
 
 func (p *parser) callonstart_0() (int, error) {
-	stack := p.varStack[len(p.varStack)-1]
+	stack := p.vstack[len(p.vstack)-1]
 	return p.cur.onstart_0(stack["result"].(int))
 }
 
 func (p *parser) callonadditive_1() (int, error) {
-	stack := p.varStack[len(p.varStack)-1]
+	stack := p.vstack[len(p.vstack)-1]
 	return p.cur.onadditive_1(stack["left"].(int), stack["right"].(int))
 }
 
 func (p *parser) callonmultiplicative_1() (int, error) {
-	stack := p.varStack[len(p.varStack)-1]
+	stack := p.vstack[len(p.vstack)-1]
 	return p.cur.onmultiplicative_1(stack["left"].(int), stack["right"].(int))
 }
 
 func (p *parser) callonprimary_2() (int, error) {
-	stack := p.varStack[len(p.varStack)-1]
+	stack := p.vstack[len(p.vstack)-1]
 	return p.cur.onprimary_2(stack["additive"].(int))
 }
 
 func (p *parser) calloninteger_0() (int, error) {
-	stack := p.varStack[len(p.varStack)-1]
+	stack := p.vstack[len(p.vstack)-1]
 	val := stack["digits"].([]interface{})
 	var buf bytes.Buffer
 	for _, v := range val {
@@ -529,9 +529,9 @@ func (p *parser) parse(g *grammar) (val interface{}, err error) {
 
 func (p *parser) parseRule(rule *rule) (interface{}, bool) {
 	// TODO : build error messages with references to the current rule
-	p.ruleStack = append(p.ruleStack, rule)
+	p.rstack = append(p.rstack, rule)
 	val, ok := p.parseExpr(rule.expr)
-	p.ruleStack = p.ruleStack[:len(p.ruleStack)-1]
+	p.rstack = p.rstack[:len(p.rstack)-1]
 	return val, ok
 }
 
@@ -573,7 +573,7 @@ func (p *parser) parseExpr(expr interface{}) (interface{}, bool) {
 }
 
 func (p *parser) parseActionExpr(act *actionExpr) (interface{}, bool) {
-	p.varStack = append(p.varStack, make(map[string]interface{}))
+	p.vstack = append(p.vstack, make(map[string]interface{}))
 	start := p.save()
 	val, ok := p.parseExpr(act.expr)
 	if ok {
@@ -585,7 +585,7 @@ func (p *parser) parseActionExpr(act *actionExpr) (interface{}, bool) {
 		}
 		val = actVal
 	}
-	p.varStack = p.varStack[:len(p.varStack)-1]
+	p.vstack = p.vstack[:len(p.vstack)-1]
 	return val, ok
 }
 
@@ -670,8 +670,8 @@ func (p *parser) parseChoiceExpr(ch *choiceExpr) (interface{}, bool) {
 
 func (p *parser) parseLabeledExpr(lab *labeledExpr) (interface{}, bool) {
 	val, ok := p.parseExpr(lab.expr)
-	if ok && lab.label != "" && len(p.varStack) > 0 {
-		m := p.varStack[len(p.varStack)-1]
+	if ok && lab.label != "" && len(p.vstack) > 0 {
+		m := p.vstack[len(p.vstack)-1]
 		m[lab.label] = val
 	}
 	return val, ok

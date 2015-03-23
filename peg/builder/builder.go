@@ -11,8 +11,14 @@ import (
 	"github.com/PuerkitoBio/exp/peg/ast"
 )
 
-var funcTemplate = `func (%s *current) %s(%s) (interface{}, error) {
+var onFuncTemplate = `func (%s *current) %s(%s) (interface{}, error) {
 %s
+}
+`
+
+var callFuncTemplate = `func (p *parser) call%s() (interface{}, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	return p.cur.%[1]s(%s)
 }
 `
 
@@ -519,7 +525,17 @@ func (b *builder) writeFunc(code *ast.CodeBlock) {
 		args.WriteString(" interface{}")
 	}
 
-	b.writelnf(funcTemplate, b.curRecvName, b.funcName(), args.String(), val)
+	fnNm := b.funcName()
+	b.writelnf(onFuncTemplate, b.curRecvName, fnNm, args.String(), val)
+
+	args.Reset()
+	for i, arg := range b.argsStack[ix] {
+		if i > 0 {
+			args.WriteString(", ")
+		}
+		args.WriteString(fmt.Sprintf(`stack[%q]`, arg))
+	}
+	b.writelnf(callFuncTemplate, fnNm, args.String())
 }
 
 func (b *builder) funcName() string {
