@@ -50,6 +50,13 @@ Grammar = sp "package" sp pkg:IdentifierName sp initializer:(Initializer sp)? ru
         g.Init = initializer.([]interface{})[0].(*ast.CodeBlock)
     }
 
+    rulesTuples := rules.([]interface{})
+    g.Rules = make([]*ast.Rule, len(rulesTuples))
+    for i, duo := range rulesTuples {
+        g.Rules[i] = duo.([]interface{})[0].(*ast.Rule)
+        fmt.Println("rule: ", g.Rules[i].Name.Val)
+    }
+
     return g, nil
 }
 
@@ -59,7 +66,19 @@ Initializer = CodeBlock {
     return cb, nil
 }
 
-Rule = IdentifierName sp ( StringLiteral )? RuleDefOp Expression EndOfRule
+Rule = ident:IdentifierName sp display:( StringLiteral sp )? RuleDefOp expr:Expression EndOfRule {
+    pos := ast.Pos{Line: c.pos.line, Col: c.pos.col, Off: c.pos.offset}
+
+    // create the rule identifier
+    nm := ast.NewIdentifier(pos, ident.(string))
+    rule := ast.NewRule(pos, nm)
+    if display != nil {
+        rule.DisplayName = display.([]interface{})[0].(*ast.StringLit)
+    }
+    // TODO : expr
+
+    return rule, nil
+}
 
 Expression = ChoiceExpr
 
@@ -105,7 +124,12 @@ IdentifierPart = IdentifierStart / [0-9]
 
 LitMatcher = StringLiteral "i"? sp
 
-StringLiteral = '"' DoubleStringChar* '"' / "'" SingleStringChar* "'"
+StringLiteral = ( '"' DoubleStringChar* '"' / "'" SingleStringChar* "'" ) {
+    pos := ast.Pos{Line: c.pos.line, Col: c.pos.col, Off: c.pos.offset}
+    fmt.Println("StringLit match: ", string(c.text))
+    sl := ast.NewStringLit(pos, string(c.text))
+    return sl, nil
+}
 
 DoubleStringChar = !( '"' / "\\" / [\n] ) . 
 
