@@ -2,7 +2,11 @@ package main
 
 {
 func main() {
-	if len(os.Args) > 2 {
+    dbgFlag := flag.Bool("debug", false, "set debug mode")
+    //noBuildFlag := flag.Bool("x", false, "do not build, only parse")
+    flag.Parse()
+
+	if flag.NArg() > 1 {
 		fmt.Fprintln(os.Stderr, "USAGE: <cmd> FILE")
 		os.Exit(1)
 	}
@@ -10,19 +14,20 @@ func main() {
 	var in io.Reader
 
 	nm := "stdin"
-	if len(os.Args) == 2 {
-		f, err := os.Open(os.Args[1])
+	if flag.NArg() == 1 {
+		f, err := os.Open(flag.Arg(0))
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(2)
 		}
 		defer f.Close()
 		in = f
-		nm = os.Args[1]
+		nm = flag.Arg(0)
 	} else {
 		in = bufio.NewReader(os.Stdin)
 	}
 
+    debug = *dbgFlag
 	res, err := Parse(nm, in)
 	if err != nil {
 		log.Fatal(err)
@@ -42,7 +47,7 @@ Grammar = sp "package" sp pkg:IdentifierName sp initializer:(Initializer sp)? ru
 
 Initializer = CodeBlock
 
-Rule = IdentifierName ( StringLiteral )? RuleDefOp Expression EndOfRule
+Rule = IdentifierName sp ( StringLiteral )? RuleDefOp Expression EndOfRule
 
 Expression = ChoiceExpr
 
