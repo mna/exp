@@ -7,6 +7,8 @@ var (
 	ErrNoMatch         = errors.New("no match found")
 )
 
+var debug = false
+
 func ParseFile(filename string) (interface{}, error) {
 	f, err := os.Open(filename)
 	if err != nil {
@@ -168,6 +170,24 @@ type parser struct {
 	rstack []*rule
 }
 
+func (p *parser) print(prefix, s string) string {
+	if !debug {
+		return s
+	}
+
+	fmt.Printf("%%s %%d:%%d:%%d: %%s [%%#U]\n",
+		prefix, p.pt.line, p.pt.col, p.pt.offset, s, p.pt.rn)
+	return s
+}
+
+func (p *parser) in(s string) string {
+	return p.print(">", s)
+}
+
+func (p *parser) out(s string) string {
+	return p.print("<", s)
+}
+
 // read advances the parser to the next rune.
 func (p *parser) read() {
 	p.pt.offset += p.pt.w
@@ -188,10 +208,12 @@ func (p *parser) read() {
 }
 
 func (p *parser) save() savepoint {
+	defer p.out(p.in("save"))
 	return p.pt
 }
 
 func (p *parser) restore(pt savepoint) {
+	defer p.out(p.in("restore"))
 	if pt.offset == p.pt.offset {
 		return
 	}
@@ -246,6 +268,8 @@ func (p *parser) parse(g *grammar) (val interface{}, err error) {
 }
 
 func (p *parser) parseRule(rule *rule) (interface{}, bool) {
+	defer p.out(p.in("parseRule " + rule.name))
+
 	// TODO : build error messages with references to the current rule
 	p.rstack = append(p.rstack, rule)
 	val, ok := p.parseExpr(rule.expr)
@@ -291,6 +315,8 @@ func (p *parser) parseExpr(expr interface{}) (interface{}, bool) {
 }
 
 func (p *parser) parseActionExpr(act *actionExpr) (interface{}, bool) {
+	defer p.out(p.in("parseActionExpr"))
+
 	p.vstack = append(p.vstack, make(map[string]interface{}))
 	start := p.save()
 	val, ok := p.parseExpr(act.expr)
@@ -308,6 +334,8 @@ func (p *parser) parseActionExpr(act *actionExpr) (interface{}, bool) {
 }
 
 func (p *parser) parseAndCodeExpr(and *andCodeExpr) (interface{}, bool) {
+	defer p.out(p.in("parseAndCodeExpr"))
+
 	ok, err := and.run(p)
 	if err != nil {
 		p.errs.add(err)
@@ -316,6 +344,8 @@ func (p *parser) parseAndCodeExpr(and *andCodeExpr) (interface{}, bool) {
 }
 
 func (p *parser) parseAndExpr(and *andExpr) (interface{}, bool) {
+	defer p.out(p.in("parseAndExpr"))
+
 	pt := p.save()
 	_, ok := p.parseExpr(and.expr)
 	p.restore(pt)
@@ -323,6 +353,8 @@ func (p *parser) parseAndExpr(and *andExpr) (interface{}, bool) {
 }
 
 func (p *parser) parseAnyMatcher(any *anyMatcher) (interface{}, bool) {
+	defer p.out(p.in("parseAnyMatcher"))
+
 	if p.pt.rn != utf8.RuneError {
 		p.read()
 		return string(p.pt.rn), true
@@ -331,6 +363,8 @@ func (p *parser) parseAnyMatcher(any *anyMatcher) (interface{}, bool) {
 }
 
 func (p *parser) parseCharClassMatcher(chr *charClassMatcher) (interface{}, bool) {
+	defer p.out(p.in("parseCharClassMatcher"))
+
 	cur := p.pt.rn
 	if chr.ignoreCase {
 		cur = unicode.ToLower(cur)
@@ -377,6 +411,8 @@ func (p *parser) parseCharClassMatcher(chr *charClassMatcher) (interface{}, bool
 }
 
 func (p *parser) parseChoiceExpr(ch *choiceExpr) (interface{}, bool) {
+	defer p.out(p.in("parseChoiceExpr"))
+
 	for _, alt := range ch.alternatives {
 		val, ok := p.parseExpr(alt)
 		if ok {
@@ -387,6 +423,8 @@ func (p *parser) parseChoiceExpr(ch *choiceExpr) (interface{}, bool) {
 }
 
 func (p *parser) parseLabeledExpr(lab *labeledExpr) (interface{}, bool) {
+	defer p.out(p.in("parseLabeledExpr"))
+
 	val, ok := p.parseExpr(lab.expr)
 	if ok && lab.label != "" && len(p.vstack) > 0 {
 		m := p.vstack[len(p.vstack)-1]
@@ -396,6 +434,8 @@ func (p *parser) parseLabeledExpr(lab *labeledExpr) (interface{}, bool) {
 }
 
 func (p *parser) parseLitMatcher(lit *litMatcher) (interface{}, bool) {
+	defer p.out(p.in("parseLitMatcher"))
+
 	var buf bytes.Buffer
 	pt := p.save()
 	for _, want := range lit.val {
@@ -414,6 +454,8 @@ func (p *parser) parseLitMatcher(lit *litMatcher) (interface{}, bool) {
 }
 
 func (p *parser) parseNotCodeExpr(not *notCodeExpr) (interface{}, bool) {
+	defer p.out(p.in("parseNotCodeExpr"))
+
 	ok, err := not.run(p)
 	if err != nil {
 		p.errs.add(err)
@@ -422,6 +464,8 @@ func (p *parser) parseNotCodeExpr(not *notCodeExpr) (interface{}, bool) {
 }
 
 func (p *parser) parseNotExpr(not *notExpr) (interface{}, bool) {
+	defer p.out(p.in("parseNotExpr"))
+
 	pt := p.save()
 	_, ok := p.parseExpr(not.expr)
 	p.restore(pt)
@@ -429,6 +473,8 @@ func (p *parser) parseNotExpr(not *notExpr) (interface{}, bool) {
 }
 
 func (p *parser) parseOneOrMoreExpr(expr *oneOrMoreExpr) (interface{}, bool) {
+	defer p.out(p.in("parseOneOrMoreExpr"))
+
 	var vals []interface{}
 
 	for {
@@ -445,6 +491,8 @@ func (p *parser) parseOneOrMoreExpr(expr *oneOrMoreExpr) (interface{}, bool) {
 }
 
 func (p *parser) parseRuleRefExpr(ref *ruleRefExpr) (interface{}, bool) {
+	defer p.out(p.in("parseRuleRefExpr " + ref.name))
+
 	if ref.name == "" {
 		panic(fmt.Sprintf("%%s: invalid rule: missing name", ref.pos))
 	}
@@ -458,6 +506,8 @@ func (p *parser) parseRuleRefExpr(ref *ruleRefExpr) (interface{}, bool) {
 }
 
 func (p *parser) parseSeqExpr(seq *seqExpr) (interface{}, bool) {
+	defer p.out(p.in("parseSeqExpr"))
+
 	var vals []interface{}
 
 	pt := p.save()
@@ -473,6 +523,8 @@ func (p *parser) parseSeqExpr(seq *seqExpr) (interface{}, bool) {
 }
 
 func (p *parser) parseZeroOrMoreExpr(expr *zeroOrMoreExpr) (interface{}, bool) {
+	defer p.out(p.in("parseZeroOrMoreExpr"))
+
 	var vals []interface{}
 
 	for {
@@ -485,6 +537,8 @@ func (p *parser) parseZeroOrMoreExpr(expr *zeroOrMoreExpr) (interface{}, bool) {
 }
 
 func (p *parser) parseZeroOrOneExpr(expr *zeroOrOneExpr) (interface{}, bool) {
+	defer p.out(p.in("parseZeroOrOneExpr"))
+
 	val, _ := p.parseExpr(expr.expr)
 	// whether it matched or not, consider it a match
 	return val, true
