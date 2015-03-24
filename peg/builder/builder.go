@@ -524,7 +524,7 @@ func (b *builder) writeFunc(code *ast.CodeBlock) {
 	if code == nil {
 		return
 	}
-	val := code.Val[1 : len(code.Val)-1]
+	val := strings.TrimSpace(code.Val)[1 : len(code.Val)-1]
 	if val[0] == '\n' {
 		val = val[1:]
 	}
