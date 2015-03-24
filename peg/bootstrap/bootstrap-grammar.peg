@@ -1,6 +1,19 @@
 package main
 
-Grammar = sp Rule+ EndOfFile
+{
+func main() {
+    fmt.Println(g)
+}
+}
+
+Grammar = sp "package" pkg:IdentifierName sp initializer:(Initializer sp)? rules:(Rule sp)+ {
+    pos := ast.Pos{Line: c.pos.line, Col: c.pos.col, Off: c.pos.offset}
+    nm := ast.NewIdentifier(pos, pkg.(string))
+    pack := ast.NewPackage(pos)
+    pack.Name = nm
+    g := ast.NewGrammar(pos, pack)
+    return g, nil
+}
 
 Rule = IdentifierName ( StringLiteral )? RuleDefOp Expression EndOfRule
 

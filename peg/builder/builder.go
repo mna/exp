@@ -55,7 +55,7 @@ func CurrentReceiverName(nm string) option {
 }
 
 func BuildParser(w io.Writer, g *ast.Grammar, opts ...option) error {
-	b := &builder{w: w}
+	b := &builder{w: w, curRecvName: "c"}
 	b.setOptions(opts)
 	return b.buildParser(g)
 }
@@ -192,7 +192,7 @@ func (b *builder) writeActionExpr(act *ast.ActionExpr) {
 	b.writelnf("&actionExpr{")
 	pos := act.Pos()
 	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
-	b.writelnf("\trun: (*parser).callon%s_%d,", b.ruleName, b.exprIndex)
+	b.writelnf("\trun: (*parser).call%s,", b.funcName())
 	b.writef("\texpr: ")
 	b.writeExpr(act.Expr)
 	b.writelnf("},")
@@ -454,10 +454,12 @@ func (b *builder) addArg(arg *ast.Identifier) {
 
 func (b *builder) writeExprCode(expr ast.Expression) {
 	b.exprIndex++
+	ix := b.exprIndex
 	switch expr := expr.(type) {
 	case *ast.ActionExpr:
 		b.pushArgsSet()
 		b.writeExprCode(expr.Expr)
+		b.exprIndex = ix
 		b.writeActionExprCode(expr)
 		b.popArgsSet()
 

@@ -49,7 +49,7 @@ type choiceExpr struct {
 type actionExpr struct {
 	pos  position
 	expr interface{}
-	run  func(*parser) (int, error)
+	run  func(*parser) (interface{}, error)
 }
 
 type seqExpr struct {
