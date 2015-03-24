@@ -84,7 +84,7 @@ SingleLineComment = "//" ( [^\n] . )*
 Identifier = IdentifierName
 
 IdentifierName = IdentifierStart IdentifierPart* {
-    return c.text, nil
+    return string(c.text), nil
 }
 
 IdentifierStart = [a-z_]i

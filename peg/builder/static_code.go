@@ -243,6 +243,7 @@ func (p *parser) parse(g *grammar) (val interface{}, err error) {
 	// and return the panic as an error.
 	defer func() {
 		if e := recover(); e != nil {
+			defer p.out(p.in("panic handler"))
 			val = nil
 			switch e := e.(type) {
 			case error:
