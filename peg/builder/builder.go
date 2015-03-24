@@ -20,6 +20,7 @@ var onFuncTemplate = `func (%s *current) %s(%s) (interface{}, error) {
 
 var callFuncTemplate = `func (p *parser) call%s() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
 	return p.cur.%[1]s(%s)
 }
 `

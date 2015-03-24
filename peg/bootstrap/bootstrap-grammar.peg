@@ -2,11 +2,36 @@ package main
 
 {
 func main() {
-    fmt.Println(g)
+	if len(os.Args) > 2 {
+		fmt.Fprintln(os.Stderr, "USAGE: <cmd> FILE")
+		os.Exit(1)
+	}
+
+	var in io.Reader
+
+	nm := "stdin"
+	if len(os.Args) == 2 {
+		f, err := os.Open(os.Args[1])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
+		defer f.Close()
+		in = f
+		nm = os.Args[1]
+	} else {
+		in = bufio.NewReader(os.Stdin)
+	}
+
+	res, err := Parse(nm, in)
+	if err != nil {
+		log.Fatal(err)
+	}
+    fmt.Println(res)
 }
 }
 
-Grammar = sp "package" pkg:IdentifierName sp initializer:(Initializer sp)? rules:(Rule sp)+ {
+Grammar = sp "package" sp pkg:IdentifierName sp initializer:(Initializer sp)? rules:(Rule sp)+ {
     pos := ast.Pos{Line: c.pos.line, Col: c.pos.col, Off: c.pos.offset}
     nm := ast.NewIdentifier(pos, pkg.(string))
     pack := ast.NewPackage(pos)
@@ -51,7 +76,9 @@ SingleLineComment = "//" ( [^\n] . )*
 
 Identifier = IdentifierName
 
-IdentifierName = IdentifierStart IdentifierPart*
+IdentifierName = IdentifierStart IdentifierPart* {
+    return c.text, nil
+}
 
 IdentifierStart = [a-z_]i
 

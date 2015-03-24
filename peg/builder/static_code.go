@@ -226,7 +226,7 @@ func (p *parser) parse(g *grammar) (val interface{}, err error) {
 			case error:
 				err = e
 			default:
-				err = fmt.Errorf("%v", e)
+				err = fmt.Errorf("%%v", e)
 			}
 		}
 	}()
@@ -286,7 +286,7 @@ func (p *parser) parseExpr(expr interface{}) (interface{}, bool) {
 	case *zeroOrOneExpr:
 		return p.parseZeroOrOneExpr(expr)
 	default:
-		panic(fmt.Sprintf("unknown expression type %T", expr))
+		panic(fmt.Sprintf("unknown expression type %%T", expr))
 	}
 }
 
@@ -446,12 +446,12 @@ func (p *parser) parseOneOrMoreExpr(expr *oneOrMoreExpr) (interface{}, bool) {
 
 func (p *parser) parseRuleRefExpr(ref *ruleRefExpr) (interface{}, bool) {
 	if ref.name == "" {
-		panic(fmt.Sprintf("%s: invalid rule: missing name", ref.pos))
+		panic(fmt.Sprintf("%%s: invalid rule: missing name", ref.pos))
 	}
 
 	rule := p.rules[ref.name]
 	if rule == nil {
-		p.errs.add(fmt.Errorf("undefined rule: %s", ref.name))
+		p.errs.add(fmt.Errorf("undefined rule: %%s", ref.name))
 		return nil, false
 	}
 	return p.parseRule(rule)
