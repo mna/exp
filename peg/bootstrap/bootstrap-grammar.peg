@@ -1,0 +1,69 @@
+package main
+
+Grammar = sp Rule+ EndOfFile
+
+Rule = IdentifierName ( StringLiteral )? RuleDefOp Expression EndOfRule
+
+Expression = ChoiceExpr
+
+ChoiceExpr = ActionExpr ( "/" sp ActionExpr )*
+
+ActionExpr = SeqExpr ( CodeBlock )?
+
+SeqExpr = LabeledExpr ( LabeledExpr )*
+
+LabeledExpr = Identifier ":" sp PrefixedExpr / PrefixedExpr
+
+PrefixedExpr = PrefixedOp SuffixedExpr / SuffixedExpr
+
+PrefixedOp = ( "&" / "!" ) sp
+
+SuffixedExpr = PrimaryExpr SuffixedOp / PrimaryExpr 
+
+SuffixedOp = ( "?" / "*" / "+" ) sp
+
+PrimaryExpr = LitMatcher / CharClassMatcher / AnyMatcher / RuleRefExpr / SemanticPredExpr / "(" sp Expression ")" sp
+
+RuleRefExpr = IdentifierName !( ( StringLiteral )? "=" )
+
+SemanticPredExpr = SemanticPredOp CodeBlock
+
+SemanticPredOp = ( "&" / "!" ) sp
+
+RuleDefOp = ( "=" / "<-" / '\u2190' / '\u27f5' ) sp
+
+MultiLineComment = "/*" ( !"*/" . )* "*/" sp
+
+SingleLineComment = "//" ( [^\n] . )*
+
+Identifier = IdentifierName
+
+IdentifierName = IdentifierStart IdentifierPart*
+
+IdentifierStart = [a-z_]i
+
+IdentifierPart = IdentifierStart / [0-9]
+
+LitMatcher = StringLiteral "i"? sp
+
+StringLiteral = '"' DoubleStringChar* '"' / "'" SingleStringChar* "'"
+
+DoubleStringChar = !( '"' / "\\" / [\n] ) . 
+
+SingleStringChar = !( "'" / "\\" / [\n] ) .
+
+CharClassMatcher = "[" "^"? ( ClassCharRange / ClassChar )* "]" "i"? sp
+
+ClassCharRange = ClassChar "-" ClassChar
+
+ClassChar = !( "]" / "\\" / [\n] ) . 
+
+AnyMatcher = "."
+
+CodeBlock = "{" sp Code "}" sp
+
+sp = [ \n\r\t]*
+
+EndOfRule = ";" sp / SingleLineComment? [\n] / EndOfFile
+
+EndOfFile = !.

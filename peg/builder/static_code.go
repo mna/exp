@@ -17,7 +17,7 @@ func ParseFile(filename string) (interface{}, error) {
 }
 
 func Parse(filename string, r io.Reader) (interface{}, error) {
-	return parse(filename, r, Grammar)
+	return parse(filename, r, g)
 }
 
 type position struct {

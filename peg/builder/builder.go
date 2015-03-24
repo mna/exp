@@ -118,7 +118,7 @@ func (b *builder) writeGrammar(g *ast.Grammar) {
 	// transform the ast grammar to the self-contained, no dependency version
 	// of the parser-generator grammar.
 	b.writelnf("var g = &grammar {")
-	b.writelnf("\trules = []*rule{")
+	b.writelnf("\trules: []*rule{")
 	for _, r := range g.Rules {
 		b.writeRule(r)
 	}
@@ -230,7 +230,7 @@ func (b *builder) writeAnyMatcher(any *ast.AnyMatcher) {
 	}
 	b.writelnf("&anyMatcher{")
 	pos := any.Pos()
-	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
+	b.writelnf("\tline: %d, col: %d, offset: %d,", pos.Line, pos.Col, pos.Off)
 	b.writelnf("},")
 }
 
