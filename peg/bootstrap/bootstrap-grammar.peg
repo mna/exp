@@ -40,6 +40,8 @@ Grammar = sp "package" sp pkg:IdentifierName sp initializer:(Initializer sp)? ru
     return g, nil
 }
 
+Initializer = CodeBlock
+
 Rule = IdentifierName ( StringLiteral )? RuleDefOp Expression EndOfRule
 
 Expression = ChoiceExpr
