@@ -34,6 +34,10 @@ func main() {
 	}
     fmt.Println(res)
 }
+
+func toASTPos(c *current) ast.Pos {
+    return ast.Pos{Line: c.pos.line, Col: c.pos.col, Off: c.pos.offset}
+}
 }
 
 Grammar = sp "package" sp pkg:IdentifierName sp initializer:(Initializer sp)? rules:(Rule sp)+ {
@@ -132,23 +136,70 @@ StringLiteral = ( '"' DoubleStringChar* '"' / "'" SingleStringChar* "'" ) {
 }
 
 DoubleStringChar = !( '"' / "\\" / [\n] ) . 
-
 SingleStringChar = !( "'" / "\\" / [\n] ) .
-
 CharClassMatcher = "[" "^"? ( ClassCharRange / ClassChar )* "]" "i"? sp
-
 ClassCharRange = ClassChar "-" ClassChar
+ClassChar = !( "]" / "\\" / EOL ) SourceChar
 
-ClassChar = !( "]" / "\\" / [\n] ) . 
+// TODO : escape sequences...
 
-AnyMatcher = "."
+ClassEscapeSequence ← ']' { return string(c.text), nil } / SingleCharEscape / UnicodeClassEscape / OctalEscape / HexEscape / LongUnicodeEscape / ShortUnicodeEscape
 
-CodeBlock = "{" sp Code "}" sp
+SingleCharEscape ← 'a' / 'b' / 'n' / 'f' / 'r' / 't' / 'v' / '\\' {
+    rn, _, _, err := strconv.UnquoteChar("\\" + string(c.text), '\'')
+    return rn, err
+}
+UnicodeClassEscape ← 'p' class:( SingleCharUnicodeClass / '{' UnicodeClass '}' ) {
+    vals := class.([]interface{})
+    var val string
+    if len(vals) == 1 {
+        val = vals[0].(string)
+    } else {
+        val = vals[1].(string)
+    }
+    return val, nil
+}
+OctalEscape ← OctalDigit OctalDigit OctalDigit {
+    rn, _, _, err := strconv.UnquoteChar("\\" + string(c.text), '\'')
+    return rn, err
+}
+HexEscape ← 'x' HexDigit HexDigit {
+    rn, _, _, err := strconv.UnquoteChar("\\" + string(c.text), '\'')
+    return rn, err
+}
+LongUnicodeEscape ← 'U' HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit {
+    rn, _, _, err := strconv.UnquoteChar("\\" + string(c.text), '\'')
+    return rn, err
+}
+ShortUnicodeEscape ← 'u' HexDigit HexDigit HexDigit HexDigit {
+    rn, _, _, err := strconv.UnquoteChar("\\" + string(c.text), '\'')
+    return rn, err
+}
 
-Code = ( ( [^{}] . )+ / "{" Code "}" )*
+OctalDigit ← [0-7]
+DecimalDigit ← [0-9]
+HexDigit ← [0-9a-f]i
 
-sp = [ \n\r\t]*
+// AnyMatcher returns *ast.AnyMatcher
+AnyMatcher ← "." {
+    any := ast.NewAnyMatcher(toASTPos(c), ".")
+    return any, nil
+}
 
-EndOfRule = ";" sp / SingleLineComment? [\n] / EndOfFile
+// CodeBlock returns *ast.CodeBlock
+CodeBlock ← "{" Code "}" {
+    pos := toASTPos(c)
+    cb := ast.NewCodeBlock(pos, string(c.text))
+    return cb, nil
+}
 
-EndOfFile = !.
+Code ← ( ( [^{}] SourceCharacter )+ / "{" Code "}" )*
+
+__ ← ( Whitespace / EOL / Comment )*
+_ ← ( Whitespace / MultiLineCommentNoLineTerminator )*
+
+Whitespace ← [ \n\t\r]
+EOL ← '\n'
+EOS ← __ ';' / _ SingleLineComment? EOL / __ EOF
+EOF ← !.
+
