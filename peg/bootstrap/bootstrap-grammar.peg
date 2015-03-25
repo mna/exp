@@ -110,38 +110,40 @@ SemanticPredExpr = SemanticPredOp CodeBlock
 
 SemanticPredOp = ( "&" / "!" ) sp
 
-RuleDefOp = ( "=" / "<-" / '\u2190' / '\u27f5' ) sp
+RuleDefOp ← ( '=' / "<-" / '\u2190' / '\u27f5' )
 
-MultiLineComment = "/*" ( !"*/" . )* "*/" sp
+SourceChar ← .
+Comment ← MultiLineComment / SingleLineComment
+MultiLineComment ← "/*" ( !"*/" SourceChar )* "*/"
+MultiLineCommentNoLineTerminator ← "/*" ( !( "*/" / EOL ) SourceChar )* "*/"
+SingleLineComment ← "//" ( !EOL SourceChar )*
 
-SingleLineComment = "//" ( [^\n] . )*
-
-Identifier = IdentifierName
-
-IdentifierName = IdentifierStart IdentifierPart* {
-    return string(c.text), nil
+Identifier ← IdentifierName
+IdentifierName ← IdentifierStart IdentifierPart* {
+    return ast.NewIdentifier(toASTPos(c), string(c.text)), nil
 }
+IdentifierStart ← [a-z_]i
+IdentifierPart ← IdentifierStart / [0-9]
 
-IdentifierStart = [a-z_]i
+// TODO : reserved words...
 
-IdentifierPart = IdentifierStart / [0-9]
-
-LitMatcher = StringLiteral "i"? sp
-
-StringLiteral = ( '"' DoubleStringChar* '"' / "'" SingleStringChar* "'" ) {
-    pos := ast.Pos{Line: c.pos.line, Col: c.pos.col, Off: c.pos.offset}
-    fmt.Println("StringLit match: ", string(c.text))
-    sl := ast.NewStringLit(pos, string(c.text))
-    return sl, nil
+LitMatcher ← lit:StringLiteral ignore:"i"? {
+    m := ast.NewLitMatcher(toASTPos(c), lit.(*ast.StringLiteral).Val)
+    m.IgnoreCase = ignore != nil
+    return m, nil
 }
+StringLiteral ← ( '"' DoubleStringChar* '"' / "'" SingleStringChar* "'" ) {
+    return ast.NewStringLit(toASTPos(c), string(c.text)), nil
+}
+DoubleStringChar ← !( '"' / "\\" / EOL ) SourceChar
+SingleStringChar ← !( "'" / "\\" / EOL ) SourceChar
 
-DoubleStringChar = !( '"' / "\\" / [\n] ) . 
-SingleStringChar = !( "'" / "\\" / [\n] ) .
+// TODO : escape sequences, character classes...
+/*
+
 CharClassMatcher = "[" "^"? ( ClassCharRange / ClassChar )* "]" "i"? sp
 ClassCharRange = ClassChar "-" ClassChar
 ClassChar = !( "]" / "\\" / EOL ) SourceChar
-
-// TODO : escape sequences...
 
 ClassEscapeSequence ← ']' { return string(c.text), nil } / SingleCharEscape / UnicodeClassEscape / OctalEscape / HexEscape / LongUnicodeEscape / ShortUnicodeEscape
 
@@ -179,6 +181,7 @@ ShortUnicodeEscape ← 'u' HexDigit HexDigit HexDigit HexDigit {
 OctalDigit ← [0-7]
 DecimalDigit ← [0-9]
 HexDigit ← [0-9a-f]i
+*/
 
 // AnyMatcher returns *ast.AnyMatcher
 AnyMatcher ← "." {
