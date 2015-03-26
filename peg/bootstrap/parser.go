@@ -77,8 +77,6 @@ func (p *Parser) Parse(filename string, r io.Reader) (*ast.Grammar, error) {
 	p.errs.reset()
 	p.s.Init(filename, r, p.errs.add)
 
-	// advance to the first token
-	p.read()
 	g := p.grammar()
 	return g, p.errs.err()
 }
@@ -116,15 +114,10 @@ outer:
 func (p *Parser) grammar() *ast.Grammar {
 	defer p.out(p.in("grammar"))
 
-	pkg := p.pkgDecl()
-	if pkg == nil {
-		p.errs.add(p.tok.pos, errors.New("no grammar"))
-		return nil
-	}
-
-	g := ast.NewGrammar(pkg.Pos(), pkg)
-
+	// advance to the first token
 	p.read()
+	g := ast.NewGrammar(p.tok.pos)
+
 	p.skip(eol, semicolon)
 	if p.tok.id == code {
 		g.Init = ast.NewCodeBlock(p.tok.pos, p.tok.lit)
@@ -161,30 +154,6 @@ func (p *Parser) expect(ids ...tid) bool {
 		p.errs.add(p.tok.pos, fmt.Errorf("expected any of %v, got %s", ids, p.tok.id))
 	}
 	return false
-}
-
-func (p *Parser) pkgDecl() *ast.Package {
-	defer p.out(p.in("pkgDecl"))
-
-	pkg := ast.NewPackage(p.tok.pos)
-	if !p.expect(keyword) {
-		return nil
-	}
-	if p.tok.lit != "package" {
-		p.errs.add(p.tok.pos, fmt.Errorf("expected keyword %q, got %q", "package", p.tok.lit))
-		return nil
-	}
-
-	p.read()
-	if !p.expect(ident) {
-		return nil
-	}
-	pkg.Name = ast.NewIdentifier(p.tok.pos, p.tok.lit)
-	p.read()
-	if !p.expect(eol, semicolon) {
-		return nil
-	}
-	return pkg
 }
 
 func (p *Parser) rule() *ast.Rule {

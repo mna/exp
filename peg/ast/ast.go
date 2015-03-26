@@ -24,14 +24,13 @@ func (p Pos) String() string {
 }
 
 type Grammar struct {
-	p       Pos        // identical to Grammar.Package.Pos()
-	Package *Package   // package declaration
-	Init    *CodeBlock // initializer code block
-	Rules   []*Rule    // all rules
+	p     Pos        // identical to Grammar.Package.Pos()
+	Init  *CodeBlock // initializer code block
+	Rules []*Rule    // all rules
 }
 
-func NewGrammar(p Pos, pkg *Package) *Grammar {
-	return &Grammar{p: p, Package: pkg}
+func NewGrammar(p Pos) *Grammar {
+	return &Grammar{p: p}
 }
 
 func (g *Grammar) Pos() Pos { return g.p }
@@ -39,8 +38,8 @@ func (g *Grammar) Pos() Pos { return g.p }
 func (g *Grammar) String() string {
 	var buf bytes.Buffer
 
-	buf.WriteString(fmt.Sprintf("%s: %T{Package: %v, Init: %v, Rules: [\n",
-		g.p, g, g.Package, g.Init))
+	buf.WriteString(fmt.Sprintf("%s: %T{Init: %v, Rules: [\n",
+		g.p, g, g.Init))
 	for _, r := range g.Rules {
 		buf.WriteString(fmt.Sprintf("%s,\n", r))
 	}
@@ -396,21 +395,6 @@ func (a *AnyMatcher) Pos() Pos { return a.p }
 
 func (a *AnyMatcher) String() string {
 	return fmt.Sprintf("%s: %T{Val: %q}", a.p, a, a.Val)
-}
-
-type Package struct {
-	p    Pos // starting pos of the package keyword
-	Name *Identifier
-}
-
-func NewPackage(p Pos) *Package {
-	return &Package{p: p}
-}
-
-func (p *Package) Pos() Pos { return p.p }
-
-func (p *Package) String() string {
-	return fmt.Sprintf("%s: %T{Name: %v}", p.p, p, p.Name)
 }
 
 type CodeBlock struct {

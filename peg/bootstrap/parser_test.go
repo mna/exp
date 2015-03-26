@@ -6,16 +6,13 @@ import (
 )
 
 var parseValidCases = []string{
-	"package a\n",
-	"package a\n{code}",
-	"package a\nR <- 'c'",
-	"package a\n;\n\nR <- 'c'\n\n",
-	`package a
-
+	"\n",
+	"\n{code}",
+	"\nR <- 'c'",
+	"\n\nR <- 'c'\n\n",
+	`
 A = ident:B / C+ / D?;`,
-	`package a
-
-{ code }
+	`{ code }
 
 R "name" <- "abc"i
 R2 = 'd'i
@@ -23,29 +20,29 @@ R3 = ( R2+ ![;] )`,
 }
 
 var parseExpRes = []string{
-	`1:1 (0): *ast.Grammar{Package: 1:1 (0): *ast.Package{Name: 1:9 (8): *ast.Identifier{Val: "a"}}, Init: <nil>, Rules: [
+	`2:0 (0): *ast.Grammar{Init: <nil>, Rules: [
 ]}`,
-	`1:1 (0): *ast.Grammar{Package: 1:1 (0): *ast.Package{Name: 1:9 (8): *ast.Identifier{Val: "a"}}, Init: 2:1 (10): *ast.CodeBlock{Val: "{code}"}, Rules: [
+	`2:0 (0): *ast.Grammar{Init: 2:1 (1): *ast.CodeBlock{Val: "{code}"}, Rules: [
 ]}`,
-	`1:1 (0): *ast.Grammar{Package: 1:1 (0): *ast.Package{Name: 1:9 (8): *ast.Identifier{Val: "a"}}, Init: <nil>, Rules: [
-2:1 (10): *ast.Rule{Name: 2:1 (10): *ast.Identifier{Val: "R"}, DisplayName: <nil>, Expr: 2:6 (15): *ast.LitMatcher{Val: "c", IgnoreCase: false}},
+	`2:0 (0): *ast.Grammar{Init: <nil>, Rules: [
+2:1 (1): *ast.Rule{Name: 2:1 (1): *ast.Identifier{Val: "R"}, DisplayName: <nil>, Expr: 2:6 (6): *ast.LitMatcher{Val: "c", IgnoreCase: false}},
 ]}`,
-	`1:1 (0): *ast.Grammar{Package: 1:1 (0): *ast.Package{Name: 1:9 (8): *ast.Identifier{Val: "a"}}, Init: <nil>, Rules: [
-4:1 (13): *ast.Rule{Name: 4:1 (13): *ast.Identifier{Val: "R"}, DisplayName: <nil>, Expr: 4:6 (18): *ast.LitMatcher{Val: "c", IgnoreCase: false}},
+	`2:0 (0): *ast.Grammar{Init: <nil>, Rules: [
+3:1 (2): *ast.Rule{Name: 3:1 (2): *ast.Identifier{Val: "R"}, DisplayName: <nil>, Expr: 3:6 (7): *ast.LitMatcher{Val: "c", IgnoreCase: false}},
 ]}`,
-	`1:1 (0): *ast.Grammar{Package: 1:1 (0): *ast.Package{Name: 1:9 (8): *ast.Identifier{Val: "a"}}, Init: <nil>, Rules: [
-3:1 (11): *ast.Rule{Name: 3:1 (11): *ast.Identifier{Val: "A"}, DisplayName: <nil>, Expr: 3:5 (15): *ast.ChoiceExpr{Alternatives: [
-3:5 (15): *ast.LabeledExpr{Label: 3:5 (15): *ast.Identifier{Val: "ident"}, Expr: 3:11 (21): *ast.RuleRefExpr{Name: 3:11 (21): *ast.Identifier{Val: "B"}}},
-3:15 (25): *ast.OneOrMoreExpr{Expr: 3:15 (25): *ast.RuleRefExpr{Name: 3:15 (25): *ast.Identifier{Val: "C"}}},
-3:20 (30): *ast.ZeroOrOneExpr{Expr: 3:20 (30): *ast.RuleRefExpr{Name: 3:20 (30): *ast.Identifier{Val: "D"}}},
+	`2:0 (0): *ast.Grammar{Init: <nil>, Rules: [
+2:1 (1): *ast.Rule{Name: 2:1 (1): *ast.Identifier{Val: "A"}, DisplayName: <nil>, Expr: 2:5 (5): *ast.ChoiceExpr{Alternatives: [
+2:5 (5): *ast.LabeledExpr{Label: 2:5 (5): *ast.Identifier{Val: "ident"}, Expr: 2:11 (11): *ast.RuleRefExpr{Name: 2:11 (11): *ast.Identifier{Val: "B"}}},
+2:15 (15): *ast.OneOrMoreExpr{Expr: 2:15 (15): *ast.RuleRefExpr{Name: 2:15 (15): *ast.Identifier{Val: "C"}}},
+2:20 (20): *ast.ZeroOrOneExpr{Expr: 2:20 (20): *ast.RuleRefExpr{Name: 2:20 (20): *ast.Identifier{Val: "D"}}},
 ]}},
 ]}`,
-	`1:1 (0): *ast.Grammar{Package: 1:1 (0): *ast.Package{Name: 1:9 (8): *ast.Identifier{Val: "a"}}, Init: 3:1 (11): *ast.CodeBlock{Val: "{ code }"}, Rules: [
-5:1 (21): *ast.Rule{Name: 5:1 (21): *ast.Identifier{Val: "R"}, DisplayName: 5:3 (23): *ast.StringLit{Val: "name"}, Expr: 5:13 (33): *ast.LitMatcher{Val: "abc", IgnoreCase: true}},
-6:1 (40): *ast.Rule{Name: 6:1 (40): *ast.Identifier{Val: "R2"}, DisplayName: <nil>, Expr: 6:6 (45): *ast.LitMatcher{Val: "d", IgnoreCase: true}},
-7:1 (50): *ast.Rule{Name: 7:1 (50): *ast.Identifier{Val: "R3"}, DisplayName: <nil>, Expr: 7:8 (57): *ast.SeqExpr{Exprs: [
-7:8 (57): *ast.OneOrMoreExpr{Expr: 7:8 (57): *ast.RuleRefExpr{Name: 7:8 (57): *ast.Identifier{Val: "R2"}}},
-7:12 (61): *ast.NotExpr{Expr: 7:13 (62): *ast.CharClassMatcher{Val: "[;]", IgnoreCase: false, Inverted: false}},
+	`1:1 (0): *ast.Grammar{Init: 1:1 (0): *ast.CodeBlock{Val: "{ code }"}, Rules: [
+3:1 (10): *ast.Rule{Name: 3:1 (10): *ast.Identifier{Val: "R"}, DisplayName: 3:3 (12): *ast.StringLit{Val: "name"}, Expr: 3:13 (22): *ast.LitMatcher{Val: "abc", IgnoreCase: true}},
+4:1 (29): *ast.Rule{Name: 4:1 (29): *ast.Identifier{Val: "R2"}, DisplayName: <nil>, Expr: 4:6 (34): *ast.LitMatcher{Val: "d", IgnoreCase: true}},
+5:1 (39): *ast.Rule{Name: 5:1 (39): *ast.Identifier{Val: "R3"}, DisplayName: <nil>, Expr: 5:8 (46): *ast.SeqExpr{Exprs: [
+5:8 (46): *ast.OneOrMoreExpr{Expr: 5:8 (46): *ast.RuleRefExpr{Name: 5:8 (46): *ast.Identifier{Val: "R2"}}},
+5:12 (50): *ast.NotExpr{Expr: 5:13 (51): *ast.CharClassMatcher{Val: "[;]", IgnoreCase: false, Inverted: false}},
 ]}},
 ]}`,
 }
@@ -70,24 +67,12 @@ func TestParseValid(t *testing.T) {
 var parseInvalidCases = []string{
 	"",
 	"a",
-	"package",
-	"package a",
-	`package a
-	Rule
-`,
-	`package a
-R "a"i`,
-	`package a
-R = )`,
+	`R = )`,
 }
 
 var parseExpErrs = [][]string{
 	{"1:0 (0): expected keyword, got eof", "1:0 (0): no grammar"},
 	{"1:1 (0): expected keyword, got ident", "1:1 (0): no grammar"},
-	{"1:7 (6): expected ident, got eof", "1:7 (6): no grammar"},
-	{"1:9 (8): expected any of [eol semicolon], got eof", "1:9 (8): no grammar"},
-	{"3:0 (15): expected ruledef, got eol"},
-	{"2:3 (12): invalid suffix 'i'"},
 	{"2:5 (14): no expression in sequence", "2:5 (14): no expression in choice", "2:5 (14): missing expression"},
 }
 
