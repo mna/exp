@@ -215,7 +215,7 @@ LitMatcher ← lit:StringLiteral ignore:"i"? {
     m.IgnoreCase = ignore != nil
     return m, nil
 }
-StringLiteral ← ( '"' DoubleStringChar* '"' / "'" SingleStringChar* "'" ) {
+StringLiteral ← ( '"' DoubleStringChar* '"' / "'" SingleStringChar "'" ) {
     return ast.NewStringLit(c.astPos(), string(c.text)), nil
 }
 DoubleStringChar ← !( '"' / "\\" / EOL ) SourceChar
