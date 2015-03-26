@@ -40,55 +40,75 @@ func (c *current) astPos() ast.Pos {
 }
 }
 
-Grammar = sp "package" sp pkg:IdentifierName sp initializer:(Initializer sp)? rules:(Rule sp)+ {
-    pos := ast.Pos{Line: c.pos.line, Col: c.pos.col, Off: c.pos.offset}
+Grammar ← __ "package" __ pkg:IdentifierName __ initializer:( Initializer __ )? rules:( Rule __ )+ {
+    pos := c.astPos()
 
-    // create the package identifier
-    nm := ast.NewIdentifier(pos, pkg.(string))
     // create the package
     pack := ast.NewPackage(pos)
-    pack.Name = nm
+    pack.Name = pkg
     // create the grammar, assign its initializer
     g := ast.NewGrammar(pos, pack)
-    if initializer != nil {
-        g.Init = initializer.([]interface{})[0].(*ast.CodeBlock)
+    initSlice := initializer.([]interface{})
+    if len(initSlice) > 0 {
+        g.Init = initSlice[0].(*ast.CodeBlock)
     }
 
-    rulesTuples := rules.([]interface{})
-    g.Rules = make([]*ast.Rule, len(rulesTuples))
-    for i, duo := range rulesTuples {
+    rulesSlice := rules.([]interface{})
+    g.Rules = make([]*ast.Rule, len(rulesSlice))
+    for i, duo := range rulesSlice {
         g.Rules[i] = duo.([]interface{})[0].(*ast.Rule)
-        fmt.Println("rule: ", g.Rules[i].Name.Val)
     }
 
     return g, nil
 }
 
-Initializer = CodeBlock {
-    pos := ast.Pos{Line: c.pos.line, Col: c.pos.col, Off: c.pos.offset}
-    cb := ast.NewCodeBlock(pos, string(c.text))
-    return cb, nil
+Initializer ← code:CodeBlock EOS {
+    return code, nil
 }
 
-Rule = ident:IdentifierName sp display:( StringLiteral sp )? RuleDefOp expr:Expression EndOfRule {
-    pos := ast.Pos{Line: c.pos.line, Col: c.pos.col, Off: c.pos.offset}
+Rule ← name:IdentifierName __ display:( StringLiteral __ )? RuleDefOp __ expr:Expression EOS {
+    pos := c.astPos()
 
-    // create the rule identifier
-    nm := ast.NewIdentifier(pos, ident.(string))
-    rule := ast.NewRule(pos, nm)
-    if display != nil {
-        rule.DisplayName = display.([]interface{})[0].(*ast.StringLit)
+    rule := ast.NewRule(pos, name)
+    displaySlice := display.([]interface{})
+    if len(displaySlice) > 0 {
+        rule.DisplayName = displaySlice[0].(*ast.StringLit)
     }
-    // TODO : expr
+    rule.Expr = expr
 
     return rule, nil
 }
 
-Expression = ChoiceExpr
+Expression ← ChoiceExpr
 
-ChoiceExpr = ActionExpr ( "/" sp ActionExpr )*
+ChoiceExpr ← first:ActionExpr rest:( __ "/" __ ActionExpr )* {
+    restSlice := rest.([]interface{})
+    if len(restSlice) == 0 {
+        return first, nil
+    }
 
-ActionExpr = SeqExpr ( CodeBlock )?
+    pos := c.astPos()
+    choice := ast.NewChoiceExpr(pos)
+    choice.Alternatives = []ast.Expression{first}
+    for _, sl := range restSlice {
+        choice.Alternatives = append(choice.Alternatives, sl[3].(ast.Expression))
+    }
+    return choice, nil
+}
+
+ActionExpr ← expr:SeqExpr code:( __ CodeBlock )? {
+    if code == nil {
+        return expr, nil
+    }
+
+    pos := c.astPos()
+    act := ast.NewActionExpr(pos)
+    act.Expr = expr
+    codeSlice := code.([]interface{})
+    act.Code = codeSlice[1].(*ast.CodeBlock)
+
+    return act, nil
+}
 
 SeqExpr ← first:LabeledExpr rest:( __ LabeledExpr )* {
     if len(rest) == 0 {
