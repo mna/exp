@@ -6,6 +6,7 @@ import (
 )
 
 var parseValidCases = []string{
+	"",
 	"\n",
 	"\n{code}",
 	"\nR <- 'c'",
@@ -20,6 +21,8 @@ R3 = ( R2+ ![;] )`,
 }
 
 var parseExpRes = []string{
+	`1:0 (0): *ast.Grammar{Init: <nil>, Rules: [
+]}`,
 	`2:0 (0): *ast.Grammar{Init: <nil>, Rules: [
 ]}`,
 	`2:0 (0): *ast.Grammar{Init: 2:1 (1): *ast.CodeBlock{Val: "{code}"}, Rules: [
@@ -65,15 +68,13 @@ func TestParseValid(t *testing.T) {
 }
 
 var parseInvalidCases = []string{
-	"",
 	"a",
 	`R = )`,
 }
 
 var parseExpErrs = [][]string{
-	{"1:0 (0): expected keyword, got eof", "1:0 (0): no grammar"},
-	{"1:1 (0): expected keyword, got ident", "1:1 (0): no grammar"},
-	{"2:5 (14): no expression in sequence", "2:5 (14): no expression in choice", "2:5 (14): missing expression"},
+	{"1:1 (0): expected ruledef, got eof"},
+	{"1:5 (4): no expression in sequence", "1:5 (4): no expression in choice", "1:5 (4): missing expression"},
 }
 
 func TestParseInvalid(t *testing.T) {
