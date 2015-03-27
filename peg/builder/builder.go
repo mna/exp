@@ -81,7 +81,6 @@ func (b *builder) setOptions(opts []option) {
 }
 
 func (b *builder) buildParser(g *ast.Grammar) error {
-	b.writePackageAndImports(g.Package, append(requiredImports, b.imports...))
 	b.writeInit(g.Init)
 	b.writeGrammar(g)
 
@@ -91,18 +90,6 @@ func (b *builder) buildParser(g *ast.Grammar) error {
 	b.writeStaticCode()
 
 	return b.err
-}
-
-func (b *builder) writePackageAndImports(pkg *ast.Package, imports []string) {
-	if pkg == nil {
-		return
-	}
-	b.writelnf("package %s", pkg.Name.Val)
-	b.writelnf("import (")
-	for _, imp := range imports {
-		b.writelnf("\t%q", imp)
-	}
-	b.writelnf(")")
 }
 
 func (b *builder) writeInit(init *ast.CodeBlock) {

@@ -8,9 +8,8 @@ import (
 	"github.com/PuerkitoBio/exp/peg/bootstrap"
 )
 
-var grammar = `package test
-
-{ 
+var grammar = ` 
+{
 var test = "some string"
 
 func init() {
