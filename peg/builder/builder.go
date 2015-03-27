@@ -39,14 +39,6 @@ var requiredImports = []string{
 
 type option func(*builder) option
 
-func Imports(imports ...string) option {
-	return func(b *builder) option {
-		prev := b.imports
-		b.imports = imports
-		return Imports(prev...)
-	}
-}
-
 func CurrentReceiverName(nm string) option {
 	return func(b *builder) option {
 		prev := b.curRecvName
@@ -66,7 +58,6 @@ type builder struct {
 	err error
 
 	// options
-	imports     []string
 	curRecvName string
 
 	ruleName  string
@@ -548,7 +539,7 @@ func (b *builder) writeStaticCode() {
 }
 
 func (b *builder) funcName() string {
-	return "on" + b.ruleName + "_" + strconv.Itoa(b.exprIndex)
+	return "on" + b.ruleName + strconv.Itoa(b.exprIndex)
 }
 
 func (b *builder) writef(f string, args ...interface{}) {
