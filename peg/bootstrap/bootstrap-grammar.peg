@@ -2,10 +2,6 @@
 // Command blah does blah.
 package main
 
-import (
-    // TODO : requred imports...
-)
-
 func main() {
     dbgFlag := flag.Bool("debug", false, "set debug mode")
     //noBuildFlag := flag.Bool("x", false, "do not build, only parse")
@@ -71,12 +67,12 @@ Initializer ← code:CodeBlock EOS {
 Rule ← name:IdentifierName __ display:( StringLiteral __ )? RuleDefOp __ expr:Expression EOS {
     pos := c.astPos()
 
-    rule := ast.NewRule(pos, name)
+    rule := ast.NewRule(pos, name.(*ast.Identifier))
     displaySlice := display.([]interface{})
     if len(displaySlice) > 0 {
         rule.DisplayName = displaySlice[0].(*ast.StringLit)
     }
-    rule.Expr = expr
+    rule.Expr = expr.(ast.Expression)
 
     return rule, nil
 }
@@ -91,9 +87,9 @@ ChoiceExpr ← first:ActionExpr rest:( __ "/" __ ActionExpr )* {
 
     pos := c.astPos()
     choice := ast.NewChoiceExpr(pos)
-    choice.Alternatives = []ast.Expression{first}
+    choice.Alternatives = []ast.Expression{first.(ast.Expression)}
     for _, sl := range restSlice {
-        choice.Alternatives = append(choice.Alternatives, sl[3].(ast.Expression))
+        choice.Alternatives = append(choice.Alternatives, sl.([]interface{})[3].(ast.Expression))
     }
     return choice, nil
 }
@@ -105,7 +101,7 @@ ActionExpr ← expr:SeqExpr code:( __ CodeBlock )? {
 
     pos := c.astPos()
     act := ast.NewActionExpr(pos)
-    act.Expr = expr
+    act.Expr = expr.(ast.Expression)
     codeSlice := code.([]interface{})
     act.Code = codeSlice[1].(*ast.CodeBlock)
 
@@ -167,7 +163,7 @@ SuffixedExpr ← expr:PrimaryExpr __ op:SuffixedOp {
         one.Expr = expr.(ast.Expression)
         return one, nil
     default:
-        return nil, errors.New("unknown operator: " + op)
+        return nil, errors.New("unknown operator: " + opStr)
     }
 } / PrimaryExpr 
 
