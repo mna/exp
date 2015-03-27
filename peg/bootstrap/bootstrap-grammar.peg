@@ -2,6 +2,10 @@
 // Command blah does blah.
 package main
 
+import (
+    // TODO : requred imports...
+)
+
 func main() {
     dbgFlag := flag.Bool("debug", false, "set debug mode")
     //noBuildFlag := flag.Bool("x", false, "do not build, only parse")
@@ -216,56 +220,39 @@ LitMatcher ← lit:StringLiteral ignore:"i"? {
     m.IgnoreCase = ignore != nil
     return m, nil
 }
-StringLiteral ← ( '"' DoubleStringChar* '"' / "'" SingleStringChar "'" ) {
+StringLiteral ← ( '"' DoubleStringChar* '"' / "'" SingleStringChar "'" / '`' RawStringChar '`' ) {
     return ast.NewStringLit(c.astPos(), string(c.text)), nil
 }
-DoubleStringChar ← !( '"' / "\\" / EOL ) SourceChar
-SingleStringChar ← !( "'" / "\\" / EOL ) SourceChar
+DoubleStringChar ← !( '"' / "\\" / EOL ) SourceChar / "\\" DoubleStringEscape
+SingleStringChar ← !( "'" / "\\" / EOL ) SourceChar / "\\" SingleStringEscape
+RawStringChar ← !'`' SourceChar
 
-// TODO : escape sequences, character classes...
-/*
+DoubleStringEscape ← "'" / CommonEscapeSequence
+SingleStringEscape ← '"' / CommonEscapeSequence
 
-CharClassMatcher = "[" "^"? ( ClassCharRange / ClassChar )* "]" "i"? sp
-ClassCharRange = ClassChar "-" ClassChar
-ClassChar = !( "]" / "\\" / EOL ) SourceChar
-
-ClassEscapeSequence ← ']' { return string(c.text), nil } / SingleCharEscape / UnicodeClassEscape / OctalEscape / HexEscape / LongUnicodeEscape / ShortUnicodeEscape
-
-SingleCharEscape ← 'a' / 'b' / 'n' / 'f' / 'r' / 't' / 'v' / '\\' {
-    rn, _, _, err := strconv.UnquoteChar("\\" + string(c.text), '\'')
-    return rn, err
-}
-UnicodeClassEscape ← 'p' class:( SingleCharUnicodeClass / '{' UnicodeClass '}' ) {
-    vals := class.([]interface{})
-    var val string
-    if len(vals) == 1 {
-        val = vals[0].(string)
-    } else {
-        val = vals[1].(string)
-    }
-    return val, nil
-}
-OctalEscape ← OctalDigit OctalDigit OctalDigit {
-    rn, _, _, err := strconv.UnquoteChar("\\" + string(c.text), '\'')
-    return rn, err
-}
-HexEscape ← 'x' HexDigit HexDigit {
-    rn, _, _, err := strconv.UnquoteChar("\\" + string(c.text), '\'')
-    return rn, err
-}
-LongUnicodeEscape ← 'U' HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit {
-    rn, _, _, err := strconv.UnquoteChar("\\" + string(c.text), '\'')
-    return rn, err
-}
-ShortUnicodeEscape ← 'u' HexDigit HexDigit HexDigit HexDigit {
-    rn, _, _, err := strconv.UnquoteChar("\\" + string(c.text), '\'')
-    return rn, err
-}
+CommonEscapeSequence ← SingleCharEscape / OctalEscape / HexEscape / LongUnicodeEscape / ShortUnicodeEscape
+SingleCharEscape ← 'a' / 'b' / 'n' / 'f' / 'r' / 't' / 'v' / '\\'
+OctalEscape ← OctalDigit OctalDigit OctalDigit
+HexEscape ← 'x' HexDigit HexDigit
+LongUnicodeEscape ← 'U' HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit
+ShortUnicodeEscape ← 'u' HexDigit HexDigit HexDigit HexDigit
 
 OctalDigit ← [0-7]
 DecimalDigit ← [0-9]
 HexDigit ← [0-9a-f]i
-*/
+
+CharClassMatcher ← '[' ( ClassCharRange / ClassChar / "\\" UnicodeClassEscape )* ']' 'i'? {
+    pos := c.astPos()
+    cc := ast.NewCharClassMatcher(pos, string(c.text))
+    return cc, nil
+}
+ClassCharRange ← ClassChar '-' ClassChar
+ClassChar ← !( "]" / "\\" / EOL ) SourceChar / "\\" CharClassEscape
+CharClassEscape ← ']' / CommonEscapeSequence
+
+UnicodeClassEscape ← 'p' ( SingleCharUnicodeClass / '{' UnicodeClass '}' )
+SingleCharUnicodeClass ← [LMNCPZS]
+UnicodeClass ← [a-z_]i+ // TODO : specify valid classes
 
 // AnyMatcher returns *ast.AnyMatcher
 AnyMatcher ← "." {
@@ -280,7 +267,7 @@ CodeBlock ← "{" Code "}" {
     return cb, nil
 }
 
-Code ← ( ( [^{}] SourceCharacter )+ / "{" Code "}" )*
+Code ← ( ( [^{}] SourceChar )+ / "{" Code "}" )*
 
 __ ← ( Whitespace / EOL / Comment )*
 _ ← ( Whitespace / MultiLineCommentNoLineTerminator )*
