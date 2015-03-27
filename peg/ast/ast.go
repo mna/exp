@@ -263,7 +263,7 @@ func (z *ZeroOrMoreExpr) String() string {
 	return fmt.Sprintf("%s: %T{Expr: %v}", z.p, z, z.Expr)
 }
 
-// OneOrMoreExr is an expression that can be matched one or more times.
+// OneOrMoreExpr is an expression that can be matched one or more times.
 type OneOrMoreExpr struct {
 	p    Pos
 	Expr Expression
