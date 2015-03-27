@@ -2190,6 +2190,10 @@ type position struct {
 	line, col, offset int
 }
 
+func (p position) String() string {
+	return fmt.Sprintf("%d:%d [%d]", p.line, p.col, p.offset)
+}
+
 type current struct {
 	pos  position // start position of the match
 	text []byte   // raw text of the match
