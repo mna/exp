@@ -25,20 +25,11 @@ var callFuncTemplate = `func (p *parser) call%s() (interface{}, error) {
 }
 `
 
-var requiredImports = []string{
-	"bytes",
-	"errors",
-	"fmt",
-	"io",
-	"io/ioutil",
-	"os",
-	"strings",
-	"unicode",
-	"unicode/utf8",
-}
-
 type option func(*builder) option
 
+// CurrentReceiverName returns an option that specifies the receiver name to
+// use for the current struct (which is the struct on which all code blocks
+// except the initializer are generated).
 func CurrentReceiverName(nm string) option {
 	return func(b *builder) option {
 		prev := b.curRecvName
@@ -47,6 +38,8 @@ func CurrentReceiverName(nm string) option {
 	}
 }
 
+// BuildParser builds the PEG parser using the provider grammar. The code is
+// written to the specified w.
 func BuildParser(w io.Writer, g *ast.Grammar, opts ...option) error {
 	b := &builder{w: w, curRecvName: "c"}
 	b.setOptions(opts)
