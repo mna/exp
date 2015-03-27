@@ -1,51 +1,5 @@
 {
-// Command blah does blah.
 package main
-
-func main() {
-    dbgFlag := flag.Bool("debug", false, "set debug mode")
-    //noBuildFlag := flag.Bool("x", false, "do not build, only parse")
-    flag.Parse()
-
-	if flag.NArg() > 1 {
-		fmt.Fprintln(os.Stderr, "USAGE: <cmd> FILE")
-		os.Exit(1)
-	}
-
-	var in io.Reader
-
-	nm := "stdin"
-	if flag.NArg() == 1 {
-		f, err := os.Open(flag.Arg(0))
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(2)
-		}
-		defer f.Close()
-		in = f
-		nm = flag.Arg(0)
-	} else {
-		in = bufio.NewReader(os.Stdin)
-	}
-
-    debug = *dbgFlag
-	res, err := Parse(nm, in)
-	if err != nil {
-		log.Fatal(err)
-	}
-    fmt.Println(res)
-}
-
-func (c *current) astPos() ast.Pos {
-    return ast.Pos{Line: c.pos.line, Col: c.pos.col, Off: c.pos.offset}
-}
-
-func toIfaceSlice(v interface{}) []interface{} {
-    if v == nil {
-        return nil
-    }
-    return v.([]interface{})
-}
 }
 
 Grammar ← __ initializer:( Initializer __ )? rules:( Rule __ )+ {
