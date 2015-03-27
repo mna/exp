@@ -171,7 +171,12 @@ IdentifierStart ← [a-z_]i
 IdentifierPart ← IdentifierStart / [0-9]
 
 LitMatcher ← lit:StringLiteral ignore:"i"? {
-    m := ast.NewLitMatcher(c.astPos(), lit.(*ast.StringLit).Val)
+    rawStr := lit.(*ast.StringLit).Val
+	s, err := strconv.Unquote(rawStr)
+    if err != nil {
+        return nil, err
+    }
+    m := ast.NewLitMatcher(c.astPos(), s)
     m.IgnoreCase = ignore != nil
     return m, nil
 }
