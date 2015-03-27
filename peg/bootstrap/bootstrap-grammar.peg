@@ -213,8 +213,6 @@ IdentifierName ← IdentifierStart IdentifierPart* {
 IdentifierStart ← [a-z_]i
 IdentifierPart ← IdentifierStart / [0-9]
 
-// TODO : reserved words...
-
 LitMatcher ← lit:StringLiteral ignore:"i"? {
     m := ast.NewLitMatcher(c.astPos(), lit.(*ast.StringLit).Val)
     m.IgnoreCase = ignore != nil
@@ -252,15 +250,13 @@ CharClassEscape ← ']' / CommonEscapeSequence
 
 UnicodeClassEscape ← 'p' ( SingleCharUnicodeClass / '{' UnicodeClass '}' )
 SingleCharUnicodeClass ← [LMNCPZS]
-UnicodeClass ← [a-z_]i+ // TODO : specify valid classes
+UnicodeClass ← [a-z_]i+
 
-// AnyMatcher returns *ast.AnyMatcher
 AnyMatcher ← "." {
     any := ast.NewAnyMatcher(c.astPos(), ".")
     return any, nil
 }
 
-// CodeBlock returns *ast.CodeBlock
 CodeBlock ← "{" Code "}" {
     pos := c.astPos()
     cb := ast.NewCodeBlock(pos, string(c.text))
