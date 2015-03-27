@@ -47,6 +47,8 @@ func (e *errList) Error() string {
 	}
 }
 
+// Parser holds the state to parse the PEG grammar into
+// an abstract syntax tree (AST).
 type Parser struct {
 	s   Scanner
 	tok token
@@ -69,10 +71,14 @@ func (p *Parser) out(s string) {
 	}
 }
 
+// NewParser creates a new Parser.
 func NewParser() *Parser {
 	return &Parser{errs: new(errList)}
 }
 
+// Parse parses the data from the reader r and generates the AST
+// or returns an error if it fails. The filename is used as information
+// in the error messages.
 func (p *Parser) Parse(filename string, r io.Reader) (*ast.Grammar, error) {
 	p.errs.reset()
 	p.s.Init(filename, r, p.errs.add)

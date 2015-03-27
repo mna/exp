@@ -2166,13 +2166,20 @@ func (p *parser) callonCodeBlock1() (interface{}, error) {
 }
 
 var (
-	ErrNoRule          = errors.New("grammar has no rule")
+	// ErrNoRule is returned when the grammar to parse has no rule.
+	ErrNoRule = errors.New("grammar has no rule")
+
+	// ErrInvalidEncoding is returned when the source is not properly
+	// utf8-encoded.
 	ErrInvalidEncoding = errors.New("invalid encoding")
-	ErrNoMatch         = errors.New("no match found")
+
+	// ErrNoMatch is returned if no match could be found.
+	ErrNoMatch = errors.New("no match found")
 )
 
 var debug = false
 
+// ParseFile parses the file identified by filename.
 func ParseFile(filename string) (interface{}, error) {
 	f, err := os.Open(filename)
 	if err != nil {
@@ -2182,6 +2189,8 @@ func ParseFile(filename string) (interface{}, error) {
 	return Parse(filename, f)
 }
 
+// Parse parses the data from r, using filename as information in the
+// error messages.
 func Parse(filename string, r io.Reader) (interface{}, error) {
 	return parse(filename, r, g)
 }
