@@ -1724,12 +1724,15 @@ var g = &grammar{
 							expr: &seqExpr{
 								pos: position{line: 269, col: 12, offset: 7365},
 								exprs: []interface{}{
-									&charClassMatcher{
-										pos:        position{line: 269, col: 12, offset: 7365},
-										val:        "[^{}]",
-										chars:      []rune{'{', '}'},
-										ignoreCase: false,
-										inverted:   true,
+									&notExpr{
+										pos: position{line: 269, col: 12, offset: 7365},
+										expr: &charClassMatcher{
+											pos:        position{line: 269, col: 13, offset: 7366},
+											val:        "[{}]",
+											chars:      []rune{'{', '}'},
+											ignoreCase: false,
+											inverted:   false,
+										},
 									},
 									&ruleRefExpr{
 										pos:  position{line: 269, col: 18, offset: 7371},
@@ -1810,70 +1813,70 @@ var g = &grammar{
 			pos:  position{line: 274, col: 1, offset: 7501},
 			expr: &charClassMatcher{
 				pos:        position{line: 274, col: 14, offset: 7516},
-				val:        "[ \\n\\t\\r]",
-				chars:      []rune{' ', '\n', '\t', '\r'},
+				val:        "[ \\t\\r]",
+				chars:      []rune{' ', '\t', '\r'},
 				ignoreCase: false,
 				inverted:   false,
 			},
 		},
 		{
 			name: "EOL",
-			pos:  position{line: 275, col: 1, offset: 7526},
+			pos:  position{line: 275, col: 1, offset: 7524},
 			expr: &litMatcher{
-				pos:        position{line: 275, col: 7, offset: 7534},
+				pos:        position{line: 275, col: 7, offset: 7532},
 				val:        "\n",
 				ignoreCase: false,
 			},
 		},
 		{
 			name: "EOS",
-			pos:  position{line: 276, col: 1, offset: 7539},
+			pos:  position{line: 276, col: 1, offset: 7537},
 			expr: &choiceExpr{
-				pos: position{line: 276, col: 7, offset: 7547},
+				pos: position{line: 276, col: 7, offset: 7545},
 				alternatives: []interface{}{
 					&seqExpr{
-						pos: position{line: 276, col: 7, offset: 7547},
+						pos: position{line: 276, col: 7, offset: 7545},
 						exprs: []interface{}{
 							&ruleRefExpr{
-								pos:  position{line: 276, col: 7, offset: 7547},
+								pos:  position{line: 276, col: 7, offset: 7545},
 								name: "__",
 							},
 							&litMatcher{
-								pos:        position{line: 276, col: 10, offset: 7550},
+								pos:        position{line: 276, col: 10, offset: 7548},
 								val:        ";",
 								ignoreCase: false,
 							},
 						},
 					},
 					&seqExpr{
-						pos: position{line: 276, col: 16, offset: 7556},
+						pos: position{line: 276, col: 16, offset: 7554},
 						exprs: []interface{}{
 							&ruleRefExpr{
-								pos:  position{line: 276, col: 16, offset: 7556},
+								pos:  position{line: 276, col: 16, offset: 7554},
 								name: "_",
 							},
 							&zeroOrOneExpr{
-								pos: position{line: 276, col: 18, offset: 7558},
+								pos: position{line: 276, col: 18, offset: 7556},
 								expr: &ruleRefExpr{
-									pos:  position{line: 276, col: 18, offset: 7558},
+									pos:  position{line: 276, col: 18, offset: 7556},
 									name: "SingleLineComment",
 								},
 							},
 							&ruleRefExpr{
-								pos:  position{line: 276, col: 37, offset: 7577},
+								pos:  position{line: 276, col: 37, offset: 7575},
 								name: "EOL",
 							},
 						},
 					},
 					&seqExpr{
-						pos: position{line: 276, col: 43, offset: 7583},
+						pos: position{line: 276, col: 43, offset: 7581},
 						exprs: []interface{}{
 							&ruleRefExpr{
-								pos:  position{line: 276, col: 43, offset: 7583},
+								pos:  position{line: 276, col: 43, offset: 7581},
 								name: "__",
 							},
 							&ruleRefExpr{
-								pos:  position{line: 276, col: 46, offset: 7586},
+								pos:  position{line: 276, col: 46, offset: 7584},
 								name: "EOF",
 							},
 						},
@@ -1883,11 +1886,11 @@ var g = &grammar{
 		},
 		{
 			name: "EOF",
-			pos:  position{line: 277, col: 1, offset: 7590},
+			pos:  position{line: 278, col: 1, offset: 7589},
 			expr: &notExpr{
-				pos: position{line: 277, col: 7, offset: 7598},
+				pos: position{line: 278, col: 7, offset: 7597},
 				expr: &anyMatcher{
-					line: 277, col: 8, offset: 7599,
+					line: 278, col: 8, offset: 7598,
 				},
 			},
 		},

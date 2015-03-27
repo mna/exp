@@ -266,13 +266,14 @@ CodeBlock ← "{" Code "}" {
     return cb, nil
 }
 
-Code ← ( ( [^{}] SourceChar )+ / "{" Code "}" )*
+Code ← ( ( ![{}] SourceChar )+ / "{" Code "}" )*
 
 __ ← ( Whitespace / EOL / Comment )*
 _ ← ( Whitespace / MultiLineCommentNoLineTerminator )*
 
-Whitespace ← [ \n\t\r]
+Whitespace ← [ \t\r]
 EOL ← '\n'
 EOS ← __ ';' / _ SingleLineComment? EOL / __ EOF
+
 EOF ← !.
 
