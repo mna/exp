@@ -163,6 +163,7 @@ MultiLineComment ← "/*" ( !"*/" SourceChar )* "*/"
 MultiLineCommentNoLineTerminator ← "/*" ( !( "*/" / EOL ) SourceChar )* "*/"
 SingleLineComment ← "//" ( !EOL SourceChar )*
 
+// TODO : reserved keywords
 Identifier ← IdentifierName
 IdentifierName ← IdentifierStart IdentifierPart* {
     return ast.NewIdentifier(c.astPos(), string(c.text)), nil
@@ -212,7 +213,7 @@ CharClassEscape ← ']' / CommonEscapeSequence
 
 UnicodeClassEscape ← 'p' ( SingleCharUnicodeClass / '{' UnicodeClass '}' )
 SingleCharUnicodeClass ← [LMNCPZS]
-UnicodeClass ← [a-z_]i+
+UnicodeClass ← [a-z_]i+ // TODO : list of Unicode classes
 
 AnyMatcher ← "." {
     any := ast.NewAnyMatcher(c.astPos(), ".")
