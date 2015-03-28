@@ -321,7 +321,6 @@ func (p *parser) parseRule(rule *rule) (interface{}, bool) {
 		defer p.out(p.in("parseRule " + rule.name))
 	}
 
-	// TODO : build error messages with references to the current rule
 	p.rstack = append(p.rstack, rule)
 	val, ok := p.parseExpr(rule.expr)
 	p.rstack = p.rstack[:len(p.rstack)-1]
