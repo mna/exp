@@ -163,8 +163,9 @@ MultiLineComment ← "/*" ( !"*/" SourceChar )* "*/"
 MultiLineCommentNoLineTerminator ← "/*" ( !( "*/" / EOL ) SourceChar )* "*/"
 SingleLineComment ← "//" ( !EOL SourceChar )*
 
-// TODO : reserved keywords
-Identifier ← IdentifierName
+Identifier ← !ReservedWord ident:IdentifierName {
+    return ident, nil
+}
 IdentifierName ← IdentifierStart IdentifierPart* {
     return ast.NewIdentifier(c.astPos(), string(c.text)), nil
 }
@@ -408,6 +409,77 @@ UnicodeClass ← "Other_Default_Ignorable_Code_Point"
     / "M"
     / "L"
     / "C"
+
+ReservedWord ←
+	// Go keywords http://golang.org/ref/spec#Keywords
+
+	"break" !IdentifierPart
+	/ "case" !IdentifierPart
+	/ "chan" !IdentifierPart
+	/ "const" !IdentifierPart
+	/ "continue" !IdentifierPart
+	/ "default" !IdentifierPart
+	/ "defer" !IdentifierPart
+	/ "else" !IdentifierPart
+	/ "fallthrough" !IdentifierPart
+	/ "for" !IdentifierPart
+	/ "func" !IdentifierPart
+	/ "goto" !IdentifierPart
+	/ "go" !IdentifierPart
+	/ "if" !IdentifierPart
+	/ "import" !IdentifierPart
+	/ "interface" !IdentifierPart
+	/ "map" !IdentifierPart
+	/ "package" !IdentifierPart
+	/ "range" !IdentifierPart
+	/ "return" !IdentifierPart
+	/ "select" !IdentifierPart
+	/ "struct" !IdentifierPart
+	/ "switch" !IdentifierPart
+	/ "type" !IdentifierPart
+	/ "var" !IdentifierPart
+
+	// predeclared identifiers http://golang.org/ref/spec#Predeclared_identifiers
+
+	/ "bool" !IdentifierPart
+	/ "byte" !IdentifierPart
+	/ "complex64" !IdentifierPart
+	/ "complex128" !IdentifierPart
+	/ "error" !IdentifierPart
+	/ "float32" !IdentifierPart
+	/ "float64" !IdentifierPart
+	/ "int8" !IdentifierPart
+	/ "int16" !IdentifierPart
+	/ "int32" !IdentifierPart
+	/ "int64" !IdentifierPart
+	/ "int" !IdentifierPart
+	/ "rune" !IdentifierPart
+	/ "string" !IdentifierPart
+	/ "uint8" !IdentifierPart
+	/ "uint16" !IdentifierPart
+	/ "uint32" !IdentifierPart
+	/ "uint64" !IdentifierPart
+	/ "uintptr" !IdentifierPart
+	/ "uint" !IdentifierPart
+	/ "true" !IdentifierPart
+	/ "false" !IdentifierPart
+	/ "iota" !IdentifierPart
+	/ "nil" !IdentifierPart
+	/ "append" !IdentifierPart
+	/ "cap" !IdentifierPart
+	/ "close" !IdentifierPart
+	/ "complex" !IdentifierPart
+	/ "copy" !IdentifierPart
+	/ "delete" !IdentifierPart
+	/ "imag" !IdentifierPart
+	/ "len" !IdentifierPart
+	/ "make" !IdentifierPart
+	/ "new" !IdentifierPart
+	/ "panic" !IdentifierPart
+	/ "println" !IdentifierPart
+	/ "print" !IdentifierPart
+	/ "real" !IdentifierPart
+	/ "recover" !IdentifierPart
 
 AnyMatcher ← "." {
     any := ast.NewAnyMatcher(c.astPos(), ".")
