@@ -214,8 +214,9 @@ CharClassEscape ← ']' / CommonEscapeSequence
 UnicodeClassEscape ← 'p' ( SingleCharUnicodeClass / '{' UnicodeClass '}' )
 SingleCharUnicodeClass ← [LMNCPZS]
 
-UnicodeClass ←
-    "ASCII_Hex_Digit"
+UnicodeClass ← "ASCII_Hex_Digit"
+
+/*
     / "Arabic"
     / "Armenian"
     / "Avestan"
@@ -408,6 +409,8 @@ UnicodeClass ←
     / "Zl"
     / "Zp"
     / "Zs"
+
+*/
 
 AnyMatcher ← "." {
     any := ast.NewAnyMatcher(c.astPos(), ".")

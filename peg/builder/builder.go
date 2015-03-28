@@ -504,11 +504,13 @@ func (b *builder) writeFunc(code *ast.CodeBlock) {
 	}
 	var args bytes.Buffer
 	ix := len(b.argsStack) - 1
-	for i, arg := range b.argsStack[ix] {
-		if i > 0 {
-			args.WriteString(", ")
+	if ix >= 0 {
+		for i, arg := range b.argsStack[ix] {
+			if i > 0 {
+				args.WriteString(", ")
+			}
+			args.WriteString(arg)
 		}
-		args.WriteString(arg)
 	}
 	if args.Len() > 0 {
 		args.WriteString(" interface{}")
@@ -518,11 +520,13 @@ func (b *builder) writeFunc(code *ast.CodeBlock) {
 	b.writelnf(onFuncTemplate, b.curRecvName, fnNm, args.String(), val)
 
 	args.Reset()
-	for i, arg := range b.argsStack[ix] {
-		if i > 0 {
-			args.WriteString(", ")
+	if ix >= 0 {
+		for i, arg := range b.argsStack[ix] {
+			if i > 0 {
+				args.WriteString(", ")
+			}
+			args.WriteString(fmt.Sprintf(`stack[%q]`, arg))
 		}
-		args.WriteString(fmt.Sprintf(`stack[%q]`, arg))
 	}
 	b.writelnf(callFuncTemplate, fnNm, args.String())
 }
