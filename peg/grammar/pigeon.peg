@@ -168,8 +168,8 @@ Identifier ← IdentifierName
 IdentifierName ← IdentifierStart IdentifierPart* {
     return ast.NewIdentifier(c.astPos(), string(c.text)), nil
 }
-IdentifierStart ← [a-z_]i
-IdentifierPart ← IdentifierStart / [0-9]
+IdentifierStart ← [\pL_]
+IdentifierPart ← IdentifierStart / [\p{Nd}]
 
 LitMatcher ← lit:StringLiteral ignore:"i"? {
     rawStr := lit.(*ast.StringLit).Val
