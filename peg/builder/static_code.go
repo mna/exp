@@ -154,6 +154,18 @@ func (e *errList) Error() string {
 	}
 }
 
+// ParserError wraps an error with a prefix indicating the rule in which
+// the error occurred. The original error is stored in the Inner field.
+type ParserError struct {
+	Inner  error
+	prefix string
+}
+
+// Error returns the error message.
+func (p *ParserError) Error() string {
+	return p.prefix + ": " + p.Inner.Error()
+}
+
 func parse(filename string, r io.Reader, g *grammar) (interface{}, error) {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -201,6 +213,23 @@ func (p *parser) out(s string) string {
 	return p.print("<", s)
 }
 
+func (p *parser) addErr(err error) {
+	if _, ok := err.(*ParserError); ok {
+		p.errs.add(err)
+		return
+	}
+	if len(p.rstack) == 0 {
+		p.errs.add(err)
+		return
+	}
+	rule := p.rstack[len(p.rstack)-1]
+	pe := &ParserError{Inner: err, prefix: rule.name}
+	if rule.displayName != "" {
+		pe.prefix = rule.displayName
+	}
+	p.errs.add(pe)
+}
+
 // read advances the parser to the next rune.
 func (p *parser) read() {
 	p.pt.offset += p.pt.w
@@ -215,7 +244,7 @@ func (p *parser) read() {
 
 	if rn == utf8.RuneError {
 		if n > 0 {
-			p.errs.add(ErrInvalidEncoding)
+			p.addErr(ErrInvalidEncoding)
 		}
 	}
 }
@@ -349,7 +378,7 @@ func (p *parser) parseActionExpr(act *actionExpr) (interface{}, bool) {
 		p.cur.text = p.slice(start.position, p.save().position)
 		actVal, err := act.run(p)
 		if err != nil {
-			p.errs.add(err) // TODO : transform, or use directly?
+			p.addErr(err)
 		}
 		val = actVal
 	}
@@ -364,7 +393,7 @@ func (p *parser) parseAndCodeExpr(and *andCodeExpr) (interface{}, bool) {
 
 	ok, err := and.run(p)
 	if err != nil {
-		p.errs.add(err)
+		p.addErr(err)
 	}
 	return nil, ok
 }
@@ -498,7 +527,7 @@ func (p *parser) parseNotCodeExpr(not *notCodeExpr) (interface{}, bool) {
 
 	ok, err := not.run(p)
 	if err != nil {
-		p.errs.add(err)
+		p.addErr(err)
 	}
 	return nil, !ok
 }
@@ -545,7 +574,7 @@ func (p *parser) parseRuleRefExpr(ref *ruleRefExpr) (interface{}, bool) {
 
 	rule := p.rules[ref.name]
 	if rule == nil {
-		p.errs.add(fmt.Errorf("undefined rule: %%s", ref.name))
+		p.addErr(fmt.Errorf("undefined rule: %%s", ref.name))
 		return nil, false
 	}
 	return p.parseRule(rule)
