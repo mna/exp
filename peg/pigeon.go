@@ -1610,27 +1610,986 @@ var g = &grammar{
 		},
 		{
 			name: "UnicodeClass",
-			pos:  position{line: 216, col: 1, offset: 6374},
-			expr: &oneOrMoreExpr{
-				pos: position{line: 216, col: 16, offset: 6391},
-				expr: &charClassMatcher{
-					pos:        position{line: 216, col: 16, offset: 6391},
-					val:        "[a-z_]i",
-					chars:      []rune{'_'},
-					ranges:     []rune{'a', 'z'},
-					ignoreCase: true,
-					inverted:   false,
+			pos:  position{line: 217, col: 1, offset: 6375},
+			expr: &choiceExpr{
+				pos: position{line: 218, col: 5, offset: 6396},
+				alternatives: []interface{}{
+					&litMatcher{
+						pos:        position{line: 218, col: 5, offset: 6396},
+						val:        "ASCII_Hex_Digit",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 219, col: 7, offset: 6420},
+						val:        "Arabic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 220, col: 7, offset: 6435},
+						val:        "Armenian",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 221, col: 7, offset: 6452},
+						val:        "Avestan",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 222, col: 7, offset: 6468},
+						val:        "Balinese",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 223, col: 7, offset: 6485},
+						val:        "Bamum",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 224, col: 7, offset: 6499},
+						val:        "Bassa_Vah",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 225, col: 7, offset: 6517},
+						val:        "Batak",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 226, col: 7, offset: 6531},
+						val:        "Bengali",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 227, col: 7, offset: 6547},
+						val:        "Bidi_Control",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 228, col: 7, offset: 6568},
+						val:        "Bopomofo",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 229, col: 7, offset: 6585},
+						val:        "Brahmi",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 230, col: 7, offset: 6600},
+						val:        "Braille",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 231, col: 7, offset: 6616},
+						val:        "Buginese",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 232, col: 7, offset: 6633},
+						val:        "Buhid",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 233, col: 7, offset: 6647},
+						val:        "C",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 234, col: 7, offset: 6657},
+						val:        "Canadian_Aboriginal",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 235, col: 7, offset: 6685},
+						val:        "Carian",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 236, col: 7, offset: 6700},
+						val:        "Caucasian_Albanian",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 237, col: 7, offset: 6727},
+						val:        "Cc",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 238, col: 7, offset: 6738},
+						val:        "Cf",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 239, col: 7, offset: 6749},
+						val:        "Chakma",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 240, col: 7, offset: 6764},
+						val:        "Cham",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 241, col: 7, offset: 6777},
+						val:        "Cherokee",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 242, col: 7, offset: 6794},
+						val:        "Co",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 243, col: 7, offset: 6805},
+						val:        "Common",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 244, col: 7, offset: 6820},
+						val:        "Coptic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 245, col: 7, offset: 6835},
+						val:        "Cs",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 246, col: 7, offset: 6846},
+						val:        "Cuneiform",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 247, col: 7, offset: 6864},
+						val:        "Cypriot",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 248, col: 7, offset: 6880},
+						val:        "Cyrillic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 249, col: 7, offset: 6897},
+						val:        "Dash",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 250, col: 7, offset: 6910},
+						val:        "Deprecated",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 251, col: 7, offset: 6929},
+						val:        "Deseret",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 252, col: 7, offset: 6945},
+						val:        "Devanagari",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 253, col: 7, offset: 6964},
+						val:        "Diacritic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 254, col: 7, offset: 6982},
+						val:        "Duployan",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 255, col: 7, offset: 6999},
+						val:        "Egyptian_Hieroglyphs",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 256, col: 7, offset: 7028},
+						val:        "Elbasan",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 257, col: 7, offset: 7044},
+						val:        "Ethiopic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 258, col: 7, offset: 7061},
+						val:        "Extender",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 259, col: 7, offset: 7078},
+						val:        "Georgian",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 260, col: 7, offset: 7095},
+						val:        "Glagolitic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 261, col: 7, offset: 7114},
+						val:        "Gothic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 262, col: 7, offset: 7129},
+						val:        "Grantha",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 263, col: 7, offset: 7145},
+						val:        "Greek",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 264, col: 7, offset: 7159},
+						val:        "Gujarati",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 265, col: 7, offset: 7176},
+						val:        "Gurmukhi",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 266, col: 7, offset: 7193},
+						val:        "Han",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 267, col: 7, offset: 7205},
+						val:        "Hangul",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 268, col: 7, offset: 7220},
+						val:        "Hanunoo",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 269, col: 7, offset: 7236},
+						val:        "Hebrew",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 270, col: 7, offset: 7251},
+						val:        "Hex_Digit",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 271, col: 7, offset: 7269},
+						val:        "Hiragana",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 272, col: 7, offset: 7286},
+						val:        "Hyphen",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 273, col: 7, offset: 7301},
+						val:        "IDS_Binary_Operator",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 274, col: 7, offset: 7329},
+						val:        "IDS_Trinary_Operator",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 275, col: 7, offset: 7358},
+						val:        "Ideographic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 276, col: 7, offset: 7378},
+						val:        "Imperial_Aramaic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 277, col: 7, offset: 7403},
+						val:        "Inherited",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 278, col: 7, offset: 7421},
+						val:        "Inscriptional_Pahlavi",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 279, col: 7, offset: 7451},
+						val:        "Inscriptional_Parthian",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 280, col: 7, offset: 7482},
+						val:        "Javanese",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 281, col: 7, offset: 7499},
+						val:        "Join_Control",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 282, col: 7, offset: 7520},
+						val:        "Kaithi",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 283, col: 7, offset: 7535},
+						val:        "Kannada",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 284, col: 7, offset: 7551},
+						val:        "Katakana",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 285, col: 7, offset: 7568},
+						val:        "Kayah_Li",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 286, col: 7, offset: 7585},
+						val:        "Kharoshthi",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 287, col: 7, offset: 7604},
+						val:        "Khmer",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 288, col: 7, offset: 7618},
+						val:        "Khojki",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 289, col: 7, offset: 7633},
+						val:        "Khudawadi",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 290, col: 7, offset: 7651},
+						val:        "L",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 291, col: 7, offset: 7661},
+						val:        "Lao",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 292, col: 7, offset: 7673},
+						val:        "Latin",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 293, col: 7, offset: 7687},
+						val:        "Lepcha",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 294, col: 7, offset: 7702},
+						val:        "Limbu",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 295, col: 7, offset: 7716},
+						val:        "Linear_A",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 296, col: 7, offset: 7733},
+						val:        "Linear_B",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 297, col: 7, offset: 7750},
+						val:        "Lisu",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 298, col: 7, offset: 7763},
+						val:        "Ll",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 299, col: 7, offset: 7774},
+						val:        "Lm",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 300, col: 7, offset: 7785},
+						val:        "Lo",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 301, col: 7, offset: 7796},
+						val:        "Logical_Order_Exception",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 302, col: 7, offset: 7828},
+						val:        "Lt",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 303, col: 7, offset: 7839},
+						val:        "Lu",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 304, col: 7, offset: 7850},
+						val:        "Lycian",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 305, col: 7, offset: 7865},
+						val:        "Lydian",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 306, col: 7, offset: 7880},
+						val:        "M",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 307, col: 7, offset: 7890},
+						val:        "Mahajani",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 308, col: 7, offset: 7907},
+						val:        "Malayalam",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 309, col: 7, offset: 7925},
+						val:        "Mandaic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 310, col: 7, offset: 7941},
+						val:        "Manichaean",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 311, col: 7, offset: 7960},
+						val:        "Mc",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 312, col: 7, offset: 7971},
+						val:        "Me",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 313, col: 7, offset: 7982},
+						val:        "Meetei_Mayek",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 314, col: 7, offset: 8003},
+						val:        "Mende_Kikakui",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 315, col: 7, offset: 8025},
+						val:        "Meroitic_Cursive",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 316, col: 7, offset: 8050},
+						val:        "Meroitic_Hieroglyphs",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 317, col: 7, offset: 8079},
+						val:        "Miao",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 318, col: 7, offset: 8092},
+						val:        "Mn",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 319, col: 7, offset: 8103},
+						val:        "Modi",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 320, col: 7, offset: 8116},
+						val:        "Mongolian",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 321, col: 7, offset: 8134},
+						val:        "Mro",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 322, col: 7, offset: 8146},
+						val:        "Myanmar",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 323, col: 7, offset: 8162},
+						val:        "N",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 324, col: 7, offset: 8172},
+						val:        "Nabataean",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 325, col: 7, offset: 8190},
+						val:        "Nd",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 326, col: 7, offset: 8201},
+						val:        "New_Tai_Lue",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 327, col: 7, offset: 8221},
+						val:        "Nko",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 328, col: 7, offset: 8233},
+						val:        "Nl",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 329, col: 7, offset: 8244},
+						val:        "No",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 330, col: 7, offset: 8255},
+						val:        "Noncharacter_Code_Point",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 331, col: 7, offset: 8287},
+						val:        "Ogham",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 332, col: 7, offset: 8301},
+						val:        "Ol_Chiki",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 333, col: 7, offset: 8318},
+						val:        "Old_Italic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 334, col: 7, offset: 8337},
+						val:        "Old_North_Arabian",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 335, col: 7, offset: 8363},
+						val:        "Old_Permic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 336, col: 7, offset: 8382},
+						val:        "Old_Persian",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 337, col: 7, offset: 8402},
+						val:        "Old_South_Arabian",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 338, col: 7, offset: 8428},
+						val:        "Old_Turkic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 339, col: 7, offset: 8447},
+						val:        "Oriya",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 340, col: 7, offset: 8461},
+						val:        "Osmanya",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 341, col: 7, offset: 8477},
+						val:        "Other_Alphabetic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 342, col: 7, offset: 8502},
+						val:        "Other_Default_Ignorable_Code_Point",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 343, col: 7, offset: 8545},
+						val:        "Other_Grapheme_Extend",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 344, col: 7, offset: 8575},
+						val:        "Other_ID_Continue",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 345, col: 7, offset: 8601},
+						val:        "Other_ID_Start",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 346, col: 7, offset: 8624},
+						val:        "Other_Lowercase",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 347, col: 7, offset: 8648},
+						val:        "Other_Math",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 348, col: 7, offset: 8667},
+						val:        "Other_Uppercase",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 349, col: 7, offset: 8691},
+						val:        "P",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 350, col: 7, offset: 8701},
+						val:        "Pahawh_Hmong",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 351, col: 7, offset: 8722},
+						val:        "Palmyrene",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 352, col: 7, offset: 8740},
+						val:        "Pattern_Syntax",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 353, col: 7, offset: 8763},
+						val:        "Pattern_White_Space",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 354, col: 7, offset: 8791},
+						val:        "Pau_Cin_Hau",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 355, col: 7, offset: 8811},
+						val:        "Pc",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 356, col: 7, offset: 8822},
+						val:        "Pd",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 357, col: 7, offset: 8833},
+						val:        "Pe",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 358, col: 7, offset: 8844},
+						val:        "Pf",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 359, col: 7, offset: 8855},
+						val:        "Phags_Pa",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 360, col: 7, offset: 8872},
+						val:        "Phoenician",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 361, col: 7, offset: 8891},
+						val:        "Pi",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 362, col: 7, offset: 8902},
+						val:        "Po",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 363, col: 7, offset: 8913},
+						val:        "Ps",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 364, col: 7, offset: 8924},
+						val:        "Psalter_Pahlavi",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 365, col: 7, offset: 8948},
+						val:        "Quotation_Mark",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 366, col: 7, offset: 8971},
+						val:        "Radical",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 367, col: 7, offset: 8987},
+						val:        "Rejang",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 368, col: 7, offset: 9002},
+						val:        "Runic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 369, col: 7, offset: 9016},
+						val:        "S",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 370, col: 7, offset: 9026},
+						val:        "STerm",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 371, col: 7, offset: 9040},
+						val:        "Samaritan",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 372, col: 7, offset: 9058},
+						val:        "Saurashtra",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 373, col: 7, offset: 9077},
+						val:        "Sc",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 374, col: 7, offset: 9088},
+						val:        "Sharada",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 375, col: 7, offset: 9104},
+						val:        "Shavian",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 376, col: 7, offset: 9120},
+						val:        "Siddham",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 377, col: 7, offset: 9136},
+						val:        "Sinhala",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 378, col: 7, offset: 9152},
+						val:        "Sk",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 379, col: 7, offset: 9163},
+						val:        "Sm",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 380, col: 7, offset: 9174},
+						val:        "So",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 381, col: 7, offset: 9185},
+						val:        "Soft_Dotted",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 382, col: 7, offset: 9205},
+						val:        "Sora_Sompeng",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 383, col: 7, offset: 9226},
+						val:        "Sundanese",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 384, col: 7, offset: 9244},
+						val:        "Syloti_Nagri",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 385, col: 7, offset: 9265},
+						val:        "Syriac",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 386, col: 7, offset: 9280},
+						val:        "Tagalog",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 387, col: 7, offset: 9296},
+						val:        "Tagbanwa",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 388, col: 7, offset: 9313},
+						val:        "Tai_Le",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 389, col: 7, offset: 9328},
+						val:        "Tai_Tham",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 390, col: 7, offset: 9345},
+						val:        "Tai_Viet",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 391, col: 7, offset: 9362},
+						val:        "Takri",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 392, col: 7, offset: 9376},
+						val:        "Tamil",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 393, col: 7, offset: 9390},
+						val:        "Telugu",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 394, col: 7, offset: 9405},
+						val:        "Terminal_Punctuation",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 395, col: 7, offset: 9434},
+						val:        "Thaana",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 396, col: 7, offset: 9449},
+						val:        "Thai",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 397, col: 7, offset: 9462},
+						val:        "Tibetan",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 398, col: 7, offset: 9478},
+						val:        "Tifinagh",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 399, col: 7, offset: 9495},
+						val:        "Tirhuta",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 400, col: 7, offset: 9511},
+						val:        "Ugaritic",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 401, col: 7, offset: 9528},
+						val:        "Unified_Ideograph",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 402, col: 7, offset: 9554},
+						val:        "Vai",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 403, col: 7, offset: 9566},
+						val:        "Variation_Selector",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 404, col: 7, offset: 9593},
+						val:        "Warang_Citi",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 405, col: 7, offset: 9613},
+						val:        "White_Space",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 406, col: 7, offset: 9633},
+						val:        "Yi",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 407, col: 7, offset: 9644},
+						val:        "Z",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 408, col: 7, offset: 9654},
+						val:        "Zl",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 409, col: 7, offset: 9665},
+						val:        "Zp",
+						ignoreCase: false,
+					},
+					&litMatcher{
+						pos:        position{line: 410, col: 7, offset: 9676},
+						val:        "Zs",
+						ignoreCase: false,
+					},
 				},
 			},
 		},
 		{
 			name: "AnyMatcher",
-			pos:  position{line: 218, col: 1, offset: 6435},
+			pos:  position{line: 412, col: 1, offset: 9682},
 			expr: &actionExpr{
-				pos: position{line: 218, col: 14, offset: 6450},
+				pos: position{line: 412, col: 14, offset: 9697},
 				run: (*parser).callonAnyMatcher1,
 				expr: &litMatcher{
-					pos:        position{line: 218, col: 14, offset: 6450},
+					pos:        position{line: 412, col: 14, offset: 9697},
 					val:        ".",
 					ignoreCase: false,
 				},
@@ -1638,24 +2597,24 @@ var g = &grammar{
 		},
 		{
 			name: "CodeBlock",
-			pos:  position{line: 223, col: 1, offset: 6525},
+			pos:  position{line: 417, col: 1, offset: 9772},
 			expr: &actionExpr{
-				pos: position{line: 223, col: 13, offset: 6539},
+				pos: position{line: 417, col: 13, offset: 9786},
 				run: (*parser).callonCodeBlock1,
 				expr: &seqExpr{
-					pos: position{line: 223, col: 13, offset: 6539},
+					pos: position{line: 417, col: 13, offset: 9786},
 					exprs: []interface{}{
 						&litMatcher{
-							pos:        position{line: 223, col: 13, offset: 6539},
+							pos:        position{line: 417, col: 13, offset: 9786},
 							val:        "{",
 							ignoreCase: false,
 						},
 						&ruleRefExpr{
-							pos:  position{line: 223, col: 17, offset: 6543},
+							pos:  position{line: 417, col: 17, offset: 9790},
 							name: "Code",
 						},
 						&litMatcher{
-							pos:        position{line: 223, col: 22, offset: 6548},
+							pos:        position{line: 417, col: 22, offset: 9795},
 							val:        "}",
 							ignoreCase: false,
 						},
@@ -1665,21 +2624,21 @@ var g = &grammar{
 		},
 		{
 			name: "Code",
-			pos:  position{line: 229, col: 1, offset: 6646},
+			pos:  position{line: 423, col: 1, offset: 9893},
 			expr: &zeroOrMoreExpr{
-				pos: position{line: 229, col: 8, offset: 6655},
+				pos: position{line: 423, col: 8, offset: 9902},
 				expr: &choiceExpr{
-					pos: position{line: 229, col: 10, offset: 6657},
+					pos: position{line: 423, col: 10, offset: 9904},
 					alternatives: []interface{}{
 						&oneOrMoreExpr{
-							pos: position{line: 229, col: 10, offset: 6657},
+							pos: position{line: 423, col: 10, offset: 9904},
 							expr: &seqExpr{
-								pos: position{line: 229, col: 12, offset: 6659},
+								pos: position{line: 423, col: 12, offset: 9906},
 								exprs: []interface{}{
 									&notExpr{
-										pos: position{line: 229, col: 12, offset: 6659},
+										pos: position{line: 423, col: 12, offset: 9906},
 										expr: &charClassMatcher{
-											pos:        position{line: 229, col: 13, offset: 6660},
+											pos:        position{line: 423, col: 13, offset: 9907},
 											val:        "[{}]",
 											chars:      []rune{'{', '}'},
 											ignoreCase: false,
@@ -1687,26 +2646,26 @@ var g = &grammar{
 										},
 									},
 									&ruleRefExpr{
-										pos:  position{line: 229, col: 18, offset: 6665},
+										pos:  position{line: 423, col: 18, offset: 9912},
 										name: "SourceChar",
 									},
 								},
 							},
 						},
 						&seqExpr{
-							pos: position{line: 229, col: 34, offset: 6681},
+							pos: position{line: 423, col: 34, offset: 9928},
 							exprs: []interface{}{
 								&litMatcher{
-									pos:        position{line: 229, col: 34, offset: 6681},
+									pos:        position{line: 423, col: 34, offset: 9928},
 									val:        "{",
 									ignoreCase: false,
 								},
 								&ruleRefExpr{
-									pos:  position{line: 229, col: 38, offset: 6685},
+									pos:  position{line: 423, col: 38, offset: 9932},
 									name: "Code",
 								},
 								&litMatcher{
-									pos:        position{line: 229, col: 43, offset: 6690},
+									pos:        position{line: 423, col: 43, offset: 9937},
 									val:        "}",
 									ignoreCase: false,
 								},
@@ -1718,22 +2677,22 @@ var g = &grammar{
 		},
 		{
 			name: "__",
-			pos:  position{line: 231, col: 1, offset: 6698},
+			pos:  position{line: 425, col: 1, offset: 9945},
 			expr: &zeroOrMoreExpr{
-				pos: position{line: 231, col: 6, offset: 6705},
+				pos: position{line: 425, col: 6, offset: 9952},
 				expr: &choiceExpr{
-					pos: position{line: 231, col: 8, offset: 6707},
+					pos: position{line: 425, col: 8, offset: 9954},
 					alternatives: []interface{}{
 						&ruleRefExpr{
-							pos:  position{line: 231, col: 8, offset: 6707},
+							pos:  position{line: 425, col: 8, offset: 9954},
 							name: "Whitespace",
 						},
 						&ruleRefExpr{
-							pos:  position{line: 231, col: 21, offset: 6720},
+							pos:  position{line: 425, col: 21, offset: 9967},
 							name: "EOL",
 						},
 						&ruleRefExpr{
-							pos:  position{line: 231, col: 27, offset: 6726},
+							pos:  position{line: 425, col: 27, offset: 9973},
 							name: "Comment",
 						},
 					},
@@ -1742,18 +2701,18 @@ var g = &grammar{
 		},
 		{
 			name: "_",
-			pos:  position{line: 232, col: 1, offset: 6737},
+			pos:  position{line: 426, col: 1, offset: 9984},
 			expr: &zeroOrMoreExpr{
-				pos: position{line: 232, col: 5, offset: 6743},
+				pos: position{line: 426, col: 5, offset: 9990},
 				expr: &choiceExpr{
-					pos: position{line: 232, col: 7, offset: 6745},
+					pos: position{line: 426, col: 7, offset: 9992},
 					alternatives: []interface{}{
 						&ruleRefExpr{
-							pos:  position{line: 232, col: 7, offset: 6745},
+							pos:  position{line: 426, col: 7, offset: 9992},
 							name: "Whitespace",
 						},
 						&ruleRefExpr{
-							pos:  position{line: 232, col: 20, offset: 6758},
+							pos:  position{line: 426, col: 20, offset: 10005},
 							name: "MultiLineCommentNoLineTerminator",
 						},
 					},
@@ -1762,9 +2721,9 @@ var g = &grammar{
 		},
 		{
 			name: "Whitespace",
-			pos:  position{line: 234, col: 1, offset: 6795},
+			pos:  position{line: 428, col: 1, offset: 10042},
 			expr: &charClassMatcher{
-				pos:        position{line: 234, col: 14, offset: 6810},
+				pos:        position{line: 428, col: 14, offset: 10057},
 				val:        "[ \\t\\r]",
 				chars:      []rune{' ', '\t', '\r'},
 				ignoreCase: false,
@@ -1773,62 +2732,62 @@ var g = &grammar{
 		},
 		{
 			name: "EOL",
-			pos:  position{line: 235, col: 1, offset: 6818},
+			pos:  position{line: 429, col: 1, offset: 10065},
 			expr: &litMatcher{
-				pos:        position{line: 235, col: 7, offset: 6826},
+				pos:        position{line: 429, col: 7, offset: 10073},
 				val:        "\n",
 				ignoreCase: false,
 			},
 		},
 		{
 			name: "EOS",
-			pos:  position{line: 236, col: 1, offset: 6831},
+			pos:  position{line: 430, col: 1, offset: 10078},
 			expr: &choiceExpr{
-				pos: position{line: 236, col: 7, offset: 6839},
+				pos: position{line: 430, col: 7, offset: 10086},
 				alternatives: []interface{}{
 					&seqExpr{
-						pos: position{line: 236, col: 7, offset: 6839},
+						pos: position{line: 430, col: 7, offset: 10086},
 						exprs: []interface{}{
 							&ruleRefExpr{
-								pos:  position{line: 236, col: 7, offset: 6839},
+								pos:  position{line: 430, col: 7, offset: 10086},
 								name: "__",
 							},
 							&litMatcher{
-								pos:        position{line: 236, col: 10, offset: 6842},
+								pos:        position{line: 430, col: 10, offset: 10089},
 								val:        ";",
 								ignoreCase: false,
 							},
 						},
 					},
 					&seqExpr{
-						pos: position{line: 236, col: 16, offset: 6848},
+						pos: position{line: 430, col: 16, offset: 10095},
 						exprs: []interface{}{
 							&ruleRefExpr{
-								pos:  position{line: 236, col: 16, offset: 6848},
+								pos:  position{line: 430, col: 16, offset: 10095},
 								name: "_",
 							},
 							&zeroOrOneExpr{
-								pos: position{line: 236, col: 18, offset: 6850},
+								pos: position{line: 430, col: 18, offset: 10097},
 								expr: &ruleRefExpr{
-									pos:  position{line: 236, col: 18, offset: 6850},
+									pos:  position{line: 430, col: 18, offset: 10097},
 									name: "SingleLineComment",
 								},
 							},
 							&ruleRefExpr{
-								pos:  position{line: 236, col: 37, offset: 6869},
+								pos:  position{line: 430, col: 37, offset: 10116},
 								name: "EOL",
 							},
 						},
 					},
 					&seqExpr{
-						pos: position{line: 236, col: 43, offset: 6875},
+						pos: position{line: 430, col: 43, offset: 10122},
 						exprs: []interface{}{
 							&ruleRefExpr{
-								pos:  position{line: 236, col: 43, offset: 6875},
+								pos:  position{line: 430, col: 43, offset: 10122},
 								name: "__",
 							},
 							&ruleRefExpr{
-								pos:  position{line: 236, col: 46, offset: 6878},
+								pos:  position{line: 430, col: 46, offset: 10125},
 								name: "EOF",
 							},
 						},
@@ -1838,11 +2797,11 @@ var g = &grammar{
 		},
 		{
 			name: "EOF",
-			pos:  position{line: 238, col: 1, offset: 6883},
+			pos:  position{line: 432, col: 1, offset: 10130},
 			expr: &notExpr{
-				pos: position{line: 238, col: 7, offset: 6891},
+				pos: position{line: 432, col: 7, offset: 10138},
 				expr: &anyMatcher{
-					line: 238, col: 8, offset: 6892,
+					line: 432, col: 8, offset: 10139,
 				},
 			},
 		},
