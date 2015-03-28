@@ -60,9 +60,7 @@ func (s *Scanner) Scan() (token, bool) {
 	case isLetter(s.cur):
 		tok.id = ident
 		tok.lit = s.scanIdentifier()
-		if _, ok := keywords[tok.lit]; ok {
-			tok.id = keyword
-		} else if _, ok := blacklistedIdents[tok.lit]; ok {
+		if _, ok := blacklistedIdents[tok.lit]; ok {
 			s.errorpf(tok.pos, "illegal identifier %q", tok.lit)
 		}
 	case isRuleDefStart(s.cur):

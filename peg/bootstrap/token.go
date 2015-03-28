@@ -13,7 +13,6 @@ const (
 	eof         // end-of-file token, id 0
 
 	ident   tid = iota + 127 // identifiers follow the same rules as Go
-	keyword                  // keywords are special identifiers
 	ruledef                  // rule definition token
 
 	// literals
@@ -45,7 +44,6 @@ var lookup = map[tid]string{
 	invalid:     "invalid",
 	eof:         "eof",
 	ident:       "ident",
-	keyword:     "keyword",
 	ruledef:     "ruledef",
 	char:        "char",
 	str:         "str",
@@ -73,10 +71,6 @@ func (t tid) String() string {
 		return s
 	}
 	return fmt.Sprintf("tid(%d)", t)
-}
-
-var keywords = map[string]struct{}{
-	"package": struct{}{},
 }
 
 var blacklistedIdents = map[string]struct{}{

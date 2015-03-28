@@ -80,7 +80,7 @@ var scanValidCases = []string{
 	"+",
 	"*",
 	"\n",
-	"package a",
+	"pockage = a",
 	`Rule <-
 	E / ( 'a'? "bcd"i )+ / [efg-j]* { println() } // comment
 	/ &'\xff' /* and
@@ -161,7 +161,7 @@ var scanExpTokens = [][]string{
 	{"1:1 (0): plus \"+\"", `1:1 (0): eof ""`},
 	{"1:1 (0): star \"*\"", `1:1 (0): eof ""`},
 	{"2:0 (0): eol \"\\n\"", `2:0 (0): eof ""`},
-	{"1:1 (0): keyword \"package\"", `1:9 (8): ident "a"`, `1:9 (8): eof ""`},
+	{"1:1 (0): ident \"pockage\"", `1:9 (8): ruledef "="`, `1:11 (10): ident "a"`, `1:11 (10): eof ""`},
 	{
 		`1:1 (0): ident "Rule"`,
 		`1:6 (5): ruledef "<-"`,
@@ -243,6 +243,7 @@ func TestScanValid(t *testing.T) {
 		}
 		if len(errh.errs) != 0 {
 			t.Errorf("%d: want no error, got %d", i, len(errh.errs))
+			t.Log(errh.errs)
 		}
 	}
 }
