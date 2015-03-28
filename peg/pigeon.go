@@ -2286,15 +2286,6 @@ type charClassMatcher struct {
 
 type anyMatcher position
 
-type ParserError struct {
-	Inner  error
-	prefix string
-}
-
-func (p *ParserError) Error() string {
-	return p.prefix + ": " + p.Inner.Error()
-}
-
 type errList []error
 
 func (e *errList) add(err error) {
@@ -2325,6 +2316,18 @@ func (e *errList) Error() string {
 		}
 		return buf.String()
 	}
+}
+
+// ParserError wraps an error with a prefix indicating the rule in which
+// the error occurred. The original error is stored in the Inner field.
+type ParserError struct {
+	Inner  error
+	prefix string
+}
+
+// Error returns the error message.
+func (p *ParserError) Error() string {
+	return p.prefix + ": " + p.Inner.Error()
 }
 
 func parse(filename string, r io.Reader, g *grammar) (interface{}, error) {
