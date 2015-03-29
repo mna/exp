@@ -405,7 +405,9 @@ func (b *builder) writeRuleCode(rule *ast.Rule) {
 	// in functions named "on<RuleName><#ExprIndex>".
 	b.ruleName = rule.Name.Val
 	b.exprIndex = 0
+	b.pushArgsSet()
 	b.writeExprCode(rule.Expr)
+	b.popArgsSet()
 }
 
 func (b *builder) pushArgsSet() {
@@ -429,15 +431,11 @@ func (b *builder) writeExprCode(expr ast.Expression) {
 	ix := b.exprIndex
 	switch expr := expr.(type) {
 	case *ast.ActionExpr:
-		b.pushArgsSet()
 		b.writeExprCode(expr.Expr)
 		b.exprIndex = ix
 		b.writeActionExprCode(expr)
-		b.popArgsSet()
 
 	case *ast.AndCodeExpr:
-		// TODO : should be able to access labeled vars too, but when to
-		// start a new args set?
 		b.writeAndCodeExprCode(expr)
 
 	case *ast.LabeledExpr:
@@ -445,8 +443,6 @@ func (b *builder) writeExprCode(expr ast.Expression) {
 		b.writeExprCode(expr.Expr)
 
 	case *ast.NotCodeExpr:
-		// TODO : should be able to access labeled vars too, but when to
-		// start a new args set?
 		b.writeNotCodeExprCode(expr)
 
 	case *ast.AndExpr:
@@ -496,10 +492,10 @@ func (b *builder) writeFunc(code *ast.CodeBlock) {
 		return
 	}
 	val := strings.TrimSpace(code.Val)[1 : len(code.Val)-1]
-	if val[0] == '\n' {
+	if len(val) > 0 && val[0] == '\n' {
 		val = val[1:]
 	}
-	if val[len(val)-1] == '\n' {
+	if len(val) > 0 && val[len(val)-1] == '\n' {
 		val = val[:len(val)-1]
 	}
 	var args bytes.Buffer
