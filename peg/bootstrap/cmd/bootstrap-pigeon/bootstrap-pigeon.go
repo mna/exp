@@ -2378,17 +2378,18 @@ func (p *parser) out(s string) string {
 }
 
 func (p *parser) addErr(err error) {
+	p.addErrAt(err, p.pt.position)
+}
+
+func (p *parser) addErrAt(err error, pos position) {
 	var buf bytes.Buffer
 	if p.filename != "" {
 		buf.WriteString(p.filename)
 	}
-	if p.pt.w > 0 || p.pt.offset > 0 {
-		if buf.Len() > 0 {
-			buf.WriteString(":")
-		}
-		// parsing has started, so add the position of the error
-		buf.WriteString(fmt.Sprintf("%d:%d (%d)", p.pt.line, p.pt.col, p.pt.offset))
+	if buf.Len() > 0 {
+		buf.WriteString(":")
 	}
+	buf.WriteString(fmt.Sprintf("%d:%d (%d)", pos.line, pos.col, pos.offset))
 	if len(p.rstack) > 0 {
 		if buf.Len() > 0 {
 			buf.WriteString(": ")
@@ -2552,7 +2553,7 @@ func (p *parser) parseActionExpr(act *actionExpr) (interface{}, bool) {
 		p.cur.text = p.slice(start.position, p.save().position)
 		actVal, err := act.run(p)
 		if err != nil {
-			p.addErr(err)
+			p.addErrAt(err, start.position)
 		}
 		val = actVal
 	}

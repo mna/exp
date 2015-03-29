@@ -8,23 +8,27 @@ import (
 var invalidParseCases = []string{
 	"",
 	"a",
+	"abc",
 	" ",
 	"a ←",
 	"{",
 	"{{}",
-	"a ← nil:b",
+	"a ← nil:b", // U#2190 is 3 bytes long
 	"a ← b\nb ←",
+	`a ← [\pA]`,
 }
 
 var expInvalidParseErrs = []string{
-	"file: no match found",
 	"file:1:1 (0): no match found",
 	"file:1:1 (0): no match found",
 	"file:1:1 (0): no match found",
 	"file:1:1 (0): no match found",
 	"file:1:1 (0): no match found",
-	"",
-	"file:2:1 (5): no match found",
+	"file:1:1 (0): no match found",
+	"file:1:1 (0): no match found",
+	"file:1:5 (6): rule Identifier: identifier is a reserved word",
+	"file:2:1 (8): no match found",
+	"file:1:8 (9): rule a: invalid Unicode escape",
 }
 
 func TestInvalidParseCases(t *testing.T) {
