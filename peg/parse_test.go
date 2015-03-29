@@ -16,6 +16,7 @@ var invalidParseCases = []string{
 	"a ← nil:b", // U#2190 is 3 bytes long
 	"a ← b\nb ←",
 	`a ← [\pA]`,
+	"\xfe",
 }
 
 var expInvalidParseErrs = []string{
@@ -29,6 +30,7 @@ var expInvalidParseErrs = []string{
 	"file:1:5 (6): rule Identifier: identifier is a reserved word",
 	"file:2:1 (8): no match found",
 	"file:1:8 (9): rule UnicodeClassEscape: invalid Unicode class escape",
+	"file:1:1 (0): invalid encoding",
 }
 
 func TestInvalidParseCases(t *testing.T) {
