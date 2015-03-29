@@ -4886,5 +4886,5 @@ func rangeTable(class string) *unicode.RangeTable {
 	}
 
 	// cannot happen
-	panic(fmt.Sprintf("invalid Unicode class: %!s(MISSING)", class))
+	panic(fmt.Sprintf("invalid Unicode class: %s", class))
 }
