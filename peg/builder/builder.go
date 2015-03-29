@@ -18,7 +18,19 @@ var onFuncTemplate = `func (%s *current) %s(%s) (interface{}, error) {
 }
 `
 
+var onPredFuncTemplate = `func (%s *current) %s(%s) (bool, error) {
+%s
+}
+`
+
 var callFuncTemplate = `func (p *parser) call%s() (interface{}, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.%[1]s(%s)
+}
+`
+
+var callPredFuncTemplate = `func (p *parser) call%s() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
 	return p.cur.%[1]s(%s)
@@ -470,24 +482,24 @@ func (b *builder) writeActionExprCode(act *ast.ActionExpr) {
 	if act == nil {
 		return
 	}
-	b.writeFunc(act.FuncIx, act.Code)
+	b.writeFunc(act.FuncIx, act.Code, callFuncTemplate, onFuncTemplate)
 }
 
 func (b *builder) writeAndCodeExprCode(and *ast.AndCodeExpr) {
 	if and == nil {
 		return
 	}
-	b.writeFunc(and.FuncIx, and.Code)
+	b.writeFunc(and.FuncIx, and.Code, callPredFuncTemplate, onPredFuncTemplate)
 }
 
 func (b *builder) writeNotCodeExprCode(not *ast.NotCodeExpr) {
 	if not == nil {
 		return
 	}
-	b.writeFunc(not.FuncIx, not.Code)
+	b.writeFunc(not.FuncIx, not.Code, callPredFuncTemplate, onPredFuncTemplate)
 }
 
-func (b *builder) writeFunc(funcIx int, code *ast.CodeBlock) {
+func (b *builder) writeFunc(funcIx int, code *ast.CodeBlock, callTpl, funcTpl string) {
 	if code == nil {
 		return
 	}
@@ -513,7 +525,7 @@ func (b *builder) writeFunc(funcIx int, code *ast.CodeBlock) {
 	}
 
 	fnNm := b.funcName(funcIx)
-	b.writelnf(onFuncTemplate, b.curRecvName, fnNm, args.String(), val)
+	b.writelnf(funcTpl, b.curRecvName, fnNm, args.String(), val)
 
 	args.Reset()
 	if ix >= 0 {
@@ -524,7 +536,7 @@ func (b *builder) writeFunc(funcIx int, code *ast.CodeBlock) {
 			args.WriteString(fmt.Sprintf(`stack[%q]`, arg))
 		}
 	}
-	b.writelnf(callFuncTemplate, fnNm, args.String())
+	b.writelnf(callTpl, fnNm, args.String())
 }
 
 func (b *builder) writeStaticCode() {
