@@ -216,8 +216,8 @@ CharClassEscape ← ']' / CommonEscapeSequence
 
 UnicodeClassEscape ← 'p' ( 
       SingleCharUnicodeClass
+    / !'{' SourceChar { return nil, errors.New("invalid Unicode class escape") }
     / '{' UnicodeClass '}'
-    / . { return nil, errors.New("invalid Unicode class escape") }
     )
 SingleCharUnicodeClass ← [LMNCPZS]
 

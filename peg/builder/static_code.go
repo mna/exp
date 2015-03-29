@@ -190,6 +190,7 @@ type parser struct {
 	data []byte
 	errs *errList
 
+	depth  int
 	rules  map[string]*rule
 	vstack []map[string]interface{}
 	rstack []*rule
@@ -206,11 +207,13 @@ func (p *parser) print(prefix, s string) string {
 }
 
 func (p *parser) in(s string) string {
-	return p.print(">", s)
+	p.depth++
+	return p.print(strings.Repeat(" ", p.depth) + ">", s)
 }
 
 func (p *parser) out(s string) string {
-	return p.print("<", s)
+	p.depth--
+	return p.print(strings.Repeat(" ", p.depth) + "<", s)
 }
 
 func (p *parser) addErr(err error) {
