@@ -2378,19 +2378,29 @@ func (p *parser) out(s string) string {
 }
 
 func (p *parser) addErr(err error) {
-	if _, ok := err.(*ParserError); ok {
-		p.errs.add(err)
-		return
+	var buf bytes.Buffer
+	if p.filename != "" {
+		buf.WriteString(p.filename)
 	}
-	if len(p.rstack) == 0 {
-		p.errs.add(err)
-		return
+	if p.pt.w > 0 || p.pt.offset > 0 {
+		if buf.Len() > 0 {
+			buf.WriteString(":")
+		}
+		// parsing has started, so add the position of the error
+		buf.WriteString(fmt.Sprintf("%d:%d (%d)", p.pt.line, p.pt.col, p.pt.offset))
 	}
-	rule := p.rstack[len(p.rstack)-1]
-	pe := &ParserError{Inner: err, prefix: rule.name}
-	if rule.displayName != "" {
-		pe.prefix = rule.displayName
+	if len(p.rstack) > 0 {
+		if buf.Len() > 0 {
+			buf.WriteString(": ")
+		}
+		rule := p.rstack[len(p.rstack)-1]
+		if rule.displayName != "" {
+			buf.WriteString("rule " + rule.displayName)
+		} else {
+			buf.WriteString("rule " + rule.name)
+		}
 	}
+	pe := &ParserError{Inner: err, prefix: buf.String()}
 	p.errs.add(pe)
 }
 
@@ -2443,7 +2453,8 @@ func (p *parser) buildRulesTable(g *grammar) {
 
 func (p *parser) parse(g *grammar) (val interface{}, err error) {
 	if len(g.rules) == 0 {
-		return nil, ErrNoRule
+		p.addErr(ErrNoRule)
+		return nil, p.errs.err()
 	}
 
 	// TODO : not super critical but this could be generated
@@ -2459,10 +2470,11 @@ func (p *parser) parse(g *grammar) (val interface{}, err error) {
 			val = nil
 			switch e := e.(type) {
 			case error:
-				err = e
+				p.addErr(e)
 			default:
-				err = fmt.Errorf("%v", e)
+				p.addErr(fmt.Errorf("%v", e))
 			}
+			err = p.errs.err()
 		}
 	}()
 
@@ -2470,12 +2482,11 @@ func (p *parser) parse(g *grammar) (val interface{}, err error) {
 	p.read() // advance to first rune
 	val, ok := p.parseRule(g.rules[0])
 	if !ok {
-		err := p.errs.err()
-		if err == nil {
+		if len(*p.errs) == 0 {
 			// make sure this doesn't go out silently
-			err = ErrNoMatch
+			p.addErr(ErrNoMatch)
 		}
-		return nil, err
+		return nil, p.errs.err()
 	}
 	return val, p.errs.err()
 }
