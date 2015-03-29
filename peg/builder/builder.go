@@ -161,10 +161,11 @@ func (b *builder) writeActionExpr(act *ast.ActionExpr) {
 		b.writelnf("nil,")
 		return
 	}
+	act.FuncIx = b.exprIndex
 	b.writelnf("&actionExpr{")
 	pos := act.Pos()
 	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
-	b.writelnf("\trun: (*parser).call%s,", b.funcName())
+	b.writelnf("\trun: (*parser).call%s,", b.funcName(act.FuncIx))
 	b.writef("\texpr: ")
 	b.writeExpr(act.Expr)
 	b.writelnf("},")
@@ -177,8 +178,9 @@ func (b *builder) writeAndCodeExpr(and *ast.AndCodeExpr) {
 	}
 	b.writelnf("&andCodeExpr{")
 	pos := and.Pos()
+	and.FuncIx = b.exprIndex
 	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
-	b.writelnf("\trun: (*parser).callon%s_%d,", b.ruleName, b.exprIndex)
+	b.writelnf("\trun: (*parser).call%s,", b.funcName(and.FuncIx))
 	b.writelnf("},")
 }
 
@@ -307,8 +309,9 @@ func (b *builder) writeNotCodeExpr(not *ast.NotCodeExpr) {
 	}
 	b.writelnf("&notCodeExpr{")
 	pos := not.Pos()
+	not.FuncIx = b.exprIndex
 	b.writelnf("\tpos: position{line: %d, col: %d, offset: %d},", pos.Line, pos.Col, pos.Off)
-	b.writelnf("\trun: (*parser).callon%s_%d,", b.ruleName, b.exprIndex)
+	b.writelnf("\trun: (*parser).call%s,", b.funcName(not.FuncIx))
 	b.writelnf("},")
 }
 
@@ -427,14 +430,10 @@ func (b *builder) addArg(arg *ast.Identifier) {
 }
 
 func (b *builder) writeExprCode(expr ast.Expression) {
-	b.exprIndex++
-	ix := b.exprIndex
 	switch expr := expr.(type) {
 	case *ast.ActionExpr:
 		b.writeExprCode(expr.Expr)
-		b.exprIndex, ix = ix, b.exprIndex
 		b.writeActionExprCode(expr)
-		b.exprIndex, ix = ix, b.exprIndex
 
 	case *ast.AndCodeExpr:
 		b.writeAndCodeExprCode(expr)
@@ -471,24 +470,24 @@ func (b *builder) writeActionExprCode(act *ast.ActionExpr) {
 	if act == nil {
 		return
 	}
-	b.writeFunc(act.Code)
+	b.writeFunc(act.FuncIx, act.Code)
 }
 
 func (b *builder) writeAndCodeExprCode(and *ast.AndCodeExpr) {
 	if and == nil {
 		return
 	}
-	b.writeFunc(and.Code)
+	b.writeFunc(and.FuncIx, and.Code)
 }
 
 func (b *builder) writeNotCodeExprCode(not *ast.NotCodeExpr) {
 	if not == nil {
 		return
 	}
-	b.writeFunc(not.Code)
+	b.writeFunc(not.FuncIx, not.Code)
 }
 
-func (b *builder) writeFunc(code *ast.CodeBlock) {
+func (b *builder) writeFunc(funcIx int, code *ast.CodeBlock) {
 	if code == nil {
 		return
 	}
@@ -513,7 +512,7 @@ func (b *builder) writeFunc(code *ast.CodeBlock) {
 		args.WriteString(" interface{}")
 	}
 
-	fnNm := b.funcName()
+	fnNm := b.funcName(funcIx)
 	b.writelnf(onFuncTemplate, b.curRecvName, fnNm, args.String(), val)
 
 	args.Reset()
@@ -532,8 +531,8 @@ func (b *builder) writeStaticCode() {
 	b.writelnf(staticCode)
 }
 
-func (b *builder) funcName() string {
-	return "on" + b.ruleName + strconv.Itoa(b.exprIndex)
+func (b *builder) funcName(ix int) string {
+	return "on" + b.ruleName + strconv.Itoa(ix)
 }
 
 func (b *builder) writef(f string, args ...interface{}) {

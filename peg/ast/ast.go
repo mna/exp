@@ -116,9 +116,10 @@ func (c *ChoiceExpr) String() string {
 // ActionExpr is an expression that has an associated block of code to
 // execute when the expression matches.
 type ActionExpr struct {
-	p    Pos
-	Expr Expression
-	Code *CodeBlock
+	p      Pos
+	Expr   Expression
+	Code   *CodeBlock
+	FuncIx int
 }
 
 // NewActionExpr creates a new action expression at the specified position.
@@ -306,8 +307,9 @@ func (r *RuleRefExpr) String() string {
 // AndCodeExpr is a zero-length matcher that is considered a match if the
 // code block returns true.
 type AndCodeExpr struct {
-	p    Pos
-	Code *CodeBlock
+	p      Pos
+	Code   *CodeBlock
+	FuncIx int
 }
 
 // NewAndCodeExpr creates a new and (&) code expression at the specified
@@ -327,8 +329,9 @@ func (a *AndCodeExpr) String() string {
 // NotCodeExpr is a zero-length matcher that is considered a match if the
 // code block returns false.
 type NotCodeExpr struct {
-	p    Pos
-	Code *CodeBlock
+	p      Pos
+	Code   *CodeBlock
+	FuncIx int
 }
 
 // NewNotCodeExpr creates a new not (!) code expression at the specified
