@@ -432,8 +432,9 @@ func (b *builder) writeExprCode(expr ast.Expression) {
 	switch expr := expr.(type) {
 	case *ast.ActionExpr:
 		b.writeExprCode(expr.Expr)
-		b.exprIndex = ix
+		b.exprIndex, ix = ix, b.exprIndex
 		b.writeActionExprCode(expr)
+		b.exprIndex, ix = ix, b.exprIndex
 
 	case *ast.AndCodeExpr:
 		b.writeAndCodeExprCode(expr)

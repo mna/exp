@@ -165,6 +165,8 @@ SingleLineComment ← "//" ( !EOL SourceChar )*
 
 Identifier ← !ReservedWord ident:IdentifierName {
     return ident, nil
+} / ReservedWord {
+    return nil, errors.New("identifier is a reserved word")
 }
 IdentifierName ← IdentifierStart IdentifierPart* {
     return ast.NewIdentifier(c.astPos(), string(c.text)), nil

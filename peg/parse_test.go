@@ -8,11 +8,23 @@ import (
 var invalidParseCases = []string{
 	"",
 	"a",
+	" ",
+	"a ←",
+	"{",
+	"{{}",
+	"a ← nil:b",
+	"a ← b\nb ←",
 }
 
 var expInvalidParseErrs = []string{
 	"file: no match found",
 	"file:1:1 (0): no match found",
+	"file:1:1 (0): no match found",
+	"file:1:1 (0): no match found",
+	"file:1:1 (0): no match found",
+	"file:1:1 (0): no match found",
+	"",
+	"file:2:1 (5): no match found",
 }
 
 func TestInvalidParseCases(t *testing.T) {
