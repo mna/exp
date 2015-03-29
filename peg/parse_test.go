@@ -28,7 +28,7 @@ var expInvalidParseErrs = []string{
 	"file:1:1 (0): no match found",
 	"file:1:1 (0): no match found",
 	"file:1:5 (6): rule Identifier: identifier is a reserved word",
-	"file:2:1 (8): no match found",
+	"file:1:1 (0): no match found",
 	"file:1:8 (9): rule UnicodeClassEscape: invalid Unicode class escape",
 	"file:1:1 (0): invalid encoding",
 }

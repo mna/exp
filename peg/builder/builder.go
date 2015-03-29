@@ -419,7 +419,6 @@ func (b *builder) writeRuleCode(rule *ast.Rule) {
 	// keep trace of the current rule, as the code blocks are created
 	// in functions named "on<RuleName><#ExprIndex>".
 	b.ruleName = rule.Name.Val
-	b.exprIndex = 0
 	b.pushArgsSet()
 	b.writeExprCode(rule.Expr)
 	b.popArgsSet()
