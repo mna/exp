@@ -17,6 +17,20 @@ var invalidParseCases = []string{
 	"a ← b\nb ←",
 	`a ← [\pA]`,
 	"\xfe",
+	`a = '\"'`,
+	`a = "\'"`,
+	`a = '\xzz`,
+	`a = '\091`,
+	`a = "b`,
+	"a = `b",
+	"a = 'b",
+	`a = '\uA'`,
+	`a = '\UA012'`,
+	`a = [b`,
+	`a = b /`,
+	`a = +`,
+	`a = *`,
+	`a = ?`,
 }
 
 var expInvalidParseErrs = []string{
@@ -31,6 +45,20 @@ var expInvalidParseErrs = []string{
 	"file:1:1 (0): no match found",
 	"file:1:8 (9): rule UnicodeClassEscape: invalid Unicode class escape",
 	"file:1:1 (0): invalid encoding",
+	"file:1:7 (6): invalid escape character",
+	"file:1:7 (6): invalid escape character",
+	"file:1:7 (6): invalid hexadecimal escape",
+	"file:1:7 (6): invalid octal escape",
+	"file:1:7 (6): string literal not terminated",
+	"file:1:7 (6): string literal not terminated",
+	"file:1:7 (6): character literal not terminated",
+	"file:1:7 (6): invalid Unicode escape",
+	"file:1:7 (6): invalid Unicode escape",
+	"file:1:7 (6): character class not terminated",
+	"file:1:7 (6): invalid choice expression",
+	"file:1:1 (0): no match found",
+	"file:1:1 (0): no match found",
+	"file:1:1 (0): no match found",
 }
 
 func TestInvalidParseCases(t *testing.T) {
