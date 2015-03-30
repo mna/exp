@@ -2297,7 +2297,20 @@ func (e *errList) err() error {
 	if len(*e) == 0 {
 		return nil
 	}
+	e.dedupe()
 	return e
+}
+
+func (e *errList) dedupe() {
+	var cleaned []error
+	set := make(map[string]bool)
+	for _, err := range *e {
+		if msg := err.Error(); !set[msg] {
+			set[msg] = true
+			cleaned = append(cleaned, err)
+		}
+	}
+	*e = cleaned
 }
 
 func (e *errList) Error() string {
@@ -2323,6 +2336,7 @@ func (e *errList) Error() string {
 // the error occurred. The original error is stored in the Inner field.
 type ParserError struct {
 	Inner  error
+	pos    position
 	prefix string
 }
 
