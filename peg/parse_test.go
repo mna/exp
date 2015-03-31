@@ -104,23 +104,36 @@ file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 file:1:5 (4): rule StringLiteral: string literal not terminated`,
 	"a = '\\x": `file:1:7 (6): rule HexEscape: invalid hexadecimal escape
 file:1:5 (4): rule StringLiteral: string literal not terminated`,
-	/*
-		"a = '\\0":  "",
-		"a = '\\u":  "",
-		"a = '\\U":  "",
-		"a = \"\\":  "",
-		"a = \"\\x": "",
-		"a = \"\\0": "",
-		"a = \"\\u": "",
-		"a = \"\\U": "",
-		"a = [\\":   "",
-		"a = [\\x":  "",
-		"a = [\\0":  "",
-		"a = [\\u":  "",
-		"a = [\\U":  "",
-		"a = [\\p":  "",
-		"a = [\\p{": "",
-	*/
+	"a = '\\0": `file:1:7 (6): rule OctalEscape: invalid octal escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = '\\u": `file:1:7 (6): rule ShortUnicodeEscape: invalid Unicode escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = '\\U": `file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = \"\\": `file:1:7 (6): rule DoubleStringEscape: invalid escape character
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = \"\\x": `file:1:7 (6): rule HexEscape: invalid hexadecimal escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = \"\\0": `file:1:7 (6): rule OctalEscape: invalid octal escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = \"\\u": `file:1:7 (6): rule ShortUnicodeEscape: invalid Unicode escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = \"\\U": `file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = [\\": `file:1:7 (6): rule CharClassEscape: invalid escape character
+file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"a = [\\x": `file:1:7 (6): rule HexEscape: invalid hexadecimal escape
+file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"a = [\\0": `file:1:7 (6): rule OctalEscape: invalid octal escape
+file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"a = [\\u": `file:1:7 (6): rule ShortUnicodeEscape: invalid Unicode escape
+file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"a = [\\U": `file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape
+file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"a = [\\p": `file:1:7 (6): rule UnicodeClass: invalid Unicode class
+file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"a = [\\p{": `file:1:7 (6): rule UnicodeClass: invalid Unicode class escape
+file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 }
 
 func TestInvalidParseCases(t *testing.T) {

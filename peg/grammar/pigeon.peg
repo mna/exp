@@ -240,13 +240,13 @@ CharClassMatcher ← '[' ( ClassCharRange / ClassChar / "\\" UnicodeClassEscape 
 ClassCharRange ← ClassChar '-' ClassChar
 ClassChar ← !( "]" / "\\" / EOL ) SourceChar / "\\" CharClassEscape
 CharClassEscape ← ( ']' / CommonEscapeSequence )
-    / !'p' SourceChar {
+    / !'p' ( SourceChar / EOL / EOF ) {
     return nil, errors.New("invalid escape character")
 }
 
 UnicodeClassEscape ← 'p' ( 
       SingleCharUnicodeClass
-    / !( '{' / EOL ) SourceChar { return nil, errors.New("invalid Unicode class escape") }
+    / !'{' ( SourceChar / EOL / EOF ) { return nil, errors.New("invalid Unicode class escape") }
     / '{' UnicodeClass '}'
     / '{' UnicodeClass ( ']' / EOL / EOF ) { return nil, errors.New("Unicode class not terminated") }
     )
