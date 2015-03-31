@@ -189,7 +189,7 @@ LitMatcher ← lit:StringLiteral ignore:"i"? {
 }
 StringLiteral ← ( '"' DoubleStringChar* '"' / "'" SingleStringChar "'" / '`' RawStringChar* '`' ) {
     return ast.NewStringLit(c.astPos(), string(c.text)), nil
-} / ( ( '"' DoubleStringChar* ( EOL / EOF ) ) / ( "'" SingleStringChar ( EOL / EOF ) ) / '`' RawStringChar* EOF ) {
+} / ( ( '"' DoubleStringChar* ( EOL / EOF ) ) / ( "'" SingleStringChar? ( EOL / EOF ) ) / '`' RawStringChar* EOF ) {
     return ast.NewStringLit(c.astPos(), "``"), errors.New("string literal not terminated")
 }
 
@@ -233,7 +233,7 @@ CharClassMatcher ← '[' ( ClassCharRange / ClassChar / "\\" UnicodeClassEscape 
     pos := c.astPos()
     cc := ast.NewCharClassMatcher(pos, string(c.text))
     return cc, nil
-} / '[' ( !( EOL / ']' ) SourceChar )* ( EOL / EOF ) {
+} / '[' ( !( EOL ) SourceChar )* ( EOL / EOF ) {
     return ast.NewCharClassMatcher(c.astPos(), "[]"), errors.New("character class not terminated")
 }
 

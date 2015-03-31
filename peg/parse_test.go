@@ -18,15 +18,37 @@ var invalidParseCases = map[string]string{
 	"a ← nil:b":  "file:1:5 (6): rule Identifier: identifier is a reserved word",
 	"\xfe":       "file:1:1 (0): invalid encoding",
 
-	// non-terminated "quoted" tokens
-	"{":       "file:1:1 (0): rule CodeBlock: code block not terminated",
-	"\n{{}":   "file:2:1 (1): rule CodeBlock: code block not terminated",
-	`a = "b`:  "file:1:5 (4): rule StringLiteral: string literal not terminated",
-	"a = `b":  "file:1:5 (4): rule StringLiteral: string literal not terminated",
-	"a = 'b":  "file:1:5 (4): rule StringLiteral: string literal not terminated",
-	`a = [b`:  "file:1:5 (4): rule CharClassMatcher: character class not terminated",
+	// non-terminated, empty, EOF "quoted" tokens
+	"{":         "file:1:1 (0): rule CodeBlock: code block not terminated",
+	"\n{":       "file:2:1 (1): rule CodeBlock: code block not terminated",
+	`a = "`:     "file:1:5 (4): rule StringLiteral: string literal not terminated",
+	"a = `":     "file:1:5 (4): rule StringLiteral: string literal not terminated",
+	"a = '":     "file:1:5 (4): rule StringLiteral: string literal not terminated",
+	`a = [`:     "file:1:5 (4): rule CharClassMatcher: character class not terminated",
+	`a = [\p{]`: "file:1:9 (10): rule UnicodeClass: Unicode class not terminated",
+
+	// non-terminated, empty, EOL "quoted" tokens
+	"{\n":          "file:1:1 (0): rule CodeBlock: code block not terminated",
+	"\n{\n":        "file:2:1 (1): rule CodeBlock: code block not terminated",
+	"a = \"\n":     "file:1:5 (4): rule StringLiteral: string literal not terminated",
+	"a = `\n":      "file:1:5 (4): rule StringLiteral: string literal not terminated",
+	"a = '\n":      "file:1:5 (4): rule StringLiteral: string literal not terminated",
+	"a = [\n":      "file:1:5 (4): rule CharClassMatcher: character class not terminated",
+	"a = [\\p{\n]": "file:1:9 (10): rule UnicodeClass: Unicode class not terminated",
+
+	// non-terminated quoted tokens with escaped closing char
 	`a = "\"`: "file:1:5 (4): rule StringLiteral: string literal not terminated",
 	`a = '\'`: "file:1:5 (4): rule StringLiteral: string literal not terminated",
+	`a = [\]`: "file:1:5 (4): rule CharClassMatcher: character class not terminated",
+
+	// non-terminated, non-empty, EOF "quoted" tokens
+	"{a":         "file:1:1 (0): rule CodeBlock: code block not terminated",
+	"\n{{}":      "file:2:1 (1): rule CodeBlock: code block not terminated",
+	`a = "b`:     "file:1:5 (4): rule StringLiteral: string literal not terminated",
+	"a = `b":     "file:1:5 (4): rule StringLiteral: string literal not terminated",
+	"a = 'b":     "file:1:5 (4): rule StringLiteral: string literal not terminated",
+	`a = [b`:     "file:1:5 (4): rule CharClassMatcher: character class not terminated",
+	`a = [\p{W]`: "file:1:9 (10): rule UnicodeClass: Unicode class not terminated",
 
 	// invalid escapes
 	`a ← [\pA]`:    "file:1:8 (9): rule UnicodeClassEscape: invalid Unicode class escape",
@@ -74,9 +96,10 @@ file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 	"a = [\\p{\n": `file:2:0 (8): rule UnicodeClass: invalid Unicode class escape
 file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 
+	// escapes followed by EOF
+	"a = '\\": `file:2:0 (6): rule SingleStringEscape: invalid escape character
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
 	/*
-		// escapes followed by EOF
-		"a = '\\":   "",
 		"a = '\\x":  "",
 		"a = '\\0":  "",
 		"a = '\\u":  "",
