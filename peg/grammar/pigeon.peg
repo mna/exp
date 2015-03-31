@@ -178,7 +178,10 @@ LitMatcher ← lit:StringLiteral ignore:"i"? {
     rawStr := lit.(*ast.StringLit).Val
 	s, err := strconv.Unquote(rawStr)
     if err != nil {
-        return nil, err
+        // an invalid string literal raises an error in the escape rules,
+        // so simply replace the literal with an empty string here to
+        // avoid a cascade of errors.
+        s = ""
     }
     m := ast.NewLitMatcher(c.astPos(), s)
     m.IgnoreCase = ignore != nil
@@ -194,8 +197,14 @@ DoubleStringChar ← !( '"' / "\\" / EOL ) SourceChar / "\\" DoubleStringEscape
 SingleStringChar ← !( "'" / "\\" / EOL ) SourceChar / "\\" SingleStringEscape
 RawStringChar ← !'`' SourceChar
 
-DoubleStringEscape ← "'" / CommonEscapeSequence
-SingleStringEscape ← '"' / CommonEscapeSequence
+DoubleStringEscape ← ( '"' / CommonEscapeSequence )
+    / SourceChar {
+    return nil, errors.New("invalid escape character")
+}
+SingleStringEscape ← ( "'" / CommonEscapeSequence )
+    / SourceChar {
+    return nil, errors.New("invalid escape character")
+}
 
 CommonEscapeSequence ← SingleCharEscape / OctalEscape / HexEscape / LongUnicodeEscape / ShortUnicodeEscape
 SingleCharEscape ← 'a' / 'b' / 'n' / 'f' / 'r' / 't' / 'v' / '\\'

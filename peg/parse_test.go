@@ -17,8 +17,8 @@ var invalidParseCases = map[string]string{
 	"a ← b\nb ←":   "file:1:1 (0): no match found",
 	`a ← [\pA]`:    "file:1:8 (9): rule UnicodeClassEscape: invalid Unicode class escape",
 	"\xfe":         "file:1:1 (0): invalid encoding",
-	`a = '\"'`:     "file:1:7 (6): invalid escape character",
-	`a = "\'"`:     "file:1:7 (6): invalid escape character",
+	`a = '\"'`:     "file:1:7 (6): rule SingleStringEscape: invalid escape character",
+	`a = "\'"`:     "file:1:7 (6): rule DoubleStringEscape: invalid escape character",
 	`a = '\xzz`:    "file:1:7 (6): invalid hexadecimal escape",
 	`a = '\091`:    "file:1:7 (6): invalid octal escape",
 	`a = "b`:       "file:1:5 (4): rule StringLiteral: string literal not terminated",
@@ -31,6 +31,8 @@ var invalidParseCases = map[string]string{
 	`a = +`:        "file:1:1 (0): no match found",
 	`a = *`:        "file:1:1 (0): no match found",
 	`a = ?`:        "file:1:1 (0): no match found",
+	`a = "\"`:      "file:1:5 (4): rule StringLiteral: string literal not terminated",
+	`a = '\'`:      "file:1:5 (4): rule StringLiteral: string literal not terminated",
 }
 
 func TestInvalidParseCases(t *testing.T) {
