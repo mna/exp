@@ -248,6 +248,7 @@ UnicodeClassEscape ← 'p' (
       SingleCharUnicodeClass
     / !( '{' / EOL ) SourceChar { return nil, errors.New("invalid Unicode class escape") }
     / '{' UnicodeClass '}'
+    / '{' UnicodeClass ( ']' / EOL / EOF ) { return nil, errors.New("Unicode class not terminated") }
     )
 SingleCharUnicodeClass ← [LMNCPZS]
 
@@ -445,7 +446,7 @@ UnicodeClass ← "Other_Default_Ignorable_Code_Point"
     / "M"
     / "L"
     / "C"
-    / SourceChar {
+    / ( !( '}' / EOL / EOF ) SourceChar )+ {
     return nil, errors.New("invalid Unicode class escape")
 }
 
