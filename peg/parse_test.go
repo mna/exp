@@ -96,7 +96,8 @@ file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 	"a = [\\U\n": `file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape
 file:1:5 (4): rule CharClassMatcher: character class not terminated`,
-	"a = [\\p\n":  `file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"a = [\\p\n": `file:2:0 (7): rule UnicodeClassEscape: invalid Unicode class escape
+file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 	"a = [\\p{\n": `file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 
 	// escapes followed by EOF
@@ -130,10 +131,9 @@ file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 	"a = [\\U": `file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape
 file:1:5 (4): rule CharClassMatcher: character class not terminated`,
-	"a = [\\p": `file:1:7 (6): rule UnicodeClass: invalid Unicode class
+	"a = [\\p": `file:1:8 (7): rule UnicodeClassEscape: invalid Unicode class escape
 file:1:5 (4): rule CharClassMatcher: character class not terminated`,
-	"a = [\\p{": `file:1:7 (6): rule UnicodeClass: invalid Unicode class escape
-file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"a = [\\p{": `file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 }
 
 func TestInvalidParseCases(t *testing.T) {
