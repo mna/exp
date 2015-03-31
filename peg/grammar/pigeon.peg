@@ -198,30 +198,30 @@ SingleStringChar ← !( "'" / "\\" / EOL ) SourceChar / "\\" SingleStringEscape
 RawStringChar ← !'`' SourceChar
 
 DoubleStringEscape ← ( '"' / CommonEscapeSequence )
-    / SourceChar {
+    / ( SourceChar / EOL / EOF ) {
     return nil, errors.New("invalid escape character")
 }
 SingleStringEscape ← ( "'" / CommonEscapeSequence )
-    / SourceChar {
+    / ( SourceChar / EOL / EOF ) {
     return nil, errors.New("invalid escape character")
 }
 
 CommonEscapeSequence ← SingleCharEscape / OctalEscape / HexEscape / LongUnicodeEscape / ShortUnicodeEscape
 SingleCharEscape ← 'a' / 'b' / 'n' / 'f' / 'r' / 't' / 'v' / '\\'
 OctalEscape ← OctalDigit OctalDigit OctalDigit
-    / OctalDigit SourceChar {
+    / OctalDigit ( SourceChar / EOL / EOF ) {
     return nil, errors.New("invalid octal escape")
 }
 HexEscape ← 'x' HexDigit HexDigit
-    / 'x' SourceChar {
+    / 'x' ( SourceChar / EOL / EOF ) {
     return nil, errors.New("invalid hexadecimal escape")
 }
 LongUnicodeEscape ← 'U' HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit
-    / 'U' SourceChar {
+    / 'U' ( SourceChar / EOL / EOF ) {
     return nil, errors.New("invalid Unicode escape")
 }
 ShortUnicodeEscape ← 'u' HexDigit HexDigit HexDigit HexDigit
-    / 'u' SourceChar {
+    / 'u' ( SourceChar / EOL / EOF ) {
     return nil, errors.New("invalid Unicode escape")
 }
 

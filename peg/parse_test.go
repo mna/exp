@@ -100,10 +100,11 @@ file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 	"a = [\\p{\n": `file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 
 	// escapes followed by EOF
-	"a = '\\": `file:2:0 (6): rule SingleStringEscape: invalid escape character
+	"a = '\\": `file:1:7 (6): rule SingleStringEscape: invalid escape character
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = '\\x": `file:1:7 (6): rule HexEscape: invalid hexadecimal escape
 file:1:5 (4): rule StringLiteral: string literal not terminated`,
 	/*
-		"a = '\\x":  "",
 		"a = '\\0":  "",
 		"a = '\\u":  "",
 		"a = '\\U":  "",
