@@ -525,13 +525,15 @@ AnyMatcher ← "." {
     return any, nil
 }
 
-CodeBlock ← "{" Code "}" {
+CodeBlock ← '{' Code '}' {
     pos := c.astPos()
     cb := ast.NewCodeBlock(pos, string(c.text))
     return cb, nil
+} / '{' Code EOF {
+    return nil, errors.New("code block not terminated")
 }
 
-Code ← ( ( ![{}] SourceChar )+ / "{" Code "}" )*
+Code ← ( ( ![{}] SourceChar )+ / '{' Code '}' )*
 
 __ ← ( Whitespace / EOL / Comment )*
 _ ← ( Whitespace / MultiLineCommentNoLineTerminator )*
