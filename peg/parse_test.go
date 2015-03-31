@@ -134,6 +134,24 @@ file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 	"a = [\\p": `file:1:8 (7): rule UnicodeClassEscape: invalid Unicode class escape
 file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 	"a = [\\p{": `file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+
+	// multi-char escapes, fail after 2 chars
+	`a = '\x0z'`: "file:1:7 (6): rule HexEscape: invalid hexadecimal escape",
+	`a = '\00z'`: "file:1:7 (6): rule OctalEscape: invalid octal escape",
+	`a = '\u0z'`: "file:1:7 (6): rule ShortUnicodeEscape: invalid Unicode escape",
+	`a = '\U0z'`: "file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape",
+	// multi-char escapes, fail after 3 chars
+	`a = '\u00z'`: "file:1:7 (6): rule ShortUnicodeEscape: invalid Unicode escape",
+	`a = '\U00z'`: "file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape",
+	// multi-char escapes, fail after 4 chars
+	`a = '\u000z'`: "file:1:7 (6): rule ShortUnicodeEscape: invalid Unicode escape",
+	`a = '\U000z'`: "file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape",
+	// multi-char escapes, fail after 5 chars
+	`a = '\U0000z'`: "file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape",
+	// multi-char escapes, fail after 6 chars
+	`a = '\U00000z'`: "file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape",
+	// multi-char escapes, fail after 7 chars
+	`a = '\U000000z'`: "file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape",
 }
 
 func TestInvalidParseCases(t *testing.T) {
