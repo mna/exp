@@ -152,6 +152,11 @@ file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 	`a = '\U00000z'`: "file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape",
 	// multi-char escapes, fail after 7 chars
 	`a = '\U000000z'`: "file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape",
+
+	// combine escape errors
+	`a = "\a\b\c\t\n\r\xab\xz\ux"`: `file:1:11 (10): rule DoubleStringEscape: invalid escape character
+file:1:23 (22): rule HexEscape: invalid hexadecimal escape
+file:1:26 (25): rule ShortUnicodeEscape: invalid Unicode escape`,
 }
 
 func TestInvalidParseCases(t *testing.T) {
