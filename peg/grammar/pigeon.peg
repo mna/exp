@@ -212,7 +212,10 @@ CharClassMatcher ← '[' ( ClassCharRange / ClassChar / "\\" UnicodeClassEscape 
     pos := c.astPos()
     cc := ast.NewCharClassMatcher(pos, string(c.text))
     return cc, nil
+} / '[' ( !( EOL / ']' ) SourceChar )* ( EOL / EOF ) {
+    return ast.NewCharClassMatcher(c.astPos(), "[]"), errors.New("character class not terminated")
 }
+
 ClassCharRange ← ClassChar '-' ClassChar
 ClassChar ← !( "]" / "\\" / EOL ) SourceChar / "\\" CharClassEscape
 CharClassEscape ← ']' / CommonEscapeSequence
