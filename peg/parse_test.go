@@ -36,25 +36,41 @@ var invalidParseCases = map[string]string{
 	`a = '\0z'`:    "file:1:7 (6): rule OctalEscape: invalid octal escape",
 	`a = '\uz'`:    "file:1:7 (6): rule ShortUnicodeEscape: invalid Unicode escape",
 	`a = '\Uz'`:    "file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape",
+	// escapes followed by newline
+	"a = '\\\n": `file:2:0 (6): rule SingleStringEscape: invalid escape character
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = '\\x\n": `file:1:7 (6): rule HexEscape: invalid hexadecimal escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = '\\0\n": `file:1:7 (6): rule OctalEscape: invalid octal escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = '\\u\n": `file:1:7 (6): rule ShortUnicodeEscape: invalid Unicode escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = '\\U\n": `file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = \"\\\n": `file:2:0 (6): rule DoubleStringEscape: invalid escape character
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = \"\\x\n": `file:1:7 (6): rule HexEscape: invalid hexadecimal escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = \"\\0\n": `file:1:7 (6): rule OctalEscape: invalid octal escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = \"\\u\n": `file:1:7 (6): rule ShortUnicodeEscape: invalid Unicode escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = \"\\U\n": `file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape
+file:1:5 (4): rule StringLiteral: string literal not terminated`,
+	"a = [\\\n": `file:2:0 (6): rule CharClassEscape: invalid escape character
+file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"a = [\\x\n": `file:1:7 (6): rule HexEscape: invalid hexadecimal escape
+file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"a = [\\0\n": `file:1:7 (6): rule OctalEscape: invalid octal escape
+file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"a = [\\u\n": `file:1:7 (6): rule ShortUnicodeEscape: invalid Unicode escape
+file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"a = [\\U\n": `file:1:7 (6): rule LongUnicodeEscape: invalid Unicode escape
+file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"a = [\\p\n": `file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"a = [\\p{\n": `file:2:0 (8): rule UnicodeClass: invalid Unicode class escape
+file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 	/*
-		// escapes followed by newline
-		"a = '\\\n":   "",
-		"a = '\\x\n":  "",
-		"a = '\\0\n":  "",
-		"a = '\\u\n":  "",
-		"a = '\\U\n":  "",
-		"a = \"\\\n":  "",
-		"a = \"\\x\n": "",
-		"a = \"\\0\n": "",
-		"a = \"\\u\n": "",
-		"a = \"\\U\n": "",
-		"a = [\\\n":   "",
-		"a = [\\x\n":  "",
-		"a = [\\0\n":  "",
-		"a = [\\u\n":  "",
-		"a = [\\U\n":  "",
-		"a = [\\p\n":  "",
-		"a = [\\p{\n": "",
 		// escapes followed by EOF
 		"a = '\\":   "",
 		"a = '\\x":  "",
