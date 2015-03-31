@@ -209,9 +209,21 @@ SingleStringEscape ← ( "'" / CommonEscapeSequence )
 CommonEscapeSequence ← SingleCharEscape / OctalEscape / HexEscape / LongUnicodeEscape / ShortUnicodeEscape
 SingleCharEscape ← 'a' / 'b' / 'n' / 'f' / 'r' / 't' / 'v' / '\\'
 OctalEscape ← OctalDigit OctalDigit OctalDigit
+    / OctalDigit SourceChar {
+    return nil, errors.New("invalid octal escape")
+}
 HexEscape ← 'x' HexDigit HexDigit
+    / 'x' SourceChar {
+    return nil, errors.New("invalid hexadecimal escape")
+}
 LongUnicodeEscape ← 'U' HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit
+    / 'U' SourceChar {
+    return nil, errors.New("invalid Unicode escape")
+}
 ShortUnicodeEscape ← 'u' HexDigit HexDigit HexDigit HexDigit
+    / 'u' SourceChar {
+    return nil, errors.New("invalid Unicode escape")
+}
 
 OctalDigit ← [0-7]
 DecimalDigit ← [0-9]
@@ -227,11 +239,14 @@ CharClassMatcher ← '[' ( ClassCharRange / ClassChar / "\\" UnicodeClassEscape 
 
 ClassCharRange ← ClassChar '-' ClassChar
 ClassChar ← !( "]" / "\\" / EOL ) SourceChar / "\\" CharClassEscape
-CharClassEscape ← ']' / CommonEscapeSequence
+CharClassEscape ← ( ']' / CommonEscapeSequence )
+    / !'p' SourceChar {
+    return nil, errors.New("invalid escape character")
+}
 
 UnicodeClassEscape ← 'p' ( 
       SingleCharUnicodeClass
-    / !'{' SourceChar { return nil, errors.New("invalid Unicode class escape") }
+    / !( '{' / EOL ) SourceChar { return nil, errors.New("invalid Unicode class escape") }
     / '{' UnicodeClass '}'
     )
 SingleCharUnicodeClass ← [LMNCPZS]
@@ -430,6 +445,9 @@ UnicodeClass ← "Other_Default_Ignorable_Code_Point"
     / "M"
     / "L"
     / "C"
+    / SourceChar {
+    return nil, errors.New("invalid Unicode class escape")
+}
 
 ReservedWord ←
 	// Go keywords http://golang.org/ref/spec#Keywords
