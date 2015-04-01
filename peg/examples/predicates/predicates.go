@@ -1,16 +1,133 @@
-package builder
+package main
 
-var staticCode = `
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"strings"
+	"unicode"
+	"unicode/utf8"
+)
+
+func main() {
+	got, err := Parse("", strings.NewReader(os.Args[1]))
+	fmt.Println(got, err)
+}
+
+var g = &grammar{
+	rules: []*rule{
+		{
+			name: "A",
+			pos:  position{line: 10, col: 1, offset: 118},
+			expr: &choiceExpr{
+				pos: position{line: 10, col: 5, offset: 124},
+				alternatives: []interface{}{
+					&seqExpr{
+						pos: position{line: 10, col: 5, offset: 124},
+						exprs: []interface{}{
+							&labeledExpr{
+								pos:   position{line: 10, col: 5, offset: 124},
+								label: "a",
+								expr: &litMatcher{
+									pos:        position{line: 10, col: 7, offset: 126},
+									val:        "a",
+									ignoreCase: false,
+								},
+							},
+							&notCodeExpr{
+								pos: position{line: 10, col: 11, offset: 130},
+								run: (*parser).callonA5,
+							},
+						},
+					},
+					&seqExpr{
+						pos: position{line: 15, col: 3, offset: 192},
+						exprs: []interface{}{
+							&labeledExpr{
+								pos:   position{line: 15, col: 3, offset: 192},
+								label: "b",
+								expr: &litMatcher{
+									pos:        position{line: 15, col: 5, offset: 194},
+									val:        "b",
+									ignoreCase: false,
+								},
+							},
+							&notCodeExpr{
+								pos: position{line: 15, col: 9, offset: 198},
+								run: (*parser).callonA9,
+							},
+						},
+					},
+					&seqExpr{
+						pos: position{line: 20, col: 3, offset: 259},
+						exprs: []interface{}{
+							&labeledExpr{
+								pos:   position{line: 20, col: 3, offset: 259},
+								label: "d",
+								expr: &litMatcher{
+									pos:        position{line: 20, col: 5, offset: 261},
+									val:        "d",
+									ignoreCase: false,
+								},
+							},
+							&notCodeExpr{
+								pos: position{line: 20, col: 9, offset: 265},
+								run: (*parser).callonA13,
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+}
+
+func (c *current) onA5(a interface{}) (bool, error) {
+	fmt.Printf("%q\n", string(c.text))
+	return true, nil
+}
+
+func (p *parser) callonA5() (bool, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onA5(stack["a"])
+}
+
+func (c *current) onA9(a, b interface{}) (bool, error) {
+	fmt.Printf("%q\n", string(c.text))
+	return true, nil
+}
+
+func (p *parser) callonA9() (bool, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onA9(stack["a"], stack["b"])
+}
+
+func (c *current) onA13(a, b, d interface{}) (bool, error) {
+	fmt.Printf("%q\n", string(c.text))
+	return true, nil
+}
+
+func (p *parser) callonA13() (bool, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onA13(stack["a"], stack["b"], stack["d"])
+}
+
 var (
 	// ErrNoRule is returned when the grammar to parse has no rule.
-	ErrNoRule          = errors.New("grammar has no rule")
+	ErrNoRule = errors.New("grammar has no rule")
 
 	// ErrInvalidEncoding is returned when the source is not properly
 	// utf8-encoded.
 	ErrInvalidEncoding = errors.New("invalid encoding")
 
 	// ErrNoMatch is returned if no match could be found.
-	ErrNoMatch         = errors.New("no match found")
+	ErrNoMatch = errors.New("no match found")
 )
 
 var debug = false
@@ -36,7 +153,7 @@ type position struct {
 }
 
 func (p position) String() string {
-	return fmt.Sprintf("%%d:%%d [%%d]", p.line, p.col, p.offset)
+	return fmt.Sprintf("%d:%d [%d]", p.line, p.col, p.offset)
 }
 
 type current struct {
@@ -62,9 +179,9 @@ type choiceExpr struct {
 }
 
 type actionExpr struct {
-	pos    position
-	expr   interface{}
-	run    func(*parser) (interface{}, error)
+	pos  position
+	expr interface{}
+	run  func(*parser) (interface{}, error)
 }
 
 type seqExpr struct {
@@ -215,19 +332,19 @@ func (p *parser) print(prefix, s string) string {
 		return s
 	}
 
-	fmt.Printf("%%s %%d:%%d:%%d: %%s [%%#U]\n",
+	fmt.Printf("%s %d:%d:%d: %s [%#U]\n",
 		prefix, p.pt.line, p.pt.col, p.pt.offset, s, p.pt.rn)
 	return s
 }
 
 func (p *parser) in(s string) string {
 	p.depth++
-	return p.print(strings.Repeat(" ", p.depth) + ">", s)
+	return p.print(strings.Repeat(" ", p.depth)+">", s)
 }
 
 func (p *parser) out(s string) string {
 	p.depth--
-	return p.print(strings.Repeat(" ", p.depth) + "<", s)
+	return p.print(strings.Repeat(" ", p.depth)+"<", s)
 }
 
 func (p *parser) addErr(err error) {
@@ -242,7 +359,7 @@ func (p *parser) addErrAt(err error, pos position) {
 	if buf.Len() > 0 {
 		buf.WriteString(":")
 	}
-	buf.WriteString(fmt.Sprintf("%%d:%%d (%%d)", pos.line, pos.col, pos.offset))
+	buf.WriteString(fmt.Sprintf("%d:%d (%d)", pos.line, pos.col, pos.offset))
 	if len(p.rstack) > 0 {
 		if buf.Len() > 0 {
 			buf.WriteString(": ")
@@ -326,7 +443,7 @@ func (p *parser) parse(g *grammar) (val interface{}, err error) {
 			case error:
 				p.addErr(e)
 			default:
-				p.addErr(fmt.Errorf("%%v", e))
+				p.addErr(fmt.Errorf("%v", e))
 			}
 			err = p.errs.err()
 		}
@@ -357,7 +474,7 @@ func (p *parser) parseRule(rule *rule) (interface{}, bool) {
 	p.vstack = p.vstack[:len(p.vstack)-1]
 	p.rstack = p.rstack[:len(p.rstack)-1]
 	if ok && debug {
-		p.print(strings.Repeat(" ", p.depth) + "MATCH", string(p.slice(start.position, p.save().position)))
+		p.print(strings.Repeat(" ", p.depth)+"MATCH", string(p.slice(start.position, p.save().position)))
 	}
 	return val, ok
 }
@@ -395,7 +512,7 @@ func (p *parser) parseExpr(expr interface{}) (interface{}, bool) {
 	case *zeroOrOneExpr:
 		return p.parseZeroOrOneExpr(expr)
 	default:
-		panic(fmt.Sprintf("unknown expression type %%T", expr))
+		panic(fmt.Sprintf("unknown expression type %T", expr))
 	}
 }
 
@@ -416,7 +533,7 @@ func (p *parser) parseActionExpr(act *actionExpr) (interface{}, bool) {
 		val = actVal
 	}
 	if ok {
-		p.print(strings.Repeat(" ", p.depth) + "MATCH", string(p.slice(start.position, p.save().position)))
+		p.print(strings.Repeat(" ", p.depth)+"MATCH", string(p.slice(start.position, p.save().position)))
 	}
 	return val, ok
 }
@@ -604,12 +721,12 @@ func (p *parser) parseRuleRefExpr(ref *ruleRefExpr) (interface{}, bool) {
 	}
 
 	if ref.name == "" {
-		panic(fmt.Sprintf("%%s: invalid rule: missing name", ref.pos))
+		panic(fmt.Sprintf("%s: invalid rule: missing name", ref.pos))
 	}
 
 	rule := p.rules[ref.name]
 	if rule == nil {
-		p.addErr(fmt.Errorf("undefined rule: %%s", ref.name))
+		p.addErr(fmt.Errorf("undefined rule: %s", ref.name))
 		return nil, false
 	}
 	return p.parseRule(rule)
@@ -672,6 +789,5 @@ func rangeTable(class string) *unicode.RangeTable {
 	}
 
 	// cannot happen
-	panic(fmt.Sprintf("invalid Unicode class: %%s", class))
+	panic(fmt.Sprintf("invalid Unicode class: %s", class))
 }
-`

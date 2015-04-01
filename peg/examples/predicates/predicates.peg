@@ -1,0 +1,23 @@
+{
+package main
+
+func main() {
+    got, err := Parse("", strings.NewReader(os.Args[1]))
+    fmt.Println(got, err)
+}
+}
+
+A ← a:'a' !{
+    fmt.Println(string(c.text))
+    return true, nil
+} 
+
+/ b:'b' !{
+    fmt.Println(string(c.text))
+    return true, nil
+}
+
+/ d:'d' !{
+    fmt.Println(string(c.text))
+    return true, nil
+}
