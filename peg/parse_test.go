@@ -184,6 +184,26 @@ var validParseCases = map[string]*ast.Grammar{
 			},
 		},
 	},
+	"a ← b\nc=d \n e <- f \ng\u27f5h": &ast.Grammar{
+		Rules: []*ast.Rule{
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "a"),
+				Expr: &ast.RuleRefExpr{Name: ast.NewIdentifier(ast.Pos{}, "b")},
+			},
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "c"),
+				Expr: &ast.RuleRefExpr{Name: ast.NewIdentifier(ast.Pos{}, "d")},
+			},
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "e"),
+				Expr: &ast.RuleRefExpr{Name: ast.NewIdentifier(ast.Pos{}, "f")},
+			},
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "g"),
+				Expr: &ast.RuleRefExpr{Name: ast.NewIdentifier(ast.Pos{}, "h")},
+			},
+		},
+	},
 }
 
 func TestValidParseCases(t *testing.T) {
