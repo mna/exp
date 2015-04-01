@@ -224,6 +224,52 @@ var validParseCases = map[string]*ast.Grammar{
 			},
 		},
 	},
+	"a\n<-\nb": &ast.Grammar{
+		Rules: []*ast.Rule{
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "a"),
+				Expr: &ast.RuleRefExpr{Name: ast.NewIdentifier(ast.Pos{}, "b")},
+			},
+		},
+	},
+	"a\n<-\nb\nc": &ast.Grammar{
+		Rules: []*ast.Rule{
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "a"),
+				Expr: &ast.SeqExpr{
+					Exprs: []ast.Expression{
+						&ast.RuleRefExpr{Name: ast.NewIdentifier(ast.Pos{}, "b")},
+						&ast.RuleRefExpr{Name: ast.NewIdentifier(ast.Pos{}, "c")},
+					},
+				},
+			},
+		},
+	},
+	"a\n<-\nb\nc\n=\nd": &ast.Grammar{
+		Rules: []*ast.Rule{
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "a"),
+				Expr: &ast.RuleRefExpr{Name: ast.NewIdentifier(ast.Pos{}, "b")},
+			},
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "c"),
+				Expr: &ast.RuleRefExpr{Name: ast.NewIdentifier(ast.Pos{}, "d")},
+			},
+		},
+	},
+	"a\n<-\nb\nc\n'C'\n=\nd": &ast.Grammar{
+		Rules: []*ast.Rule{
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "a"),
+				Expr: &ast.RuleRefExpr{Name: ast.NewIdentifier(ast.Pos{}, "b")},
+			},
+			{
+				Name:        ast.NewIdentifier(ast.Pos{}, "c"),
+				DisplayName: ast.NewStringLit(ast.Pos{}, `'C'`),
+				Expr:        &ast.RuleRefExpr{Name: ast.NewIdentifier(ast.Pos{}, "d")},
+			},
+		},
+	},
 }
 
 func TestValidParseCases(t *testing.T) {
