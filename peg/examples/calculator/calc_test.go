@@ -34,6 +34,9 @@ var validCases = map[string]int{
 	"1 - 0": 1,
 	"1 * 0": 0,
 
+	"1\n+\t2\r\n +\n3\n": 6,
+	"(2) * 3":            6,
+
 	" 1 + 2 - 3 * 4 / 5 ":       1,
 	" 1 + (2 - 3) * 4 / 5 ":     1,
 	" (1 + 2 - 3) * 4 / 5 ":     0,
@@ -60,22 +63,24 @@ func TestValidCases(t *testing.T) {
 }
 
 var invalidCases = map[string]string{
-	"":    "1:1 (0): no match found",
-	"(":   "1:1 (0): no match found",
-	")":   "1:1 (0): no match found",
-	"()":  "1:1 (0): no match found",
-	"+":   "1:1 (0): no match found",
-	"-":   "1:1 (0): no match found",
-	"*":   "1:1 (0): no match found",
-	"/":   "1:1 (0): no match found",
-	"+1":  "1:1 (0): no match found",
-	"*1":  "1:1 (0): no match found",
-	"/1":  "1:1 (0): no match found",
-	"1/0": "1:4 (3): rule Term: runtime error: integer divide by zero",
-	"1+":  "1:1 (0): no match found",
-	"1-":  "1:1 (0): no match found",
-	"1*":  "1:1 (0): no match found",
-	"1/":  "1:1 (0): no match found",
+	"":        "1:1 (0): no match found",
+	"(":       "1:1 (0): no match found",
+	")":       "1:1 (0): no match found",
+	"()":      "1:1 (0): no match found",
+	"+":       "1:1 (0): no match found",
+	"-":       "1:1 (0): no match found",
+	"*":       "1:1 (0): no match found",
+	"/":       "1:1 (0): no match found",
+	"+1":      "1:1 (0): no match found",
+	"*1":      "1:1 (0): no match found",
+	"/1":      "1:1 (0): no match found",
+	"1/0":     "1:4 (3): rule Term: runtime error: integer divide by zero",
+	"1+":      "1:1 (0): no match found",
+	"1-":      "1:1 (0): no match found",
+	"1*":      "1:1 (0): no match found",
+	"1/":      "1:1 (0): no match found",
+	"1 (+ 2)": "1:1 (0): no match found",
+	"1 (2)":   "1:1 (0): no match found",
 }
 
 func TestInvalidCases(t *testing.T) {
