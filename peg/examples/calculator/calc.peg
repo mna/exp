@@ -1,0 +1,42 @@
+{
+// Command calculator is a small PEG-generated parser that computes
+// simple math using integers, additions, subtractions and multiplications.
+//
+// Example usage: $ calculator "3 + (2 - 5 * 12)"
+//
+// Inspired by pegjs arithmetic example:
+// https://github.com/pegjs/pegjs/blob/master/examples/arithmetics.pegjs
+//
+package main
+
+func main() {
+    if len(os.Args) != 2 {
+        log.Fatal("Usage: calculator 'EXPR'")
+    }
+    got, err := Parse("", strings.NewReader(os.Args[1]))
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println("=", got)
+}
+}
+
+Input <- Expr+ EOF
+
+Expr <- _ Term ( _ AddOp _ Term )* _
+
+Term <- Factor ( _ MulOp _ Factor )*
+
+Factor <- '(' expr:Expr ')' { return expr, nil } / Integer
+
+AddOp <- '+' / '-'
+
+MulOp <- '*'
+
+Integer <- [0-9]+ {
+    return strconv.Atoi(string(c.text))
+}
+
+_ "whitespace" <- [ \n\t\r]*
+
+EOF <- !.
