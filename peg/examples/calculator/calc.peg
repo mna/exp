@@ -9,6 +9,18 @@
 //
 package main
 
+var ops = map[string]func(int, int) int {
+    "+": func(l, r int) int {
+        return l + r
+    },
+    "-": func(l, r int) int {
+        return l - r
+    },
+    "*": func(l, r int) int {
+        return l * r
+    },
+}
+
 func main() {
     if len(os.Args) != 2 {
         log.Fatal("Usage: calculator 'EXPR'")
@@ -19,19 +31,52 @@ func main() {
     }
     fmt.Println("=", got)
 }
+
+func toIfaceSlice(v interface{}) []interface{} {
+    if v == nil {
+        return nil
+    }
+    return v.([]interface{})
 }
 
-Input <- Expr+ EOF
+func eval(first, rest interface{}) int {
+    l := first.(int)
+    restSl := toIfaceSlice(rest)
+    for _, v := range restSl {
+        restExpr := toIfaceSlice(v)
+        r := restExpr[3].(int)
+        op := restExpr[1].(string)
+        l = ops[op](l, r)
+    }
+    return l
+}
+}
 
-Expr <- _ Term ( _ AddOp _ Term )* _
+Input <- expr:Expr EOF {
+    return expr, nil
+}
 
-Term <- Factor ( _ MulOp _ Factor )*
+Expr <- _ first:Term rest:( _ AddOp _ Term )* _ {
+    return eval(first, rest), nil
+}
 
-Factor <- '(' expr:Expr ')' { return expr, nil } / Integer
+Term <- first:Factor rest:( _ MulOp _ Factor )* {
+    return eval(first, rest), nil
+}
 
-AddOp <- '+' / '-'
+Factor <- '(' expr:Expr ')' {
+    return expr, nil
+} / integer:Integer {
+    return integer, nil
+}
 
-MulOp <- '*'
+AddOp <- ( '+' / '-' ) {
+    return string(c.text), nil
+}
+
+MulOp <- '*' {
+    return string(c.text), nil
+}
 
 Integer <- [0-9]+ {
     return strconv.Atoi(string(c.text))
