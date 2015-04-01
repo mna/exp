@@ -19,6 +19,9 @@ var ops = map[string]func(int, int) int {
     "*": func(l, r int) int {
         return l * r
     },
+    "/": func(l, r int) int {
+        return l / r
+    },
 }
 
 func main() {
@@ -74,11 +77,11 @@ AddOp <- ( '+' / '-' ) {
     return string(c.text), nil
 }
 
-MulOp <- '*' {
+MulOp <- ( '*' / '/' ) {
     return string(c.text), nil
 }
 
-Integer <- [0-9]+ {
+Integer <- '-'? [0-9]+ {
     return strconv.Atoi(string(c.text))
 }
 
