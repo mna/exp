@@ -20,6 +20,7 @@ var invalidParseCases = map[string]string{
 	"a ← b\nb ←": "file:1:1 (0): no match found",
 	"a ← nil:b":  "file:1:5 (6): rule Identifier: identifier is a reserved word",
 	"\xfe":       "file:1:1 (0): invalid encoding",
+	"{}{}":       "file:1:1 (0): no match found",
 
 	// non-terminated, empty, EOF "quoted" tokens
 	"{":     "file:1:1 (0): rule CodeBlock: code block not terminated",
@@ -201,6 +202,25 @@ var validParseCases = map[string]*ast.Grammar{
 			{
 				Name: ast.NewIdentifier(ast.Pos{}, "g"),
 				Expr: &ast.RuleRefExpr{Name: ast.NewIdentifier(ast.Pos{}, "h")},
+			},
+		},
+	},
+	`a "A"← b`: &ast.Grammar{
+		Rules: []*ast.Rule{
+			{
+				Name:        ast.NewIdentifier(ast.Pos{}, "a"),
+				DisplayName: ast.NewStringLit(ast.Pos{}, `"A"`),
+				Expr:        &ast.RuleRefExpr{Name: ast.NewIdentifier(ast.Pos{}, "b")},
+			},
+		},
+	},
+	"{ init \n}\na 'A'← b": &ast.Grammar{
+		Init: ast.NewCodeBlock(ast.Pos{}, "{ init \n}"),
+		Rules: []*ast.Rule{
+			{
+				Name:        ast.NewIdentifier(ast.Pos{}, "a"),
+				DisplayName: ast.NewStringLit(ast.Pos{}, `'A'`),
+				Expr:        &ast.RuleRefExpr{Name: ast.NewIdentifier(ast.Pos{}, "b")},
 			},
 		},
 	},
