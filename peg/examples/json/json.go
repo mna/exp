@@ -466,8 +466,8 @@ var g = &grammar{
 			expr: &charClassMatcher{
 				pos:        position{line: 93, col: 15, offset: 2113},
 				val:        "[\\x00-\\x1f\"\\\\]",
-				chars:      []rune{'\x00', '0', '0', 'f', '"', '\\'},
-				ranges:     []rune{'\x00', '1'},
+				chars:      []rune{'"', '\\'},
+				ranges:     []rune{'\x00', '\x1f'},
 				ignoreCase: false,
 				inverted:   false,
 			},
@@ -1105,6 +1105,7 @@ func (p *parser) parseRule(rule *rule) (interface{}, bool) {
 
 	start := p.save()
 	p.rstack = append(p.rstack, rule)
+	// TODO : where should the variable stack start/end?
 	p.vstack = append(p.vstack, make(map[string]interface{}))
 	val, ok := p.parseExpr(rule.expr)
 	p.vstack = p.vstack[:len(p.vstack)-1]
