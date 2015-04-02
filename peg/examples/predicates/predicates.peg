@@ -2,7 +2,16 @@
 package main
 
 func main() {
-    got, err := Parse("", strings.NewReader(os.Args[1]))
+    in := os.Stdin
+    if len(os.Args) > 1 {
+        f, err := os.Open(os.Args[1])
+        if err != nil {
+            log.Fatal(err)
+        }
+        defer f.Close()
+        in = f
+    }
+    got, err := Parse("", in)
     fmt.Println(got, err)
 }
 }
@@ -21,3 +30,5 @@ A ← a:'a' !{
     fmt.Println(string(c.text))
     return true, nil
 }
+
+B ← out:( inner:( 'a' innermost:'b' &{return true, nil} ) &{return true, nil} ) &{return true, nil}

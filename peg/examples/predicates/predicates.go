@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 	"unicode"
@@ -13,7 +14,16 @@ import (
 )
 
 func main() {
-	got, err := Parse("", strings.NewReader(os.Args[1]))
+	in := os.Stdin
+	if len(os.Args) > 1 {
+		f, err := os.Open(os.Args[1])
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		in = f
+	}
+	got, err := Parse("", in)
 	fmt.Println(got, err)
 }
 
@@ -21,63 +31,116 @@ var g = &grammar{
 	rules: []*rule{
 		{
 			name: "A",
-			pos:  position{line: 10, col: 1, offset: 118},
+			pos:  position{line: 19, col: 1, offset: 280},
 			expr: &choiceExpr{
-				pos: position{line: 10, col: 5, offset: 124},
+				pos: position{line: 19, col: 5, offset: 286},
 				alternatives: []interface{}{
 					&seqExpr{
-						pos: position{line: 10, col: 5, offset: 124},
+						pos: position{line: 19, col: 5, offset: 286},
 						exprs: []interface{}{
 							&labeledExpr{
-								pos:   position{line: 10, col: 5, offset: 124},
+								pos:   position{line: 19, col: 5, offset: 286},
 								label: "a",
 								expr: &litMatcher{
-									pos:        position{line: 10, col: 7, offset: 126},
+									pos:        position{line: 19, col: 7, offset: 288},
 									val:        "a",
 									ignoreCase: false,
 								},
 							},
 							&notCodeExpr{
-								pos: position{line: 10, col: 11, offset: 130},
+								pos: position{line: 19, col: 11, offset: 292},
 								run: (*parser).callonA5,
 							},
 						},
 					},
 					&seqExpr{
-						pos: position{line: 15, col: 3, offset: 192},
+						pos: position{line: 24, col: 3, offset: 354},
 						exprs: []interface{}{
 							&labeledExpr{
-								pos:   position{line: 15, col: 3, offset: 192},
+								pos:   position{line: 24, col: 3, offset: 354},
 								label: "b",
 								expr: &litMatcher{
-									pos:        position{line: 15, col: 5, offset: 194},
+									pos:        position{line: 24, col: 5, offset: 356},
 									val:        "b",
 									ignoreCase: false,
 								},
 							},
 							&notCodeExpr{
-								pos: position{line: 15, col: 9, offset: 198},
+								pos: position{line: 24, col: 9, offset: 360},
 								run: (*parser).callonA9,
 							},
 						},
 					},
 					&seqExpr{
-						pos: position{line: 20, col: 3, offset: 259},
+						pos: position{line: 29, col: 3, offset: 421},
 						exprs: []interface{}{
 							&labeledExpr{
-								pos:   position{line: 20, col: 3, offset: 259},
+								pos:   position{line: 29, col: 3, offset: 421},
 								label: "d",
 								expr: &litMatcher{
-									pos:        position{line: 20, col: 5, offset: 261},
+									pos:        position{line: 29, col: 5, offset: 423},
 									val:        "d",
 									ignoreCase: false,
 								},
 							},
 							&notCodeExpr{
-								pos: position{line: 20, col: 9, offset: 265},
+								pos: position{line: 29, col: 9, offset: 427},
 								run: (*parser).callonA13,
 							},
 						},
+					},
+				},
+			},
+		},
+		{
+			name: "B",
+			pos:  position{line: 34, col: 1, offset: 486},
+			expr: &seqExpr{
+				pos: position{line: 34, col: 5, offset: 492},
+				exprs: []interface{}{
+					&labeledExpr{
+						pos:   position{line: 34, col: 5, offset: 492},
+						label: "out",
+						expr: &seqExpr{
+							pos: position{line: 34, col: 11, offset: 498},
+							exprs: []interface{}{
+								&labeledExpr{
+									pos:   position{line: 34, col: 11, offset: 498},
+									label: "inner",
+									expr: &seqExpr{
+										pos: position{line: 34, col: 19, offset: 506},
+										exprs: []interface{}{
+											&litMatcher{
+												pos:        position{line: 34, col: 19, offset: 506},
+												val:        "a",
+												ignoreCase: false,
+											},
+											&labeledExpr{
+												pos:   position{line: 34, col: 23, offset: 510},
+												label: "innermost",
+												expr: &litMatcher{
+													pos:        position{line: 34, col: 33, offset: 520},
+													val:        "b",
+													ignoreCase: false,
+												},
+											},
+											&andCodeExpr{
+												pos: position{line: 34, col: 37, offset: 524},
+												run: (*parser).callonB9,
+											},
+										},
+									},
+								},
+								&andCodeExpr{
+									pos: position{line: 34, col: 59, offset: 546},
+									run: (*parser).callonB10,
+								},
+							},
+						},
+					},
+					&andCodeExpr{
+						pos: position{line: 34, col: 81, offset: 568},
+						run: (*parser).callonB11,
 					},
 				},
 			},
@@ -86,7 +149,7 @@ var g = &grammar{
 }
 
 func (c *current) onA5(a interface{}) (bool, error) {
-	fmt.Printf("%q\n", string(c.text))
+	fmt.Println(string(c.text))
 	return true, nil
 }
 
@@ -97,7 +160,7 @@ func (p *parser) callonA5() (bool, error) {
 }
 
 func (c *current) onA9(a, b interface{}) (bool, error) {
-	fmt.Printf("%q\n", string(c.text))
+	fmt.Println(string(c.text))
 	return true, nil
 }
 
@@ -108,7 +171,7 @@ func (p *parser) callonA9() (bool, error) {
 }
 
 func (c *current) onA13(a, b, d interface{}) (bool, error) {
-	fmt.Printf("%q\n", string(c.text))
+	fmt.Println(string(c.text))
 	return true, nil
 }
 
@@ -116,6 +179,36 @@ func (p *parser) callonA13() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
 	return p.cur.onA13(stack["a"], stack["b"], stack["d"])
+}
+
+func (c *current) onB9(out, inner, innermost interface{}) (bool, error) {
+	return true, nil
+}
+
+func (p *parser) callonB9() (bool, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onB9(stack["out"], stack["inner"], stack["innermost"])
+}
+
+func (c *current) onB10(out, inner, innermost interface{}) (bool, error) {
+	return true, nil
+}
+
+func (p *parser) callonB10() (bool, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onB10(stack["out"], stack["inner"], stack["innermost"])
+}
+
+func (c *current) onB11(out, inner, innermost interface{}) (bool, error) {
+	return true, nil
+}
+
+func (p *parser) callonB11() (bool, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onB11(stack["out"], stack["inner"], stack["innermost"])
 }
 
 var (
@@ -469,6 +562,7 @@ func (p *parser) parseRule(rule *rule) (interface{}, bool) {
 
 	start := p.save()
 	p.rstack = append(p.rstack, rule)
+	// TODO : where should the variable stack start/end?
 	p.vstack = append(p.vstack, make(map[string]interface{}))
 	val, ok := p.parseExpr(rule.expr)
 	p.vstack = p.vstack[:len(p.vstack)-1]
