@@ -1,0 +1,9 @@
+- fix labeled args/args stack issue
+- add tests with the JSON parser, compare results with the stdlib, benchmark for fun
+- add CurrentReceiverName option as a command-line flag
+- better CLI doc, manpage
+- better docs, refactor code
+- shell script to generate all (pigeon itself + examples)
+- README, LICENSE, README in examples directories
+? type annotations for generated code functions
+? toIfaceSlice as built-in helper function
