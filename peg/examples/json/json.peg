@@ -1,0 +1,61 @@
+{
+package main
+
+func main() {
+    in := os.Stdin
+    nm := "stdin"
+    if len(os.Args) > 1 {
+        f, err := os.Open(os.Args[1])
+        if err != nil {
+            log.Fatal(err)
+        }
+        defer f.Close()
+        in = f
+        nm = os.Args[1]
+    }
+
+    got, err := Parse(nm, in)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println(got)
+}
+}
+
+JSON ← _ Value+ EOF
+
+Value ← ( Object / Array / Number / String / Bool / Null ) _
+
+Object ← '{' _ ( String _ ':' _ Value ( ',' _ String _ ':' _ Value )* )? '}'
+
+Array ← '[' _ ( Value ( ',' _ Value )* )? ']'
+
+Number ← '-'? Integer ( '.' DecimalDigit+ )? Exponent?
+
+Integer ← '0' / NonZeroDecimalDigit DecimalDigit*
+
+Exponent ← 'e'i [+-]? DecimalDigit+
+
+String ← '"' ( !EscapedChar . / '\\' EscapeSequence )* '"'
+
+EscapedChar ← [\x00-\x1f"\\]
+
+EscapeSequence ← SingleCharEscape / UnicodeEscape
+
+SingleCharEscape ← ["\\/bfnrt]
+
+UnicodeEscape ← 'u' HexDigit HexDigit HexDigit HexDigit
+
+DecimalDigit ← [0-9]
+
+NonZeroDecimalDigit ← [1-9]
+
+HexDigit ← [0-9a-f]i
+
+Bool ← "true" { return true, nil } / "false" { return false, nil }
+
+Null ← "null" { return nil, nil }
+
+_ "whitespace" ← [ \t\r\n]*
+
+EOF ← !.

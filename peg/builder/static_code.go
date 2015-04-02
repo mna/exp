@@ -352,6 +352,7 @@ func (p *parser) parseRule(rule *rule) (interface{}, bool) {
 
 	start := p.save()
 	p.rstack = append(p.rstack, rule)
+	// TODO : where should the variable stack start/end?
 	p.vstack = append(p.vstack, make(map[string]interface{}))
 	val, ok := p.parseExpr(rule.expr)
 	p.vstack = p.vstack[:len(p.vstack)-1]
