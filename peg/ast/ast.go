@@ -469,7 +469,7 @@ outer:
 					rn, _, _ := r.ReadRune()
 					buf.WriteRune(rn)
 				}
-			case '0':
+			case '0', '1', '2', '3', '4', '5', '6', '7':
 				buf.Reset()
 				buf.WriteRune(rn)
 				for i := 0; i < 2; i++ {
