@@ -270,6 +270,61 @@ var validParseCases = map[string]*ast.Grammar{
 			},
 		},
 	},
+	`a = [a-def]`: &ast.Grammar{
+		Rules: []*ast.Rule{
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "a"),
+				Expr: &ast.CharClassMatcher{
+					Chars:  []rune{'e', 'f'},
+					Ranges: []rune{'a', 'd'},
+				},
+			},
+		},
+	},
+	`a = [abc-f]`: &ast.Grammar{
+		Rules: []*ast.Rule{
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "a"),
+				Expr: &ast.CharClassMatcher{
+					Chars:  []rune{'a', 'b'},
+					Ranges: []rune{'c', 'f'},
+				},
+			},
+		},
+	},
+	`a = [abc-fg]`: &ast.Grammar{
+		Rules: []*ast.Rule{
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "a"),
+				Expr: &ast.CharClassMatcher{
+					Chars:  []rune{'a', 'b', 'g'},
+					Ranges: []rune{'c', 'f'},
+				},
+			},
+		},
+	},
+	`a = [abc-fgh-l]`: &ast.Grammar{
+		Rules: []*ast.Rule{
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "a"),
+				Expr: &ast.CharClassMatcher{
+					Chars:  []rune{'a', 'b', 'g'},
+					Ranges: []rune{'c', 'f', 'h', 'l'},
+				},
+			},
+		},
+	},
+	`a = [\x00-\xabc]`: &ast.Grammar{
+		Rules: []*ast.Rule{
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "a"),
+				Expr: &ast.CharClassMatcher{
+					Chars:  []rune{'c'},
+					Ranges: []rune{'\x00', '\xab'},
+				},
+			},
+		},
+	},
 }
 
 func TestValidParseCases(t *testing.T) {
@@ -405,14 +460,10 @@ func compareExpr(t *testing.T, prefix string, ix int, exp, got ast.Expression) b
 			t.Errorf("%q: want Inverted %t, got %t", ixPrefix, exp.Inverted, got.Inverted)
 			return false
 		}
-		if exp.Val != got.Val {
-			t.Errorf("%q: want value %q, got %q", ixPrefix, exp.Val, got.Val)
-			return false
-		}
 
 		ne, ng := len(exp.Chars), len(got.Chars)
 		if ne != ng {
-			t.Errorf("%q: want %d Chars, got %d", ixPrefix, ne, ng)
+			t.Errorf("%q: want %d Chars, got %d (%v)", ixPrefix, ne, ng, got.Chars)
 			return false
 		}
 		for i, r := range exp.Chars {

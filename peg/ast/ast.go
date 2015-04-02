@@ -414,7 +414,8 @@ func (c *CharClassMatcher) parse() {
 
 	// content of char class is necessarily valid, so escapes are correct
 	r := strings.NewReader(raw)
-	inRange := false
+	var chars []rune
+	var buf bytes.Buffer
 outer:
 	for {
 		rn, _, err := r.ReadRune()
@@ -427,48 +428,85 @@ outer:
 			rn, _, _ := r.ReadRune()
 			switch rn {
 			case ']':
-				c.Chars = append(c.Chars, rn)
+				chars = append(chars, rn)
+				continue
+
 			case 'p':
 				rn, _, _ := r.ReadRune()
 				if rn == '{' {
-					var class bytes.Buffer
+					buf.Reset()
 					for {
 						rn, _, _ := r.ReadRune()
 						if rn == '}' {
 							break
 						}
-						class.WriteRune(rn)
+						buf.WriteRune(rn)
 					}
-					c.UnicodeClasses = append(c.UnicodeClasses, class.String())
+					c.UnicodeClasses = append(c.UnicodeClasses, buf.String())
 				} else {
 					c.UnicodeClasses = append(c.UnicodeClasses, string(rn))
 				}
+				continue
+
+			case 'x':
+				buf.Reset()
+				buf.WriteRune(rn)
+				for i := 0; i < 2; i++ {
+					rn, _, _ := r.ReadRune()
+					buf.WriteRune(rn)
+				}
+			case 'u':
+				buf.Reset()
+				buf.WriteRune(rn)
+				for i := 0; i < 4; i++ {
+					rn, _, _ := r.ReadRune()
+					buf.WriteRune(rn)
+				}
+			case 'U':
+				buf.Reset()
+				buf.WriteRune(rn)
+				for i := 0; i < 8; i++ {
+					rn, _, _ := r.ReadRune()
+					buf.WriteRune(rn)
+				}
+			case '0':
+				buf.Reset()
+				buf.WriteRune(rn)
+				for i := 0; i < 2; i++ {
+					rn, _, _ := r.ReadRune()
+					buf.WriteRune(rn)
+				}
 			default:
-				rn, _, _, _ := strconv.UnquoteChar("\\"+string(rn), 0)
-				c.Chars = append(c.Chars, rn)
+				buf.Reset()
+				buf.WriteRune(rn)
 			}
-		case '-':
-			if !inRange && len(c.Chars) > 0 {
-				inRange = true
-				continue
-			}
-			fallthrough
+			rn, _, _, _ = strconv.UnquoteChar("\\"+buf.String(), 0)
+			chars = append(chars, rn)
 		default:
-			if inRange {
-				// remove last char, use it at range start, and use current
-				// as range end
-				last := c.Chars[len(c.Chars)-1]
-				c.Chars = c.Chars[:len(c.Chars)-1]
-				c.Ranges = append(c.Ranges, last, rn)
-				inRange = false
-				continue
-			}
-			c.Chars = append(c.Chars, rn)
+			chars = append(chars, rn)
 		}
 	}
-	if inRange {
-		// chars ended with a '-', add it as a valid char
-		c.Chars = append(c.Chars, '-')
+
+	// extract ranges and chars
+	inRange, wasRange := false, false
+	for i, r := range chars {
+		if inRange {
+			c.Ranges = append(c.Ranges, r)
+			inRange = false
+			wasRange = true
+			continue
+		}
+
+		if r == '-' && !wasRange && len(c.Chars) > 0 && i < len(chars)-1 {
+			inRange = true
+			wasRange = false
+			c.Ranges = append(c.Ranges, c.Chars[len(c.Chars)-1])
+			c.Chars = c.Chars[:len(c.Chars)-1]
+			// start of range is the last Char added
+			continue
+		}
+		wasRange = false
+		c.Chars = append(c.Chars, r)
 	}
 }
 
