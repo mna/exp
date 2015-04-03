@@ -26,6 +26,7 @@ var onPredFuncTemplate = `func (%s *current) %s(%s) (bool, error) {
 var callFuncTemplate = `func (p *parser) call%s() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
+	//fmt.Printf("CALL %[1]s: stack %%d: %%v\n", len(p.vstack), stack)
 	return p.cur.%[1]s(%s)
 }
 `
@@ -33,6 +34,7 @@ var callFuncTemplate = `func (p *parser) call%s() (interface{}, error) {
 var callPredFuncTemplate = `func (p *parser) call%s() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
+	//fmt.Printf("CALL %[1]s: stack %%d: %%v\n", len(p.vstack), stack)
 	return p.cur.%[1]s(%s)
 }
 `

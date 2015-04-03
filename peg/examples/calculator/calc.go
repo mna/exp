@@ -360,6 +360,7 @@ func (c *current) onInput1(expr interface{}) (interface{}, error) {
 func (p *parser) callonInput1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
+	//fmt.Printf("CALL onInput1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onInput1(stack["expr"])
 }
 
@@ -370,6 +371,7 @@ func (c *current) onExpr1(first, rest interface{}) (interface{}, error) {
 func (p *parser) callonExpr1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
+	//fmt.Printf("CALL onExpr1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onExpr1(stack["first"], stack["rest"])
 }
 
@@ -380,6 +382,7 @@ func (c *current) onTerm1(first, rest interface{}) (interface{}, error) {
 func (p *parser) callonTerm1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
+	//fmt.Printf("CALL onTerm1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onTerm1(stack["first"], stack["rest"])
 }
 
@@ -390,6 +393,7 @@ func (c *current) onFactor2(expr interface{}) (interface{}, error) {
 func (p *parser) callonFactor2() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
+	//fmt.Printf("CALL onFactor2: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onFactor2(stack["expr"])
 }
 
@@ -400,6 +404,7 @@ func (c *current) onFactor8(expr, integer interface{}) (interface{}, error) {
 func (p *parser) callonFactor8() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
+	//fmt.Printf("CALL onFactor8: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onFactor8(stack["expr"], stack["integer"])
 }
 
@@ -410,6 +415,7 @@ func (c *current) onAddOp1() (interface{}, error) {
 func (p *parser) callonAddOp1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
+	//fmt.Printf("CALL onAddOp1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onAddOp1()
 }
 
@@ -420,6 +426,7 @@ func (c *current) onMulOp1() (interface{}, error) {
 func (p *parser) callonMulOp1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
+	//fmt.Printf("CALL onMulOp1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onMulOp1()
 }
 
@@ -430,6 +437,7 @@ func (c *current) onInteger1() (interface{}, error) {
 func (p *parser) callonInteger1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
+	//fmt.Printf("CALL onInteger1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onInteger1()
 }
 
@@ -618,7 +626,12 @@ func parse(filename string, r io.Reader, g *grammar) (interface{}, error) {
 		return nil, err
 	}
 
-	p := &parser{filename: filename, errs: new(errList), data: b, pt: savepoint{position: position{line: 1}}}
+	p := &parser{
+		filename: filename,
+		errs:     new(errList),
+		data:     b,
+		pt:       savepoint{position: position{line: 1}},
+	}
 	return p.parse(g)
 }
 
@@ -640,6 +653,36 @@ type parser struct {
 	rules  map[string]*rule
 	vstack []map[string]interface{}
 	rstack []*rule
+}
+
+func (p *parser) pushV() {
+	if cap(p.vstack) == len(p.vstack) {
+		// create new empty slot in the stack
+		p.vstack = append(p.vstack, nil)
+	} else {
+		// slice to 1 more
+		p.vstack = p.vstack[:len(p.vstack)+1]
+	}
+
+	// get the last args set
+	m := p.vstack[len(p.vstack)-1]
+	if m != nil && len(m) == 0 {
+		// empty map, all good
+		return
+	}
+
+	m = make(map[string]interface{})
+	p.vstack[len(p.vstack)-1] = m
+}
+
+func (p *parser) popV() {
+	// if the map is not empty, clear it
+	m := p.vstack[len(p.vstack)-1]
+	if len(m) > 0 {
+		// GC that map
+		p.vstack[len(p.vstack)-1] = nil
+	}
+	p.vstack = p.vstack[:len(p.vstack)-1]
 }
 
 func (p *parser) print(prefix, s string) string {
@@ -784,9 +827,11 @@ func (p *parser) parseRule(rule *rule) (interface{}, bool) {
 
 	start := p.save()
 	p.rstack = append(p.rstack, rule)
+	p.pushV()
 	val, ok := p.parseExpr(rule.expr)
+	p.popV()
 	p.rstack = p.rstack[:len(p.rstack)-1]
-	if ok {
+	if ok && debug {
 		p.print(strings.Repeat(" ", p.depth)+"MATCH", string(p.slice(start.position, p.save().position)))
 	}
 	return val, ok
@@ -834,7 +879,6 @@ func (p *parser) parseActionExpr(act *actionExpr) (interface{}, bool) {
 		defer p.out(p.in("parseActionExpr"))
 	}
 
-	p.vstack = append(p.vstack, make(map[string]interface{}))
 	start := p.save()
 	val, ok := p.parseExpr(act.expr)
 	if ok {
@@ -846,7 +890,6 @@ func (p *parser) parseActionExpr(act *actionExpr) (interface{}, bool) {
 		}
 		val = actVal
 	}
-	p.vstack = p.vstack[:len(p.vstack)-1]
 	if ok {
 		p.print(strings.Repeat(" ", p.depth)+"MATCH", string(p.slice(start.position, p.save().position)))
 	}
@@ -944,7 +987,9 @@ func (p *parser) parseChoiceExpr(ch *choiceExpr) (interface{}, bool) {
 	}
 
 	for _, alt := range ch.alternatives {
+		p.pushV()
 		val, ok := p.parseExpr(alt)
+		p.popV()
 		if ok {
 			return val, ok
 		}
@@ -957,10 +1002,13 @@ func (p *parser) parseLabeledExpr(lab *labeledExpr) (interface{}, bool) {
 		defer p.out(p.in("parseLabeledExpr"))
 	}
 
+	p.pushV()
 	val, ok := p.parseExpr(lab.expr)
-	if ok && lab.label != "" && len(p.vstack) > 0 {
+	p.popV()
+	if ok && lab.label != "" {
 		m := p.vstack[len(p.vstack)-1]
 		m[lab.label] = val
+		//fmt.Printf("LABEL: set %q = %T (%s) to stack %d\n", lab.label, val, val, len(p.vstack))
 	}
 	return val, ok
 }
