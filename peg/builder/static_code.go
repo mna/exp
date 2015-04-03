@@ -383,9 +383,7 @@ func (p *parser) parseRule(rule *rule) (interface{}, bool) {
 
 	start := p.save()
 	p.rstack = append(p.rstack, rule)
-	p.pushV()
 	val, ok := p.parseExpr(rule.expr)
-	p.popV()
 	p.rstack = p.rstack[:len(p.rstack)-1]
 	if ok && debug {
 		p.print(strings.Repeat(" ", p.depth) + "MATCH", string(p.slice(start.position, p.save().position)))
@@ -436,6 +434,7 @@ func (p *parser) parseActionExpr(act *actionExpr) (interface{}, bool) {
 	}
 
 	start := p.save()
+	p.pushV()
 	val, ok := p.parseExpr(act.expr)
 	if ok {
 		p.cur.pos = start.position
@@ -446,6 +445,7 @@ func (p *parser) parseActionExpr(act *actionExpr) (interface{}, bool) {
 		}
 		val = actVal
 	}
+	p.popV()
 	if ok {
 		p.print(strings.Repeat(" ", p.depth) + "MATCH", string(p.slice(start.position, p.save().position)))
 	}
