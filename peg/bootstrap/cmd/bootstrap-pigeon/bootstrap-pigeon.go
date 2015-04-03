@@ -1872,7 +1872,7 @@ func (c *current) onGrammar1(initializer, rules interface{}) (interface{}, error
 func (p *parser) callonGrammar1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onGrammar1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onGrammar1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onGrammar1(stack["initializer"], stack["rules"])
 }
 
@@ -1883,7 +1883,7 @@ func (c *current) onInitializer1(code interface{}) (interface{}, error) {
 func (p *parser) callonInitializer1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onInitializer1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onInitializer1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onInitializer1(stack["code"])
 }
 
@@ -1903,7 +1903,7 @@ func (c *current) onRule1(name, display, expr interface{}) (interface{}, error) 
 func (p *parser) callonRule1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onRule1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onRule1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onRule1(stack["name"], stack["display"], stack["expr"])
 }
 
@@ -1925,7 +1925,7 @@ func (c *current) onChoiceExpr1(first, rest interface{}) (interface{}, error) {
 func (p *parser) callonChoiceExpr1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onChoiceExpr1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onChoiceExpr1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onChoiceExpr1(stack["first"], stack["rest"])
 }
 
@@ -1946,7 +1946,7 @@ func (c *current) onActionExpr1(expr, code interface{}) (interface{}, error) {
 func (p *parser) callonActionExpr1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onActionExpr1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onActionExpr1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onActionExpr1(stack["expr"], stack["code"])
 }
 
@@ -1966,7 +1966,7 @@ func (c *current) onSeqExpr1(first, rest interface{}) (interface{}, error) {
 func (p *parser) callonSeqExpr1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onSeqExpr1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onSeqExpr1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onSeqExpr1(stack["first"], stack["rest"])
 }
 
@@ -1981,7 +1981,7 @@ func (c *current) onLabeledExpr2(label, expr interface{}) (interface{}, error) {
 func (p *parser) callonLabeledExpr2() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onLabeledExpr2: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onLabeledExpr2: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onLabeledExpr2(stack["label"], stack["expr"])
 }
 
@@ -2001,7 +2001,7 @@ func (c *current) onPrefixedExpr2(op, expr interface{}) (interface{}, error) {
 func (p *parser) callonPrefixedExpr2() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onPrefixedExpr2: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onPrefixedExpr2: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onPrefixedExpr2(stack["op"], stack["expr"])
 }
 
@@ -2012,7 +2012,7 @@ func (c *current) onPrefixedOp1() (interface{}, error) {
 func (p *parser) callonPrefixedOp1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onPrefixedOp1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onPrefixedOp1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onPrefixedOp1()
 }
 
@@ -2040,7 +2040,7 @@ func (c *current) onSuffixedExpr2(expr, op interface{}) (interface{}, error) {
 func (p *parser) callonSuffixedExpr2() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onSuffixedExpr2: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onSuffixedExpr2: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onSuffixedExpr2(stack["expr"], stack["op"])
 }
 
@@ -2051,7 +2051,7 @@ func (c *current) onSuffixedOp1() (interface{}, error) {
 func (p *parser) callonSuffixedOp1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onSuffixedOp1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onSuffixedOp1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onSuffixedOp1()
 }
 
@@ -2062,7 +2062,7 @@ func (c *current) onPrimaryExpr7(expr interface{}) (interface{}, error) {
 func (p *parser) callonPrimaryExpr7() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onPrimaryExpr7: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onPrimaryExpr7: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onPrimaryExpr7(stack["expr"])
 }
 
@@ -2075,7 +2075,7 @@ func (c *current) onRuleRefExpr1(name interface{}) (interface{}, error) {
 func (p *parser) callonRuleRefExpr1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onRuleRefExpr1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onRuleRefExpr1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onRuleRefExpr1(stack["name"])
 }
 
@@ -2094,7 +2094,7 @@ func (c *current) onSemanticPredExpr1(op, code interface{}) (interface{}, error)
 func (p *parser) callonSemanticPredExpr1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onSemanticPredExpr1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onSemanticPredExpr1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onSemanticPredExpr1(stack["op"], stack["code"])
 }
 
@@ -2105,7 +2105,7 @@ func (c *current) onSemanticPredOp1() (interface{}, error) {
 func (p *parser) callonSemanticPredOp1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onSemanticPredOp1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onSemanticPredOp1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onSemanticPredOp1()
 }
 
@@ -2116,7 +2116,7 @@ func (c *current) onIdentifierName1() (interface{}, error) {
 func (p *parser) callonIdentifierName1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onIdentifierName1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onIdentifierName1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onIdentifierName1()
 }
 
@@ -2134,7 +2134,7 @@ func (c *current) onLitMatcher1(lit, ignore interface{}) (interface{}, error) {
 func (p *parser) callonLitMatcher1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onLitMatcher1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onLitMatcher1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onLitMatcher1(stack["lit"], stack["ignore"])
 }
 
@@ -2145,7 +2145,7 @@ func (c *current) onStringLiteral1() (interface{}, error) {
 func (p *parser) callonStringLiteral1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onStringLiteral1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onStringLiteral1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onStringLiteral1()
 }
 
@@ -2158,7 +2158,7 @@ func (c *current) onCharClassMatcher1() (interface{}, error) {
 func (p *parser) callonCharClassMatcher1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onCharClassMatcher1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onCharClassMatcher1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onCharClassMatcher1()
 }
 
@@ -2170,7 +2170,7 @@ func (c *current) onAnyMatcher1() (interface{}, error) {
 func (p *parser) callonAnyMatcher1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onAnyMatcher1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onAnyMatcher1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onAnyMatcher1()
 }
 
@@ -2183,7 +2183,7 @@ func (c *current) onCodeBlock1() (interface{}, error) {
 func (p *parser) callonCodeBlock1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onCodeBlock1: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onCodeBlock1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onCodeBlock1()
 }
 
@@ -2754,7 +2754,7 @@ func (p *parser) parseLabeledExpr(lab *labeledExpr) (interface{}, bool) {
 	if ok && lab.label != "" {
 		m := p.vstack[len(p.vstack)-1]
 		m[lab.label] = val
-		//fmt.Printf("LABEL: set %q = %T (%s) to stack %d\n", lab.label, val, val, len(p.vstack))
+		fmt.Fprintf(os.Stderr, "LABEL: set %q = %T (%s) to stack %d\n", lab.label, val, val, len(p.vstack))
 	}
 	return val, ok
 }

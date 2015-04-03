@@ -568,7 +568,7 @@ func (p *parser) parseLabeledExpr(lab *labeledExpr) (interface{}, bool) {
 	if ok && lab.label != "" {
 		m := p.vstack[len(p.vstack)-1]
 		m[lab.label] = val
-		//fmt.Printf("LABEL: set %%q = %%T (%%s) to stack %%d\n", lab.label, val, val, len(p.vstack))
+		fmt.Fprintf(os.Stderr, "LABEL: set %%q = %%T (%%s) to stack %%d\n", lab.label, val, val, len(p.vstack))
 	}
 	return val, ok
 }

@@ -26,7 +26,7 @@ var onPredFuncTemplate = `func (%s *current) %s(%s) (bool, error) {
 var callFuncTemplate = `func (p *parser) call%s() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL %[1]s: stack %%d: %%v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL %[1]s: stack %%d: %%v\n", len(p.vstack), stack)
 	return p.cur.%[1]s(%s)
 }
 `
@@ -34,7 +34,7 @@ var callFuncTemplate = `func (p *parser) call%s() (interface{}, error) {
 var callPredFuncTemplate = `func (p *parser) call%s() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL %[1]s: stack %%d: %%v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL %[1]s: stack %%d: %%v\n", len(p.vstack), stack)
 	return p.cur.%[1]s(%s)
 }
 `
@@ -453,7 +453,9 @@ func (b *builder) writeExprCode(expr ast.Expression) {
 
 	case *ast.LabeledExpr:
 		b.addArg(expr.Label)
+		b.pushArgsSet()
 		b.writeExprCode(expr.Expr)
+		b.popArgsSet()
 
 	case *ast.NotCodeExpr:
 		b.writeNotCodeExprCode(expr)
@@ -462,7 +464,9 @@ func (b *builder) writeExprCode(expr ast.Expression) {
 		b.writeExprCode(expr.Expr)
 	case *ast.ChoiceExpr:
 		for _, alt := range expr.Alternatives {
+			b.pushArgsSet()
 			b.writeExprCode(alt)
+			b.popArgsSet()
 		}
 	case *ast.NotExpr:
 		b.writeExprCode(expr.Expr)

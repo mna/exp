@@ -83,7 +83,7 @@ var g = &grammar{
 									ignoreCase: false,
 								},
 							},
-							&notCodeExpr{
+							&andCodeExpr{
 								pos: position{line: 29, col: 9, offset: 427},
 								run: (*parser).callonA13,
 							},
@@ -110,36 +110,36 @@ var g = &grammar{
 									expr: &seqExpr{
 										pos: position{line: 34, col: 19, offset: 506},
 										exprs: []interface{}{
-											&litMatcher{
+											&charClassMatcher{
 												pos:        position{line: 34, col: 19, offset: 506},
-												val:        "a",
+												val:        "[^abd]",
+												chars:      []rune{'a', 'b', 'd'},
 												ignoreCase: false,
+												inverted:   true,
 											},
 											&labeledExpr{
-												pos:   position{line: 34, col: 23, offset: 510},
+												pos:   position{line: 34, col: 26, offset: 513},
 												label: "innermost",
-												expr: &litMatcher{
-													pos:        position{line: 34, col: 33, offset: 520},
-													val:        "b",
-													ignoreCase: false,
+												expr: &anyMatcher{
+													line: 34, col: 36, offset: 523,
 												},
 											},
 											&andCodeExpr{
-												pos: position{line: 34, col: 37, offset: 524},
+												pos: position{line: 34, col: 38, offset: 525},
 												run: (*parser).callonB9,
 											},
 										},
 									},
 								},
 								&andCodeExpr{
-									pos: position{line: 34, col: 59, offset: 546},
+									pos: position{line: 34, col: 60, offset: 547},
 									run: (*parser).callonB10,
 								},
 							},
 						},
 					},
 					&andCodeExpr{
-						pos: position{line: 34, col: 81, offset: 568},
+						pos: position{line: 34, col: 82, offset: 569},
 						run: (*parser).callonB11,
 					},
 				},
@@ -156,11 +156,11 @@ func (c *current) onA5(a interface{}) (bool, error) {
 func (p *parser) callonA5() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onA5: stack %d: %v\n", len(p.vstack), stack)
+	fmt.Fprintf(os.Stderr, "CALL onA5: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onA5(stack["a"])
 }
 
-func (c *current) onA9(a, b interface{}) (bool, error) {
+func (c *current) onA9(b interface{}) (bool, error) {
 	fmt.Println(string(c.text))
 	return true, nil
 }
@@ -168,11 +168,11 @@ func (c *current) onA9(a, b interface{}) (bool, error) {
 func (p *parser) callonA9() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onA9: stack %d: %v\n", len(p.vstack), stack)
-	return p.cur.onA9(stack["a"], stack["b"])
+	fmt.Fprintf(os.Stderr, "CALL onA9: stack %d: %v\n", len(p.vstack), stack)
+	return p.cur.onA9(stack["b"])
 }
 
-func (c *current) onA13(a, b, d interface{}) (bool, error) {
+func (c *current) onA13(d interface{}) (bool, error) {
 	fmt.Println(string(c.text))
 	return true, nil
 }
@@ -180,41 +180,41 @@ func (c *current) onA13(a, b, d interface{}) (bool, error) {
 func (p *parser) callonA13() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onA13: stack %d: %v\n", len(p.vstack), stack)
-	return p.cur.onA13(stack["a"], stack["b"], stack["d"])
+	fmt.Fprintf(os.Stderr, "CALL onA13: stack %d: %v\n", len(p.vstack), stack)
+	return p.cur.onA13(stack["d"])
 }
 
-func (c *current) onB9(out, inner, innermost interface{}) (bool, error) {
+func (c *current) onB9(innermost interface{}) (bool, error) {
 	return true, nil
 }
 
 func (p *parser) callonB9() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onB9: stack %d: %v\n", len(p.vstack), stack)
-	return p.cur.onB9(stack["out"], stack["inner"], stack["innermost"])
+	fmt.Fprintf(os.Stderr, "CALL onB9: stack %d: %v\n", len(p.vstack), stack)
+	return p.cur.onB9(stack["innermost"])
 }
 
-func (c *current) onB10(out, inner, innermost interface{}) (bool, error) {
+func (c *current) onB10(inner interface{}) (bool, error) {
 	return true, nil
 }
 
 func (p *parser) callonB10() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onB10: stack %d: %v\n", len(p.vstack), stack)
-	return p.cur.onB10(stack["out"], stack["inner"], stack["innermost"])
+	fmt.Fprintf(os.Stderr, "CALL onB10: stack %d: %v\n", len(p.vstack), stack)
+	return p.cur.onB10(stack["inner"])
 }
 
-func (c *current) onB11(out, inner, innermost interface{}) (bool, error) {
+func (c *current) onB11(out interface{}) (bool, error) {
 	return true, nil
 }
 
 func (p *parser) callonB11() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onB11: stack %d: %v\n", len(p.vstack), stack)
-	return p.cur.onB11(stack["out"], stack["inner"], stack["innermost"])
+	fmt.Fprintf(os.Stderr, "CALL onB11: stack %d: %v\n", len(p.vstack), stack)
+	return p.cur.onB11(stack["out"])
 }
 
 var (
@@ -784,7 +784,7 @@ func (p *parser) parseLabeledExpr(lab *labeledExpr) (interface{}, bool) {
 	if ok && lab.label != "" {
 		m := p.vstack[len(p.vstack)-1]
 		m[lab.label] = val
-		//fmt.Printf("LABEL: set %q = %T (%s) to stack %d\n", lab.label, val, val, len(p.vstack))
+		fmt.Fprintf(os.Stderr, "LABEL: set %q = %T (%s) to stack %d\n", lab.label, val, val, len(p.vstack))
 	}
 	return val, ok
 }

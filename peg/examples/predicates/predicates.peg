@@ -26,9 +26,9 @@ A ← a:'a' !{
     return true, nil
 }
 
-/ d:'d' !{
+/ d:'d' &{
     fmt.Println(string(c.text))
     return true, nil
 }
 
-B ← out:( inner:( 'a' innermost:'b' &{return true, nil} ) &{return true, nil} ) &{return true, nil}
+B ← out:( inner:( [^abd] innermost:. &{return true, nil} ) &{return true, nil} ) &{return true, nil}
