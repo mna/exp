@@ -1,5 +1,4 @@
-! fix labeled args/args stack issue
-- add tests with the JSON parser, compare results with the stdlib, benchmark for fun
+! fix labeled args/args stack issue for predicates
 - add CurrentReceiverName option as a command-line flag
 - better CLI doc, manpage
 - better docs, refactor code
