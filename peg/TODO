@@ -1,8 +1,7 @@
-! fix labeled args/args stack issue for predicates
+- shell script or Makefile to generate all (pigeon itself + examples)
 - add CurrentReceiverName option as a command-line flag
-- better CLI doc, manpage
 - better docs, refactor code
-- shell script to generate all (pigeon itself + examples)
+- better CLI doc, manpage
 - README, LICENSE, README in examples directories
 ? type annotations for generated code functions
 ? toIfaceSlice as built-in helper function
