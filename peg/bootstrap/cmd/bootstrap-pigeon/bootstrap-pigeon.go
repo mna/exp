@@ -2351,7 +2351,13 @@ func parse(filename string, r io.Reader, g *grammar) (interface{}, error) {
 		return nil, err
 	}
 
-	p := &parser{filename: filename, errs: new(errList), data: b, pt: savepoint{position: position{line: 1}}}
+	p := &parser{
+		filename: filename,
+		errs:     new(errList),
+		data:     b,
+		pt:       savepoint{position: position{line: 1}},
+		vlist:    make(chan map[string]interface{}, 10), // free list of 10 elements
+	}
 	return p.parse(g)
 }
 
@@ -2372,7 +2378,32 @@ type parser struct {
 	depth  int
 	rules  map[string]*rule
 	vstack []map[string]interface{}
+	vlist  chan map[string]interface{}
 	rstack []*rule
+}
+
+func (p *parser) pushV() {
+	// try to get a map from the free list
+	var m map[string]interface{}
+	select {
+	case m = <-p.vlist:
+	default:
+		m = make(map[string]interface{})
+	}
+	p.vstack = append(p.vstack, m)
+}
+
+func (p *parser) popV() {
+	// if the map is empty, store it in the free list
+	m := p.vstack[len(p.vstack)-1]
+	if len(m) == 0 {
+		select {
+		case p.vlist <- m:
+		default:
+			// drop the map
+		}
+	}
+	p.vstack = p.vstack[:len(p.vstack)-1]
 }
 
 func (p *parser) print(prefix, s string) string {
@@ -2517,10 +2548,9 @@ func (p *parser) parseRule(rule *rule) (interface{}, bool) {
 
 	start := p.save()
 	p.rstack = append(p.rstack, rule)
-	// TODO : where should the variable stack start/end?
-	p.vstack = append(p.vstack, make(map[string]interface{}))
+	p.pushV()
 	val, ok := p.parseExpr(rule.expr)
-	p.vstack = p.vstack[:len(p.vstack)-1]
+	p.popV()
 	p.rstack = p.rstack[:len(p.rstack)-1]
 	if ok && debug {
 		p.print(strings.Repeat(" ", p.depth)+"MATCH", string(p.slice(start.position, p.save().position)))
@@ -2692,7 +2722,7 @@ func (p *parser) parseLabeledExpr(lab *labeledExpr) (interface{}, bool) {
 	}
 
 	val, ok := p.parseExpr(lab.expr)
-	if ok && lab.label != "" && len(p.vstack) > 0 {
+	if ok && lab.label != "" {
 		m := p.vstack[len(p.vstack)-1]
 		m[lab.label] = val
 	}
