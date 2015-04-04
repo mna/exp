@@ -1,3 +1,6 @@
+- move test-only examples to test
+- test and/not code predicates in a generated parser
+- use map for Unicode classes (go generated) and keywords, benchmark speedup
 - shell script or Makefile to generate all (pigeon itself + examples)
 - add CurrentReceiverName option as a command-line flag
 - better docs, refactor code
