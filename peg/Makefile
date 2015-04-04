@@ -23,7 +23,7 @@ BOOTSTRAP_GRAMMAR = $(GRAMMAR_DIR)/bootstrap.peg
 PIGEON_GRAMMAR = $(GRAMMAR_DIR)/pigeon.peg
 
 all: $(BINDIR)/bootstrap-build $(BOOTSTRAPPIGEON_DIR)/bootstrap_pigeon.go \
-	$(BINDIR)/bootstrap-pigeon $(ROOT)/pigeon.go
+	$(BINDIR)/bootstrap-pigeon $(ROOT)/pigeon.go $(BINDIR)/pigeon
 
 $(BINDIR)/bootstrap-build: $(BOOTSTRAPBUILD_SRC) $(BOOTSTRAP_SRC) $(BUILDER_SRC) \
 	$(AST_SRC)
@@ -47,8 +47,8 @@ $(BOOTSTRAP_GRAMMAR):
 $(PIGEON_GRAMMAR):
 
 clean:
-	rm $(BOOTSTRAPBUILD_DIR)/bootstrap-build $(BOOTSTRAPPIGEON_DIR)/bootstrap-pigeon \
-		$(BOOTSTRAPPIGEON_DIR)/bootstrap_pigeon.go $(ROOT)/pigeon.go
+	rm $(BOOTSTRAPPIGEON_DIR)/bootstrap_pigeon.go $(ROOT)/pigeon.go
+	rm -rf $(BINDIR)
 
 .PHONY: all clean
 
