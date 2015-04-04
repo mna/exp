@@ -1,5 +1,4 @@
 - shell script or Makefile to generate all (pigeon itself + examples)
-- add CurrentReceiverName option as a command-line flag
 - better docs, refactor code
 - better CLI doc, manpage
 - README, LICENSE, README in examples directories

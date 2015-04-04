@@ -22,15 +22,13 @@ var invalidParseCases = map[string]string{
 	"{}{}":       "file:1:1 (0): no match found",
 
 	// non-terminated, empty, EOF "quoted" tokens
-	"{":     "file:1:1 (0): rule CodeBlock: code block not terminated",
-	"\n{":   "file:2:1 (1): rule CodeBlock: code block not terminated",
-	`a = "`: "file:1:5 (4): rule StringLiteral: string literal not terminated",
-	"a = `": "file:1:5 (4): rule StringLiteral: string literal not terminated",
-	"a = '": "file:1:5 (4): rule StringLiteral: string literal not terminated",
-	`a = [`: "file:1:5 (4): rule CharClassMatcher: character class not terminated",
-	`a = [\p{]`: `file:1:9 (8): rule UnicodeClass: invalid Unicode class escape
-file:1:8 (7): rule UnicodeClassEscape: Unicode class not terminated
-file:1:5 (4): rule CharClassMatcher: character class not terminated`,
+	"{":         "file:1:1 (0): rule CodeBlock: code block not terminated",
+	"\n{":       "file:2:1 (1): rule CodeBlock: code block not terminated",
+	`a = "`:     "file:1:5 (4): rule StringLiteral: string literal not terminated",
+	"a = `":     "file:1:5 (4): rule StringLiteral: string literal not terminated",
+	"a = '":     "file:1:5 (4): rule StringLiteral: string literal not terminated",
+	`a = [`:     "file:1:5 (4): rule CharClassMatcher: character class not terminated",
+	`a = [\p{]`: `file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 
 	// non-terminated, empty, EOL "quoted" tokens
 	"{\n":          "file:1:1 (0): rule CodeBlock: code block not terminated",
@@ -53,13 +51,12 @@ file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 	"a = `b": "file:1:5 (4): rule StringLiteral: string literal not terminated",
 	"a = 'b": "file:1:5 (4): rule StringLiteral: string literal not terminated",
 	`a = [b`: "file:1:5 (4): rule CharClassMatcher: character class not terminated",
-	`a = [\p{W]`: `file:1:9 (8): rule UnicodeClass: invalid Unicode class escape
-file:1:8 (7): rule UnicodeClassEscape: Unicode class not terminated
+	`a = [\p{W]`: `file:1:8 (7): rule UnicodeClassEscape: Unicode class not terminated
 file:1:5 (4): rule CharClassMatcher: character class not terminated`,
 
 	// invalid escapes
 	`a ← [\pA]`:    "file:1:8 (9): rule UnicodeClassEscape: invalid Unicode class escape",
-	`a ← [\p{WW}]`: "file:1:9 (10): rule UnicodeClass: invalid Unicode class escape",
+	`a ← [\p{WW}]`: "file:1:8 (9): rule UnicodeClassEscape: invalid Unicode class escape",
 	`a = '\"'`:     "file:1:7 (6): rule SingleStringEscape: invalid escape character",
 	`a = "\'"`:     "file:1:7 (6): rule DoubleStringEscape: invalid escape character",
 	`a = [\']`:     "file:1:7 (6): rule CharClassEscape: invalid escape character",

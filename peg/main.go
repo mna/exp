@@ -15,6 +15,7 @@ func main() {
 	dbgFlag := flag.Bool("debug", false, "set debug mode")
 	noBuildFlag := flag.Bool("x", false, "do not build, only parse")
 	outputFlag := flag.String("o", "", "output file, defaults to stdout")
+	curRecvrNmFlag := flag.String("current-receiver-name", "c", "receiver name for the `current` type's generated methods")
 	flag.Parse()
 
 	if flag.NArg() > 1 {
@@ -55,7 +56,8 @@ func main() {
 			outw = f
 		}
 
-		if err := builder.BuildParser(outw, g.(*ast.Grammar)); err != nil {
+		curNmOpt := builder.CurrentReceiverName(*curRecvrNmFlag)
+		if err := builder.BuildParser(outw, g.(*ast.Grammar), curNmOpt); err != nil {
 			fmt.Fprintln(os.Stderr, "build error: ", err)
 			os.Exit(5)
 		}
