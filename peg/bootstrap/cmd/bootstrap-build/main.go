@@ -1,3 +1,6 @@
+// Command bootstrap-build bootstraps the PEG parser generator by
+// parsing the bootstrap grammar and creating a basic parser generator
+// sufficiently complete to parse the pigeon PEG grammar.
 package main
 
 import (
