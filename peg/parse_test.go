@@ -367,6 +367,26 @@ var validParseCases = map[string]*ast.Grammar{
 			},
 		},
 	},
+	`a = [\p{Latin}]`: &ast.Grammar{
+		Rules: []*ast.Rule{
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "a"),
+				Expr: &ast.CharClassMatcher{
+					UnicodeClasses: []string{"Latin"},
+				},
+			},
+		},
+	},
+	`a = [\p{Latin}\pZ]`: &ast.Grammar{
+		Rules: []*ast.Rule{
+			{
+				Name: ast.NewIdentifier(ast.Pos{}, "a"),
+				Expr: &ast.CharClassMatcher{
+					UnicodeClasses: []string{"Latin", "Z"},
+				},
+			},
+		},
+	},
 }
 
 func TestValidParseCases(t *testing.T) {

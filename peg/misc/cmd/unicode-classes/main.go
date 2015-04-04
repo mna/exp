@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"sort"
-	"strconv"
 	"unicode"
 )
 
@@ -22,16 +21,18 @@ func main() {
 	for k := range set {
 		classes = append(classes, k)
 	}
-	sort.Sort(lenSorter(classes))
-	for i, s := range classes {
-		fmt.Print("\t")
-		if i > 0 {
-			fmt.Print("/ ")
-		}
-		fmt.Println(strconv.Quote(s))
+
+	sort.Strings(classes)
+	fmt.Println("package main")
+	fmt.Println("\nvar unicodeClasses = map[string]bool{")
+	for _, s := range classes {
+		fmt.Printf("\t%q: true,\n", s)
 	}
+	fmt.Println("}")
 }
 
+// lenSorter was used to generate Unicode classes directly in the PEG
+// grammar (where longer classes had to come first).
 type lenSorter []string
 
 func (l lenSorter) Len() int      { return len(l) }
