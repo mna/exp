@@ -360,7 +360,6 @@ func (c *current) onInput1(expr interface{}) (interface{}, error) {
 func (p *parser) callonInput1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onInput1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onInput1(stack["expr"])
 }
 
@@ -371,7 +370,6 @@ func (c *current) onExpr1(first, rest interface{}) (interface{}, error) {
 func (p *parser) callonExpr1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onExpr1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onExpr1(stack["first"], stack["rest"])
 }
 
@@ -382,7 +380,6 @@ func (c *current) onTerm1(first, rest interface{}) (interface{}, error) {
 func (p *parser) callonTerm1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onTerm1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onTerm1(stack["first"], stack["rest"])
 }
 
@@ -393,19 +390,17 @@ func (c *current) onFactor2(expr interface{}) (interface{}, error) {
 func (p *parser) callonFactor2() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onFactor2: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onFactor2(stack["expr"])
 }
 
-func (c *current) onFactor8(expr, integer interface{}) (interface{}, error) {
+func (c *current) onFactor8(integer interface{}) (interface{}, error) {
 	return integer, nil
 }
 
 func (p *parser) callonFactor8() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onFactor8: stack %d: %v\n", len(p.vstack), stack)
-	return p.cur.onFactor8(stack["expr"], stack["integer"])
+	return p.cur.onFactor8(stack["integer"])
 }
 
 func (c *current) onAddOp1() (interface{}, error) {
@@ -415,7 +410,6 @@ func (c *current) onAddOp1() (interface{}, error) {
 func (p *parser) callonAddOp1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onAddOp1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onAddOp1()
 }
 
@@ -426,7 +420,6 @@ func (c *current) onMulOp1() (interface{}, error) {
 func (p *parser) callonMulOp1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onMulOp1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onMulOp1()
 }
 
@@ -437,7 +430,6 @@ func (c *current) onInteger1() (interface{}, error) {
 func (p *parser) callonInteger1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onInteger1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onInteger1()
 }
 
@@ -1008,7 +1000,6 @@ func (p *parser) parseLabeledExpr(lab *labeledExpr) (interface{}, bool) {
 	if ok && lab.label != "" {
 		m := p.vstack[len(p.vstack)-1]
 		m[lab.label] = val
-		//fmt.Printf("LABEL: set %q = %T (%s) to stack %d\n", lab.label, val, val, len(p.vstack))
 	}
 	return val, ok
 }

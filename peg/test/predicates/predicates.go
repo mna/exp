@@ -156,7 +156,6 @@ func (c *current) onA5(a interface{}) (bool, error) {
 func (p *parser) callonA5() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	fmt.Fprintf(os.Stderr, "CALL onA5: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onA5(stack["a"])
 }
 
@@ -168,7 +167,6 @@ func (c *current) onA9(b interface{}) (bool, error) {
 func (p *parser) callonA9() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	fmt.Fprintf(os.Stderr, "CALL onA9: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onA9(stack["b"])
 }
 
@@ -180,7 +178,6 @@ func (c *current) onA13(d interface{}) (bool, error) {
 func (p *parser) callonA13() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	fmt.Fprintf(os.Stderr, "CALL onA13: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onA13(stack["d"])
 }
 
@@ -191,7 +188,6 @@ func (c *current) onB9(innermost interface{}) (bool, error) {
 func (p *parser) callonB9() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	fmt.Fprintf(os.Stderr, "CALL onB9: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onB9(stack["innermost"])
 }
 
@@ -202,7 +198,6 @@ func (c *current) onB10(inner interface{}) (bool, error) {
 func (p *parser) callonB10() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	fmt.Fprintf(os.Stderr, "CALL onB10: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onB10(stack["inner"])
 }
 
@@ -213,7 +208,6 @@ func (c *current) onB11(out interface{}) (bool, error) {
 func (p *parser) callonB11() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	fmt.Fprintf(os.Stderr, "CALL onB11: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onB11(stack["out"])
 }
 
@@ -784,7 +778,6 @@ func (p *parser) parseLabeledExpr(lab *labeledExpr) (interface{}, bool) {
 	if ok && lab.label != "" {
 		m := p.vstack[len(p.vstack)-1]
 		m[lab.label] = val
-		fmt.Fprintf(os.Stderr, "LABEL: set %q = %T (%s) to stack %d\n", lab.label, val, val, len(p.vstack))
 	}
 	return val, ok
 }

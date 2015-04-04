@@ -160,7 +160,6 @@ func (c *current) onAB6(abees interface{}) (bool, error) {
 func (p *parser) callonAB6() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	fmt.Fprintf(os.Stderr, "CALL onAB6: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onAB6(stack["abees"])
 }
 
@@ -171,7 +170,6 @@ func (c *current) onCD5(ceedees interface{}) (bool, error) {
 func (p *parser) callonCD5() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	fmt.Fprintf(os.Stderr, "CALL onCD5: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onCD5(stack["ceedees"])
 }
 
@@ -742,7 +740,6 @@ func (p *parser) parseLabeledExpr(lab *labeledExpr) (interface{}, bool) {
 	if ok && lab.label != "" {
 		m := p.vstack[len(p.vstack)-1]
 		m[lab.label] = val
-		fmt.Fprintf(os.Stderr, "LABEL: set %q = %T (%s) to stack %d\n", lab.label, val, val, len(p.vstack))
 	}
 	return val, ok
 }

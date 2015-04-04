@@ -646,7 +646,6 @@ func (c *current) onJSON1(vals interface{}) (interface{}, error) {
 func (p *parser) callonJSON1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onJSON1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onJSON1(stack["vals"])
 }
 
@@ -657,7 +656,6 @@ func (c *current) onValue1(val interface{}) (interface{}, error) {
 func (p *parser) callonValue1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onValue1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onValue1(stack["val"])
 }
 
@@ -679,7 +677,6 @@ func (c *current) onObject1(vals interface{}) (interface{}, error) {
 func (p *parser) callonObject1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onObject1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onObject1(stack["vals"])
 }
 
@@ -700,7 +697,6 @@ func (c *current) onArray1(vals interface{}) (interface{}, error) {
 func (p *parser) callonArray1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onArray1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onArray1(stack["vals"])
 }
 
@@ -713,7 +709,6 @@ func (c *current) onNumber1() (interface{}, error) {
 func (p *parser) callonNumber1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onNumber1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onNumber1()
 }
 
@@ -726,7 +721,6 @@ func (c *current) onString1() (interface{}, error) {
 func (p *parser) callonString1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onString1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onString1()
 }
 
@@ -737,7 +731,6 @@ func (c *current) onBool2() (interface{}, error) {
 func (p *parser) callonBool2() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onBool2: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onBool2()
 }
 
@@ -748,7 +741,6 @@ func (c *current) onBool4() (interface{}, error) {
 func (p *parser) callonBool4() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onBool4: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onBool4()
 }
 
@@ -759,7 +751,6 @@ func (c *current) onNull1() (interface{}, error) {
 func (p *parser) callonNull1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	//fmt.Printf("CALL onNull1: stack %d: %v\n", len(p.vstack), stack)
 	return p.cur.onNull1()
 }
 
@@ -1330,7 +1321,6 @@ func (p *parser) parseLabeledExpr(lab *labeledExpr) (interface{}, bool) {
 	if ok && lab.label != "" {
 		m := p.vstack[len(p.vstack)-1]
 		m[lab.label] = val
-		//fmt.Printf("LABEL: set %q = %T (%s) to stack %d\n", lab.label, val, val, len(p.vstack))
 	}
 	return val, ok
 }

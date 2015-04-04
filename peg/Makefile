@@ -1,9 +1,13 @@
 SHELL = /bin/sh
 
+# directories and source code lists
 ROOT = .
-ROOTDIR = $(ROOT)/*.go
+ROOT_SRC = $(ROOT)/*.go
 BINDIR = ./bin
+EXAMPLES_DIR = $(ROOT)/examples
+TEST_DIR = $(ROOT)/test
 
+# builder and ast packages
 BUILDER_DIR = $(ROOT)/builder
 BUILDER_SRC = $(BUILDER_DIR)/*.go
 AST_DIR = $(ROOT)/ast
@@ -22,8 +26,11 @@ GRAMMAR_DIR = $(ROOT)/grammar
 BOOTSTRAP_GRAMMAR = $(GRAMMAR_DIR)/bootstrap.peg
 PIGEON_GRAMMAR = $(GRAMMAR_DIR)/pigeon.peg
 
+TEST_GENERATED_SRC = $(patsubst %.peg,%.go,$(shell echo ./{examples,test}/**/*.peg))
+
 all: $(BINDIR)/bootstrap-build $(BOOTSTRAPPIGEON_DIR)/bootstrap_pigeon.go \
-	$(BINDIR)/bootstrap-pigeon $(ROOT)/pigeon.go $(BINDIR)/pigeon
+	$(BINDIR)/bootstrap-pigeon $(ROOT)/pigeon.go $(BINDIR)/pigeon \
+	$(TEST_GENERATED_SRC)
 
 $(BINDIR)/bootstrap-build: $(BOOTSTRAPBUILD_SRC) $(BOOTSTRAP_SRC) $(BUILDER_SRC) \
 	$(AST_SRC)
@@ -46,8 +53,22 @@ $(BINDIR)/pigeon: $(ROOT_SRC) $(ROOT)/pigeon.go
 $(BOOTSTRAP_GRAMMAR):
 $(PIGEON_GRAMMAR):
 
+# surely there's a better way to define the examples and test targets
+
+$(EXAMPLES_DIR)/json/json.go: $(EXAMPLES_DIR)/json/json.peg $(BINDIR)/pigeon
+	$(BINDIR)/pigeon $< | goimports > $@
+
+$(EXAMPLES_DIR)/calculator/calculator.go: $(EXAMPLES_DIR)/calculator/calculator.peg $(BINDIR)/pigeon
+	$(BINDIR)/pigeon $< | goimports > $@
+
+$(TEST_DIR)/andnot/andnot.go: $(TEST_DIR)/andnot/andnot.peg $(BINDIR)/pigeon
+	$(BINDIR)/pigeon $< | goimports > $@
+
+$(TEST_DIR)/predicates/predicates.go: $(TEST_DIR)/predicates/predicates.peg $(BINDIR)/pigeon
+	$(BINDIR)/pigeon $< | goimports > $@
+
 clean:
-	rm $(BOOTSTRAPPIGEON_DIR)/bootstrap_pigeon.go $(ROOT)/pigeon.go
+	rm $(BOOTSTRAPPIGEON_DIR)/bootstrap_pigeon.go $(ROOT)/pigeon.go $(TEST_GENERATED_SRC)
 	rm -rf $(BINDIR)
 
 .PHONY: all clean
