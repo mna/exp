@@ -423,6 +423,7 @@ outer:
 			break outer
 		}
 
+		consumeN := 0
 		switch rn {
 		case '\\':
 			rn, _, _ := r.ReadRune()
@@ -449,39 +450,24 @@ outer:
 				continue
 
 			case 'x':
-				buf.Reset()
-				buf.WriteRune(rn)
-				for i := 0; i < 2; i++ {
-					rn, _, _ := r.ReadRune()
-					buf.WriteRune(rn)
-				}
+				consumeN = 2
 			case 'u':
-				buf.Reset()
-				buf.WriteRune(rn)
-				for i := 0; i < 4; i++ {
-					rn, _, _ := r.ReadRune()
-					buf.WriteRune(rn)
-				}
+				consumeN = 4
 			case 'U':
-				buf.Reset()
-				buf.WriteRune(rn)
-				for i := 0; i < 8; i++ {
-					rn, _, _ := r.ReadRune()
-					buf.WriteRune(rn)
-				}
+				consumeN = 8
 			case '0', '1', '2', '3', '4', '5', '6', '7':
-				buf.Reset()
-				buf.WriteRune(rn)
-				for i := 0; i < 2; i++ {
-					rn, _, _ := r.ReadRune()
-					buf.WriteRune(rn)
-				}
-			default:
-				buf.Reset()
+				consumeN = 2
+			}
+
+			buf.Reset()
+			buf.WriteRune(rn)
+			for i := 0; i < consumeN; i++ {
+				rn, _, _ := r.ReadRune()
 				buf.WriteRune(rn)
 			}
 			rn, _, _, _ = strconv.UnquoteChar("\\"+buf.String(), 0)
 			chars = append(chars, rn)
+
 		default:
 			chars = append(chars, rn)
 		}
@@ -500,9 +486,9 @@ outer:
 		if r == '-' && !wasRange && len(c.Chars) > 0 && i < len(chars)-1 {
 			inRange = true
 			wasRange = false
+			// start of range is the last Char added
 			c.Ranges = append(c.Ranges, c.Chars[len(c.Chars)-1])
 			c.Chars = c.Chars[:len(c.Chars)-1]
-			// start of range is the last Char added
 			continue
 		}
 		wasRange = false
