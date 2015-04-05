@@ -1,3 +1,5 @@
+// Command pegparse is a helper command-line tool to test the bootstrap
+// parser.
 package main
 
 import (

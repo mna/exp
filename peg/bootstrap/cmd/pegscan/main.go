@@ -1,3 +1,5 @@
+// Command pegscan is a command-line helper tool to test the bootstrap
+// scanner.
 package main
 
 import (
