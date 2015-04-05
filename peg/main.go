@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/PuerkitoBio/exp/peg/ast"
@@ -12,56 +13,89 @@ import (
 )
 
 func main() {
-	dbgFlag := flag.Bool("debug", false, "set debug mode")
-	noBuildFlag := flag.Bool("x", false, "do not build, only parse")
-	outputFlag := flag.String("o", "", "output file, defaults to stdout")
-	curRecvrNmFlag := flag.String("current-receiver-name", "c", "receiver name for the `current` type's generated methods")
+	// define command-line flags
+	var (
+		dbgFlag        = flag.Bool("debug", false, "set debug mode")
+		noBuildFlag    = flag.Bool("x", false, "do not build, only parse")
+		outputFlag     = flag.String("o", "", "output file, defaults to stdout")
+		curRecvrNmFlag = flag.String("receiver-name", "c", "receiver name for the `current` type's generated methods")
+	)
+	flag.Usage = usage
 	flag.Parse()
 
 	if flag.NArg() > 1 {
-		fmt.Fprintf(os.Stderr, "USAGE: %s [options] [FILE]\n", os.Args[0])
+		flag.Usage()
 		os.Exit(1)
 	}
 
-	nm := "stdin"
-	inf := os.Stdin
+	// get input source
+	infile := ""
 	if flag.NArg() == 1 {
-		f, err := os.Open(flag.Arg(0))
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(2)
-		}
-		defer f.Close()
-		inf = f
-		nm = flag.Arg(0)
+		infile = flag.Arg(0)
 	}
-	in := bufio.NewReader(inf)
+	nm, rc := input(infile)
+	defer rc.Close()
 
+	// parse input
 	debug = *dbgFlag
-	g, err := Parse(nm, in)
+	g, err := Parse(nm, rc)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "parse error: ", err)
 		os.Exit(3)
 	}
 
 	if !*noBuildFlag {
-		outw := os.Stdout
-		if *outputFlag != "" {
-			f, err := os.Create(*outputFlag)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(4)
-			}
-			defer f.Close()
-			outw = f
-		}
+		out := output(*outputFlag)
+		defer out.Close()
 
 		curNmOpt := builder.CurrentReceiverName(*curRecvrNmFlag)
-		if err := builder.BuildParser(outw, g.(*ast.Grammar), curNmOpt); err != nil {
+		if err := builder.BuildParser(out, g.(*ast.Grammar), curNmOpt); err != nil {
 			fmt.Fprintln(os.Stderr, "build error: ", err)
 			os.Exit(5)
 		}
 	}
+}
+
+func usage() {
+	fmt.Printf("usage: %s [options] FILE\n", os.Args[0])
+	flag.PrintDefaults()
+}
+
+func input(filename string) (nm string, rc io.ReadCloser) {
+	nm = "stdin"
+	inf := os.Stdin
+	if filename != "" {
+		f, err := os.Open(filename)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
+		inf = f
+		nm = filename
+	}
+	r := bufio.NewReader(inf)
+	return nm, makeReadCloser(r, inf)
+}
+
+func output(filename string) io.WriteCloser {
+	out := os.Stdout
+	if filename != "" {
+		f, err := os.Create(filename)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(4)
+		}
+		out = f
+	}
+	return out
+}
+
+func makeReadCloser(r io.Reader, c io.Closer) io.ReadCloser {
+	rc := struct {
+		io.Reader
+		io.Closer
+	}{r, c}
+	return io.ReadCloser(rc)
 }
 
 func (c *current) astPos() ast.Pos {
