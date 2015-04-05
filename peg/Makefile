@@ -71,5 +71,9 @@ clean:
 	rm $(BOOTSTRAPPIGEON_DIR)/bootstrap_pigeon.go $(ROOT)/pigeon.go $(TEST_GENERATED_SRC)
 	rm -rf $(BINDIR)
 
-.PHONY: all clean
+lint:
+	golint ./...
+	go vet ./...
+
+.PHONY: all clean lint
 
