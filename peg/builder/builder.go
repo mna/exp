@@ -13,29 +13,29 @@ import (
 	"github.com/PuerkitoBio/exp/peg/ast"
 )
 
-var onFuncTemplate = `func (%s *current) %s(%s) (interface{}, error) {
+// generated function templates
+var (
+	onFuncTemplate = `func (%s *current) %s(%s) (interface{}, error) {
 %s
 }
 `
-
-var onPredFuncTemplate = `func (%s *current) %s(%s) (bool, error) {
+	onPredFuncTemplate = `func (%s *current) %s(%s) (bool, error) {
 %s
 }
 `
-
-var callFuncTemplate = `func (p *parser) call%s() (interface{}, error) {
+	callFuncTemplate = `func (p *parser) call%s() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
 	return p.cur.%[1]s(%s)
 }
 `
-
-var callPredFuncTemplate = `func (p *parser) call%s() (bool, error) {
+	callPredFuncTemplate = `func (p *parser) call%s() (bool, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
 	return p.cur.%[1]s(%s)
 }
 `
+)
 
 type option func(*builder) option
 
