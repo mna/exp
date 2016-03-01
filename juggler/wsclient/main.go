@@ -2,98 +2,99 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
-	"net/http"
 	"os"
-	"path/filepath"
-	"sort"
-	"strconv"
 	"strings"
 
+	"golang.org/x/crypto/ssh/terminal"
+
 	"github.com/gorilla/websocket"
-	"github.com/kless/term/readline"
-	"github.com/mitchellh/go-homedir"
 )
 
-var commands map[string]func(...string)
+const welcomeMessage = `
+Welcome to the websocket client. Enter ? or help for the available
+commands. Press ^D (ctrl-D) to exit.
+`
+
+var commands map[string]*cmd
 
 var connections []*websocket.Conn
 
 func init() {
-	commands = map[string]func(...string){
-		"?":          showHelp,
-		"help":       showHelp,
-		"connect":    connect,
-		"disconnect": disconnect,
-		"send":       send,
+	commands = map[string]*cmd{
+		"?":    helpCmd,
+		"help": helpCmd,
+		/*
+			"connect":    connect,
+			"disconnect": disconnect,
+			"send":       send,
+		*/
 	}
 }
 
+var term *terminal.Terminal
+
 func main() {
-	fmt.Println(`
-Welcome to the websocket client. Enter ? or help for the available
-commands. Press ^D (ctrl-D) to exit.
-`)
+	var exitCode int
 
-	home, err := homedir.Dir()
-	if err != nil {
-		log.Fatalf("wsclient: failed to read home directory: %v", err)
-	}
-	hist, err := readline.NewHistory(filepath.Join(home, ".wsclienthist"))
-	if err != nil {
-		log.Fatalf("wsclient: failed to create history file: %v", err)
-	}
-
-	line, err := readline.NewDefaultLine(hist)
-	if err != nil {
-		log.Fatalf("wsclient: failed to create line: %v", err)
-	}
-
-	go func() {
-		for {
-			select {
-			case <-readline.ChanCtrlC:
-			case <-readline.ChanCtrlD:
-				line.Restore()
-				for _, conn := range connections {
-					if conn != nil {
-						conn.Close()
-					}
-				}
-				hist.Save()
-				os.Exit(0)
-			}
+	// call os.Exit in a defer, otherwise defer to reset the terminal
+	// will not be run.
+	defer func() {
+		if exitCode != 0 {
+			os.Exit(exitCode)
 		}
 	}()
 
+	// setup and restore the terminal
+	t, fn := setupTerminal()
+	defer fn()
+	term = t
+
+	print(welcomeMessage)
 	for {
-		l, err := line.Read()
+		l, err := t.ReadLine()
 		if err != nil {
-			line.Restore()
-			log.Fatalf("wsclient: failed to read line: %v", err)
+			if err == io.EOF {
+				return
+			}
+			log.Printf("wsclient: failed to read line: %v", err)
+			exitCode = 1
+			return
 		}
+
 		args := strings.Fields(l)
 		if len(args) != 0 {
 			if cmd := commands[args[0]]; cmd != nil {
-				cmd(args[1:]...)
+				cmd.Run(args[1:]...)
 			} else {
-				fmt.Printf("unknown command %q\r\n", args[0])
+				print("unknown command %q", args[0])
 			}
 		}
 	}
 }
 
-func showHelp(_ ...string) {
-	keys := make([]string, 0, len(commands))
-	for k := range commands {
-		keys = append(keys, k)
+func setupTerminal() (*terminal.Terminal, func()) {
+	// setup terminal
+	oldState, err := terminal.MakeRaw(0)
+	if err != nil {
+		log.Fatalf("wsclient: failed to initialize the terminal: %v", err)
 	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		fmt.Printf("%s\r\n", k)
-	}
+	cleanUp := func() { terminal.Restore(0, oldState) }
+
+	var screen = struct {
+		io.Reader
+		io.Writer
+	}{os.Stdin, os.Stdout}
+	t := terminal.NewTerminal(screen, "ws> ")
+	return t, cleanUp
 }
 
+func print(msg string, args ...interface{}) {
+	fmt.Fprintf(term, msg+"\n", args...)
+}
+
+/*
 func connect(args ...string) {
 	var d websocket.Dialer
 
@@ -165,3 +166,4 @@ func send(args ...string) {
 		}
 	}
 }
+*/
