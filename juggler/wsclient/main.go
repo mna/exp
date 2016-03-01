@@ -60,6 +60,7 @@ commands. Press ^D (ctrl-D) to exit.
 						conn.Close()
 					}
 				}
+				hist.Save()
 				os.Exit(0)
 			}
 		}
