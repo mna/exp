@@ -25,3 +25,7 @@ func LogConn(c *Conn) {
 func LogMsg(c *Conn, msg Msg) {
 	LogFunc("%v: received message %v %s", c.UUID, msg.UUID(), msg.Type())
 }
+
+func ProcessMsg(c *Conn, msg Msg) {
+	// TODO : default handling based on the type of msg
+}

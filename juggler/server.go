@@ -111,7 +111,7 @@ func (s *Server) read(c *Conn) error {
 			return err
 		}
 		if mt != websocket.TextMessage {
-			return fmt.Errorf("juggler: invalid websocket message type: %d", mt)
+			return fmt.Errorf("invalid websocket message type: %d", mt)
 		}
 		c.WSConn.SetReadDeadline(time.Now().Add(s.ReadTimeout))
 
@@ -122,61 +122,60 @@ func (s *Server) read(c *Conn) error {
 
 		if s.ReadHandler != nil {
 			s.ReadHandler.Handle(c, msg)
-		}
-		if err := s.processMsg(c, msg); err != nil {
-			return err
+		} else {
+			ProcessMsg(c, msg)
 		}
 	}
-}
-
-func (s *Server) processMsg(c *Conn, msg Msg) error {
-	return nil
 }
 
 func unmarshalMessage(r io.Reader) (Msg, error) {
 	var pm partialMsg
 	if err := json.NewDecoder(r).Decode(&pm); err != nil {
-		return nil, fmt.Errorf("juggler: invalid JSON message: %v", err)
+		return nil, fmt.Errorf("invalid JSON message: %v", err)
+	}
+
+	genericUnmarshal := func(v interface{}, metaDst *meta) error {
+		if err := json.Unmarshal(pm.Payload, v); err != nil {
+			return fmt.Errorf("invalid %s message: %v", pm.Meta.T, err)
+		}
+		*metaDst = pm.Meta
+		return nil
 	}
 
 	var msg Msg
 	switch pm.Meta.T {
 	case AuthMsg:
 		var auth Auth
-		if err := json.Unmarshal(pm.Payload, &auth); err != nil {
-			return nil, fmt.Errorf("juggler: invalid %s message: %v", pm.Meta.T, err)
+		if err := genericUnmarshal(&auth, &auth.meta); err != nil {
+			return nil, err
 		}
-		auth.meta = pm.Meta
 		msg = &auth
 
 	case CallMsg:
 		var call Call
-		if err := json.Unmarshal(pm.Payload, &call); err != nil {
-			return nil, fmt.Errorf("juggler: invalid %s message: %v", pm.Meta.T, err)
+		if err := genericUnmarshal(&call, &call.meta); err != nil {
+			return nil, err
 		}
-		call.meta = pm.Meta
 		msg = &call
 
 	case SubMsg:
 		var sub Sub
-		if err := json.Unmarshal(pm.Payload, &sub); err != nil {
-			return nil, fmt.Errorf("juggler: invalid %s message: %v", pm.Meta.T, err)
+		if err := genericUnmarshal(&sub, &sub.meta); err != nil {
+			return nil, err
 		}
-		sub.meta = pm.Meta
 		msg = &sub
 
 	case PubMsg:
 		var pub Pub
-		if err := json.Unmarshal(pm.Payload, &pub); err != nil {
-			return nil, fmt.Errorf("juggler: invalid %s message: %v", pm.Meta.T, err)
+		if err := genericUnmarshal(&pub, &pub.meta); err != nil {
+			return nil, err
 		}
-		pub.meta = pm.Meta
 		msg = &pub
 
 	case ErrMsg, OKMsg, ResMsg, EvntMsg:
-		return nil, fmt.Errorf("juggler: invalid message %s for client peer", pm.Meta.T)
+		return nil, fmt.Errorf("invalid message %s for client peer", pm.Meta.T)
 	default:
-		return nil, fmt.Errorf("juggler: unknown message %s", pm.Meta.T)
+		return nil, fmt.Errorf("unknown message %s", pm.Meta.T)
 	}
 
 	return msg, nil

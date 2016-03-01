@@ -32,7 +32,7 @@ types.
 */
 
 type MsgHandler interface {
-	Handle(*Conn, Msg)
+	Handle(*Conn, Msg) // TODO : some way to distinguish between write and read
 }
 
 type MessageType int
