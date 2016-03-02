@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/pborman/uuid"
 )
 
 var LogFunc = log.Printf
@@ -43,8 +42,7 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 
 		// configure the websocket connection
 		wsConn.SetReadLimit(srv.ReadLimit)
-		c := &Conn{UUID: uuid.NewRandom(), WSConn: wsConn}
-		c.setState(Connected, nil)
+		c := newConn(wsConn)
 		defer func() {
 			if srv.ConnHandler != nil {
 				srv.ConnHandler.Handle(c)
