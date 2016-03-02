@@ -134,6 +134,23 @@ func (w *exclusiveWriter) Close() error {
 	return err
 }
 
+// Writer returns an io.WriteCloser that can be used to send a
+// message on the connection. Only one writer can be active at
+// any moment for a given connection, so the returned writer
+// will acquire a lock on the first call to Write, and will
+// release it only when Close is called. The timeout controls
+// the time to wait to acquire the lock on the first call to
+// Write. If the lock cannot be acquired within that time,
+// ErrLockWriterTimeout is returned and no write is performed.
+//
+// It is possible to enter a deadlock state if Writer is called
+// with no timeout, an initial Write is executed, and Writer is
+// called again from the same goroutine, without a timeout.
+// To avoid this, make sure each goroutine closes the Writer
+// before asking for another one, and ideally always use a timeout.
+//
+// The returned writer itself is not safe for concurrent use, but
+// as all Conn methods, Writer can be called concurrently.
 func (c *Conn) Writer(timeout time.Duration) io.WriteCloser {
 	return &exclusiveWriter{
 		c:       c,
@@ -141,6 +158,8 @@ func (c *Conn) Writer(timeout time.Duration) io.WriteCloser {
 	}
 }
 
+// Send sends the msg to the client. It calls the Server's
+// WriteHandler if any, or ProcessMsg if nil.
 func (c *Conn) Send(msg Msg) {
 	if c.srv.WriteHandler != nil {
 		c.srv.WriteHandler.Handle(c, msg)
