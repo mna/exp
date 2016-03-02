@@ -36,6 +36,9 @@ func isIn(list []string, v string) bool {
 // Server is a juggler server. Once a websocket handshake has been
 // established with a juggler subprotocol over a standard HTTP server,
 // the connections get served by this server.
+//
+// The fields should not be updated once a server has started
+// serving connections.
 type Server struct {
 	// ReadLimit defines the maximum size, in bytes, of incoming
 	// messages. If a client sends a message that exceeds this limit,
@@ -55,7 +58,7 @@ type Server struct {
 	// ConnState specifies an optional callback function that is called
 	// when a connection changes state. It is called for Connected and
 	// Closing states.
-	ConnState func(*Conn, ConnState, error)
+	ConnState func(*Conn, ConnState)
 
 	// ReadHandler is the handler that is called when an incoming
 	// message is processed. The ProcessMsg function is called
@@ -99,66 +102,28 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 			return
 		}
 		defer wsConn.Close()
+
+		// the agreed-upon subprotocol must be one of the supported ones.
 		if wsConn.Subprotocol() == "" || !isIn(Subprotocols, wsConn.Subprotocol()) {
 			LogFunc("juggler: no supported subprotocol, closing connection")
 			return
 		}
 
-		var closeErr error
 		wsConn.SetReadLimit(srv.ReadLimit)
 		c := newConn(wsConn, srv)
-		defer func() {
-			if srv.ConnState != nil {
-				srv.ConnState(c, Closing, closeErr)
-			}
-		}()
+		if srv.ConnState != nil {
+			defer func() {
+				srv.ConnState(c, Closing)
+			}()
+		}
 
 		// start lifecycle of the connection
 		if srv.ConnState != nil {
-			srv.ConnState(c, Connected, nil)
+			srv.ConnState(c, Connected)
 		}
 
-		if err := c.receive(); err != nil {
-			closeErr = err
-			return
-		}
-
-		/*
-			if err := c.WSConn.WriteMessage(websocket.TextMessage, []byte("hello")); err != nil {
-				c.setState(Closing, err)
-				LogFunc("juggler: WriteMessage failed: %v; closing connection", err)
-				return
-			}
-			for {
-				c.WSConn.SetWriteDeadline(time.Time{})
-
-				mt, r, err := c.WSConn.NextReader()
-				if err != nil {
-					c.setState(Closing, err)
-					LogFunc("juggler: NextReader failed: %v; closing connection", err)
-					return
-				}
-				c.WSConn.SetReadDeadline(time.Now().Add(srv.ReadTimeout))
-
-				w, err := c.WSConn.NextWriter(mt)
-				if err != nil {
-					c.setState(Closing, err)
-					LogFunc("juggler: NextWriter failed: %v; closing connection", err)
-					return
-				}
-				c.WSConn.SetWriteDeadline(time.Now().Add(srv.WriteTimeout))
-
-				if _, err := io.Copy(w, r); err != nil {
-					c.setState(Closing, err)
-					LogFunc("juggler: Copy failed: %v; closing connection", err)
-					return
-				}
-				if err := w.Close(); err != nil {
-					c.setState(Closing, err)
-					LogFunc("juggler: Close failed: %v; closing connection", err)
-					return
-				}
-			}
-		*/
+		kill := c.CloseNotify()
+		go c.receive()
+		<-kill
 	})
 }
