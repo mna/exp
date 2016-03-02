@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -30,7 +31,7 @@ var helpCmd = &cmd{
 }
 
 var connectCmd = &cmd{
-	Help: "usage: connect [URL [PROTO]]\n\tconnect to URL using subprotocol PROTO (defaults to juggler.1)",
+	Help: "usage: connect [URL [PROTO]]\n\tconnect to URL using subprotocol PROTO (defaults to juggler.0)",
 
 	Run: func(args ...string) {
 		var d websocket.Dialer
@@ -40,7 +41,7 @@ var connectCmd = &cmd{
 			addr = args[0]
 		}
 
-		h := http.Header{"Sec-WebSocket-Protocol": {"juggler.1"}}
+		h := http.Header{"Sec-WebSocket-Protocol": {"juggler.0"}}
 		if len(args) > 1 {
 			h.Set("Sec-WebSocket-Protocol", args[1])
 		}
@@ -65,6 +66,25 @@ var disconnectCmd = &cmd{
 			return
 		}
 		if c, ix := getConn(args[0]); c != nil {
+			c.Close()
+			connections[ix] = nil
+		}
+	},
+}
+
+var closeCmd = &cmd{
+	Help: "usage: close CONN_ID\n\tcleanly close the connection identified by CONN_ID",
+
+	Run: func(args ...string) {
+		if len(args) != 1 {
+			printErr("usage: close CONN_ID")
+			return
+		}
+		if c, ix := getConn(args[0]); c != nil {
+			if err := c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseGoingAway, "bye"), time.Time{}); err != nil {
+				printErr("failed to send close message: %v", err)
+				return
+			}
 			c.Close()
 			connections[ix] = nil
 		}
