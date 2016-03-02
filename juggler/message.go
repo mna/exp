@@ -31,35 +31,33 @@ peer. That includes sending binary messages and sending unknown message
 types.
 */
 
-type Direction int
-
-const (
-	Read Direction = iota
-	Write
-)
-
 type MsgHandler interface {
-	Handle(*Conn, Msg, Direction)
+	Handle(*Conn, Msg)
 }
 
 type MessageType int
 
 const (
-	AuthMsg MessageType = iota + 1
+	startRead MessageType = iota
+	AuthMsg
 	CallMsg
-	SubMsg
 	PubMsg
+	SubMsg
+	endRead
+
+	startWrite
 	ErrMsg
 	OKMsg
 	ResMsg
 	EvntMsg
+	endWrite
 )
 
 var lookupMessageType = []string{
 	AuthMsg: "AUTH",
 	CallMsg: "CALL",
-	SubMsg:  "SUB",
 	PubMsg:  "PUB",
+	SubMsg:  "SUB",
 	ErrMsg:  "ERR",
 	OKMsg:   "OK",
 	ResMsg:  "RES",
@@ -76,6 +74,8 @@ func (mt MessageType) String() string {
 type Msg interface {
 	Type() MessageType
 	UUID() uuid.UUID
+	IsRead() bool
+	IsWrite() bool
 }
 
 type meta struct {
@@ -94,6 +94,14 @@ func (m meta) Type() MessageType {
 
 func (m meta) UUID() uuid.UUID {
 	return m.U
+}
+
+func (m meta) IsRead() bool {
+	return startRead < m.T && m.T < endRead
+}
+
+func (m meta) IsWrite() bool {
+	return startWrite < m.T && m.T < endWrite
 }
 
 type Auth struct {

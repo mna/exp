@@ -6,10 +6,10 @@ func (h ConnHandlerFunc) Handle(c *Conn) {
 	h(c)
 }
 
-type MsgHandlerFunc func(*Conn, Msg, Direction)
+type MsgHandlerFunc func(*Conn, Msg)
 
-func (h MsgHandlerFunc) Handle(c *Conn, msg Msg, dir Direction) {
-	h(c, msg, dir)
+func (h MsgHandlerFunc) Handle(c *Conn, msg Msg) {
+	h(c, msg)
 }
 
 func LogConn(c *Conn) {
@@ -26,6 +26,6 @@ func LogMsg(c *Conn, msg Msg) {
 	LogFunc("%v: received message %v %s", c.UUID, msg.UUID(), msg.Type())
 }
 
-func ProcessMsg(c *Conn, msg Msg, dir Direction) {
+func ProcessMsg(c *Conn, msg Msg) {
 	// TODO : default handling based on the type of msg
 }
