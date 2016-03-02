@@ -16,6 +16,7 @@ import (
 const welcomeMessage = `
 Welcome to the websocket client. Enter ? or help for the available
 commands. Press ^D (ctrl-D) to exit.
+
 `
 
 var (
@@ -30,9 +31,7 @@ func init() {
 		"help":       helpCmd,
 		"connect":    connectCmd,
 		"disconnect": disconnectCmd,
-		/*
-			"send":       send,
-		*/
+		"send":       sendCmd,
 	}
 }
 
@@ -58,7 +57,7 @@ func main() {
 	defer fn()
 	term = t
 
-	print(welcomeMessage)
+	printf(welcomeMessage)
 	for {
 		l, err := t.ReadLine()
 		if err != nil {
@@ -106,18 +105,3 @@ func printErr(msg string, args ...interface{}) {
 	printf(msg, args...)
 	term.Write(term.Escape.Reset)
 }
-
-/*
-func send(args ...string) {
-	if len(args) < 2 {
-		fmt.Print("usage: send CONN_ID MSG\r\n")
-		return
-	}
-	if c, _ := getConn(args[0]); c != nil {
-		if err := c.WriteMessage(websocket.TextMessage, []byte(strings.Join(args[1:], " "))); err != nil {
-			fmt.Printf("WriteMessage failed: %v\r\n", err)
-			return
-		}
-	}
-}
-*/

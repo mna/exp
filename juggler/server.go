@@ -121,9 +121,9 @@ func (s *Server) read(c *Conn) error {
 		}
 
 		if s.ReadHandler != nil {
-			s.ReadHandler.Handle(c, msg)
+			s.ReadHandler.Handle(c, msg, Read)
 		} else {
-			ProcessMsg(c, msg)
+			ProcessMsg(c, msg, Read)
 		}
 	}
 }

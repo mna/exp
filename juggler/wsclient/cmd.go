@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -66,6 +67,23 @@ var disconnectCmd = &cmd{
 		if c, ix := getConn(args[0]); c != nil {
 			c.Close()
 			connections[ix] = nil
+		}
+	},
+}
+
+var sendCmd = &cmd{
+	Help: "usage: send CONN_ID MSG\n\tsend MSG to the connection identified by CONN_ID",
+
+	Run: func(args ...string) {
+		if len(args) < 2 {
+			printErr("usage: send CONN_ID MSG")
+			return
+		}
+		if c, _ := getConn(args[0]); c != nil {
+			if err := c.WriteMessage(websocket.TextMessage, []byte(strings.Join(args[1:], " "))); err != nil {
+				printErr("WriteMessage failed: %v", err)
+				return
+			}
 		}
 	},
 }

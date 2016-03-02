@@ -31,8 +31,15 @@ peer. That includes sending binary messages and sending unknown message
 types.
 */
 
+type Direction int
+
+const (
+	Read Direction = iota
+	Write
+)
+
 type MsgHandler interface {
-	Handle(*Conn, Msg) // TODO : some way to distinguish between write and read
+	Handle(*Conn, Msg, Direction)
 }
 
 type MessageType int
