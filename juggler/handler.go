@@ -6,9 +6,8 @@ func (h MsgHandlerFunc) Handle(c *Conn, msg Msg) {
 	h(c, msg)
 }
 
-func LogConn(c *Conn) {
-	st, err := c.State()
-	switch st {
+func LogConn(c *Conn, state ConnState, err error) {
+	switch state {
 	case Connected:
 		LogFunc("%v: connected from %v with subprotocol %q", c.UUID, c.WSConn.RemoteAddr(), c.WSConn.Subprotocol())
 	case Closing:

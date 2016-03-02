@@ -1,9 +1,10 @@
 package juggler
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -27,20 +28,15 @@ type ConnHandler interface {
 }
 
 type Conn struct {
-	UUID uuid.UUID
+	UUID   uuid.UUID
+	WSConn *websocket.Conn // TODO : hide/show only as needed
 
-	// TODO : hide/show only as needed
-	WSConn *websocket.Conn
 	// TODO : some connection state (authenticated, etc.)
-
-	wmu chan struct{}
-
-	mu       sync.RWMutex
-	state    ConnState
-	closeErr error
+	wmu chan struct{} // write lock
+	srv *Server
 }
 
-func newConn(c *websocket.Conn) *Conn {
+func newConn(c *websocket.Conn, srv *Server) *Conn {
 	// wmu is the write lock, used as a semaphore of 1, so start with
 	// an available slot (initialize with a sent value).
 	wmu := make(chan struct{}, 1)
@@ -50,7 +46,7 @@ func newConn(c *websocket.Conn) *Conn {
 		UUID:   uuid.NewRandom(),
 		WSConn: c,
 		wmu:    wmu,
-		state:  Connected,
+		srv:    srv,
 	}
 }
 
@@ -102,16 +98,83 @@ func (c *Conn) Writer(timeout time.Duration) io.WriteCloser {
 	}
 }
 
-func (c *Conn) State() (state ConnState, closeErr error) {
-	c.mu.RLock()
-	st, err := c.state, c.closeErr
-	c.mu.RUnlock()
-	return st, err
+func (c *Conn) receive() error {
+	for {
+		c.WSConn.SetReadDeadline(time.Time{})
+
+		mt, r, err := c.WSConn.NextReader()
+		if err != nil {
+			return err
+		}
+		if mt != websocket.TextMessage {
+			return fmt.Errorf("invalid websocket message type: %d", mt)
+		}
+		if c.srv.ReadTimeout > 0 {
+			c.WSConn.SetReadDeadline(time.Now().Add(c.srv.ReadTimeout))
+		}
+
+		msg, err := unmarshalMessage(r)
+		if err != nil {
+			return err
+		}
+
+		if c.srv.ReadHandler != nil {
+			c.srv.ReadHandler.Handle(c, msg)
+		} else {
+			ProcessMsg(c, msg)
+		}
+	}
 }
 
-func (c *Conn) setState(state ConnState, err error) {
-	c.mu.Lock()
-	c.state = state
-	c.closeErr = err
-	c.mu.Unlock()
+func unmarshalMessage(r io.Reader) (Msg, error) {
+	var pm partialMsg
+	if err := json.NewDecoder(r).Decode(&pm); err != nil {
+		return nil, fmt.Errorf("invalid JSON message: %v", err)
+	}
+
+	genericUnmarshal := func(v interface{}, metaDst *meta) error {
+		if err := json.Unmarshal(pm.Payload, v); err != nil {
+			return fmt.Errorf("invalid %s message: %v", pm.Meta.T, err)
+		}
+		*metaDst = pm.Meta
+		return nil
+	}
+
+	var msg Msg
+	switch pm.Meta.T {
+	case AuthMsg:
+		var auth Auth
+		if err := genericUnmarshal(&auth, &auth.meta); err != nil {
+			return nil, err
+		}
+		msg = &auth
+
+	case CallMsg:
+		var call Call
+		if err := genericUnmarshal(&call, &call.meta); err != nil {
+			return nil, err
+		}
+		msg = &call
+
+	case SubMsg:
+		var sub Sub
+		if err := genericUnmarshal(&sub, &sub.meta); err != nil {
+			return nil, err
+		}
+		msg = &sub
+
+	case PubMsg:
+		var pub Pub
+		if err := genericUnmarshal(&pub, &pub.meta); err != nil {
+			return nil, err
+		}
+		msg = &pub
+
+	case ErrMsg, OKMsg, ResMsg, EvntMsg:
+		return nil, fmt.Errorf("invalid message %s for client peer", pm.Meta.T)
+	default:
+		return nil, fmt.Errorf("unknown message %s", pm.Meta.T)
+	}
+
+	return msg, nil
 }

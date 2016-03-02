@@ -1,9 +1,6 @@
 package juggler
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"time"
@@ -58,7 +55,7 @@ type Server struct {
 	// ConnState specifies an optional callback function that is called
 	// when a connection changes state. It is called for Connected and
 	// Closing states.
-	ConnState func(*Conn, ConnState)
+	ConnState func(*Conn, ConnState, error)
 
 	// ReadHandler is the handler that is called when an incoming
 	// message is processed. The ProcessMsg function is called
@@ -107,23 +104,22 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 			return
 		}
 
-		// configure the websocket connection
+		var closeErr error
 		wsConn.SetReadLimit(srv.ReadLimit)
-		c := newConn(wsConn)
+		c := newConn(wsConn, srv)
 		defer func() {
 			if srv.ConnState != nil {
-				srv.ConnState(c, Closing)
+				srv.ConnState(c, Closing, closeErr)
 			}
 		}()
 
 		// start lifecycle of the connection
 		if srv.ConnState != nil {
-			srv.ConnState(c, Connected)
+			srv.ConnState(c, Connected, nil)
 		}
 
-		if err := srv.read(c); err != nil {
-			c.setState(Closing, err)
-			LogFunc("juggler: read failed: %v; closing connection", err)
+		if err := c.receive(); err != nil {
+			closeErr = err
 			return
 		}
 
@@ -165,85 +161,4 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 			}
 		*/
 	})
-}
-
-func (s *Server) read(c *Conn) error {
-	for {
-		c.WSConn.SetReadDeadline(time.Time{})
-
-		mt, r, err := c.WSConn.NextReader()
-		if err != nil {
-			return err
-		}
-		if mt != websocket.TextMessage {
-			return fmt.Errorf("invalid websocket message type: %d", mt)
-		}
-		if s.ReadTimeout > 0 {
-			c.WSConn.SetReadDeadline(time.Now().Add(s.ReadTimeout))
-		}
-
-		msg, err := unmarshalMessage(r)
-		if err != nil {
-			return err
-		}
-
-		if s.ReadHandler != nil {
-			s.ReadHandler.Handle(c, msg)
-		} else {
-			ProcessMsg(c, msg)
-		}
-	}
-}
-
-func unmarshalMessage(r io.Reader) (Msg, error) {
-	var pm partialMsg
-	if err := json.NewDecoder(r).Decode(&pm); err != nil {
-		return nil, fmt.Errorf("invalid JSON message: %v", err)
-	}
-
-	genericUnmarshal := func(v interface{}, metaDst *meta) error {
-		if err := json.Unmarshal(pm.Payload, v); err != nil {
-			return fmt.Errorf("invalid %s message: %v", pm.Meta.T, err)
-		}
-		*metaDst = pm.Meta
-		return nil
-	}
-
-	var msg Msg
-	switch pm.Meta.T {
-	case AuthMsg:
-		var auth Auth
-		if err := genericUnmarshal(&auth, &auth.meta); err != nil {
-			return nil, err
-		}
-		msg = &auth
-
-	case CallMsg:
-		var call Call
-		if err := genericUnmarshal(&call, &call.meta); err != nil {
-			return nil, err
-		}
-		msg = &call
-
-	case SubMsg:
-		var sub Sub
-		if err := genericUnmarshal(&sub, &sub.meta); err != nil {
-			return nil, err
-		}
-		msg = &sub
-
-	case PubMsg:
-		var pub Pub
-		if err := genericUnmarshal(&pub, &pub.meta); err != nil {
-			return nil, err
-		}
-		msg = &pub
-
-	case ErrMsg, OKMsg, ResMsg, EvntMsg:
-		return nil, fmt.Errorf("invalid message %s for client peer", pm.Meta.T)
-	default:
-		return nil, fmt.Errorf("unknown message %s", pm.Meta.T)
-	}
-
-	return msg, nil
 }

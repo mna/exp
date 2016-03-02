@@ -26,7 +26,7 @@ func main() {
 		ReadLimit:    int64(*readLimitFlag),
 		ReadTimeout:  *readTOFlag,
 		WriteTimeout: *writeTOFlag,
-		ConnHandler:  juggler.ConnHandlerFunc(juggler.LogConn),
+		ConnState:    juggler.LogConn,
 		ReadHandler:  juggler.MsgHandlerFunc(juggler.LogMsg),
 	}
 	http.Handle("/ws", juggler.Upgrade(upg, srv))
