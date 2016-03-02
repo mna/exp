@@ -45,7 +45,7 @@ type Conn struct {
 	// TODO : some connection state (authenticated, etc.)?
 	wmu       chan struct{} // write lock
 	srv       *Server
-	kill      chan struct{}
+	kill      chan struct{} // signal channel, closed when Close is called
 	closeOnce sync.Once
 }
 

@@ -16,7 +16,7 @@ type cmd struct {
 }
 
 var helpCmd = &cmd{
-	Help: "print this message",
+	Help: "usage: ? or help\n\tprint this message",
 
 	Run: func(_ ...string) {
 		keys := make([]string, 0, len(commands))
@@ -25,7 +25,7 @@ var helpCmd = &cmd{
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
-			printf("%s\n\t%s\n", k, commands[k].Help)
+			printf("- %s :\n\t%s\n", k, commands[k].Help)
 		}
 	},
 }

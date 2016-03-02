@@ -21,13 +21,15 @@ var (
 func main() {
 	flag.Parse()
 
+	h := juggler.PanicRecover(juggler.MsgHandlerFunc(juggler.LogMsg), true)
 	upg := &websocket.Upgrader{Subprotocols: juggler.Subprotocols}
 	srv := &juggler.Server{
 		ReadLimit:    int64(*readLimitFlag),
 		ReadTimeout:  *readTOFlag,
 		WriteTimeout: *writeTOFlag,
 		ConnState:    juggler.LogConn,
-		ReadHandler:  juggler.MsgHandlerFunc(juggler.LogMsg),
+		ReadHandler:  h,
+		WriteHandler: h,
 	}
 	http.Handle("/ws", juggler.Upgrade(upg, srv))
 

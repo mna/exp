@@ -16,7 +16,6 @@ import (
 const welcomeMessage = `
 Welcome to the websocket client. Enter ? or help for the available
 commands. Press ^D (ctrl-D) to exit.
-
 `
 
 var (

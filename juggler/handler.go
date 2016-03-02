@@ -1,5 +1,7 @@
 package juggler
 
+import "fmt"
+
 // MsgHandler defines the method required to handle a send or receive
 // of a Msg over a connection.
 type MsgHandler interface {
@@ -14,6 +16,41 @@ type MsgHandlerFunc func(*Conn, Msg)
 // function itself.
 func (h MsgHandlerFunc) Handle(c *Conn, msg Msg) {
 	h(c, msg)
+}
+
+// Chain returns a MsgHandler that calls the provided handlers
+// in order, one after the other.
+func Chain(hs ...MsgHandler) MsgHandler {
+	return MsgHandlerFunc(func(c *Conn, msg Msg) {
+		for _, h := range hs {
+			h.Handle(c, msg)
+		}
+	})
+}
+
+// PanicRecover returns a MsgHandler that recovers from panics that
+// may happen in h and logs the panic to LogFunc. If close is true,
+// the connection is closed on a panic.
+func PanicRecover(h MsgHandler, close bool) MsgHandler {
+	return MsgHandlerFunc(func(c *Conn, msg Msg) {
+		defer func() {
+			if e := recover(); e != nil {
+				if close {
+					var err error
+					switch e := e.(type) {
+					case error:
+						err = e
+					default:
+						err = fmt.Errorf("%v", e)
+					}
+					c.Close(err)
+				}
+
+				LogFunc("%v: recovered from panic %v; serving message %v %s", c.UUID, e, msg.UUID(), msg.Type())
+			}
+		}()
+		h.Handle(c, msg)
+	})
 }
 
 // LogConn is a function compatible with the Server.ConnState field
