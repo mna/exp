@@ -23,7 +23,7 @@ var helpCmd = &cmd{
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
-			print("%s\n\t%s\n", k, commands[k].Help)
+			printf("%s\n\t%s\n", k, commands[k].Help)
 		}
 	},
 }
@@ -50,7 +50,7 @@ var connectCmd = &cmd{
 			return
 		}
 		connections = append(connections, conn)
-		print("connected to %s [%d]", addr, len(connections))
+		printf("connected to %s [%d]", addr, len(connections))
 		go read(len(connections), conn)
 	},
 }
@@ -78,7 +78,7 @@ func read(ix int, c *websocket.Conn) {
 			c.Close()
 			return
 		}
-		print("[%d] %v", ix, string(b))
+		printf("[%d] %v", ix, string(b))
 	}
 }
 

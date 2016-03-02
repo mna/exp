@@ -97,13 +97,13 @@ func setupTerminal() (*terminal.Terminal, func()) {
 	return t, cleanUp
 }
 
-func print(msg string, args ...interface{}) {
+func printf(msg string, args ...interface{}) {
 	fmt.Fprintf(term, msg+"\n", args...)
 }
 
 func printErr(msg string, args ...interface{}) {
 	term.Write(term.Escape.Red)
-	print(msg, args...)
+	printf(msg, args...)
 	term.Write(term.Escape.Reset)
 }
 
