@@ -11,19 +11,58 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// LogFunc is the function called to log events. It should never be
+// set to nil, use DiscardLog instead to disable logging. By default,
+// it logs using log.Printf.
 var LogFunc = log.Printf
 
+// DiscardLog is a helper no-op function that can be assigned to LogFunc
+// to disable logging.
+func DiscardLog(f string, args ...interface{}) {}
+
+// Subprotocols is the list of juggler protocol versions supported by this
+// package. It should be set as-is on the websocket.Upgrader Subprotocols
+// field.
 var Subprotocols = []string{
 	"juggler.1",
 }
 
+// Server is a juggler server. Once a websocket handshake has been
+// established with a juggler subprotocol over a standard HTTP server,
+// the connections get served by this server.
 type Server struct {
-	ReadLimit    int64
-	ReadTimeout  time.Duration
+	// ReadLimit defines the maximum size, in bytes, of incoming
+	// messages. If a client sends a message that exceeds this limit,
+	// the connection is closed. The default of 0 means no limit.
+	ReadLimit int64
+
+	// ReadTimeout is the timeout to read an incoming message. It is
+	// set on the websocket connection with SetReadDeadline before
+	// reading each message. The default of 0 means no timeout.
+	ReadTimeout time.Duration
+
+	// WriteTimeout is the timeout to write an outgoing message. It is
+	// set on the websocket connection with SetWriteDeadline before
+	// writing each message. The default of 0 means no timeout.
 	WriteTimeout time.Duration
 
-	ConnHandler  ConnHandler
-	ReadHandler  MsgHandler
+	// ConnState specifies an optional callback function that is called
+	// when a connection changes state. It is called for Connected and
+	// Closing states.
+	ConnState func(*Conn, ConnState)
+
+	// ReadHandler is the handler that is called when an incoming
+	// message is processed. The ProcessMsg function is called
+	// if the default nil value is set. If a custom handler is set,
+	// it is assumed that it will call ProcessMsg at some point,
+	// or otherwise manually process the messages.
+	ReadHandler MsgHandler
+
+	// WriteHandler is the handler that is called when an outgoing
+	// message is processed. The ProcessMsg function is called
+	// if the default nil value is set. If a custom handler is set,
+	// it is assumed that it will call ProcessMsg at some point,
+	// or otherwise manually process the messages.
 	WriteHandler MsgHandler
 }
 
@@ -44,14 +83,14 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 		wsConn.SetReadLimit(srv.ReadLimit)
 		c := newConn(wsConn)
 		defer func() {
-			if srv.ConnHandler != nil {
-				srv.ConnHandler.Handle(c)
+			if srv.ConnState != nil {
+				srv.ConnState(c, Closing)
 			}
 		}()
 
 		// start lifecycle of the connection
-		if srv.ConnHandler != nil {
-			srv.ConnHandler.Handle(c)
+		if srv.ConnState != nil {
+			srv.ConnState(c, Connected)
 		}
 
 		if err := srv.read(c); err != nil {
@@ -111,7 +150,9 @@ func (s *Server) read(c *Conn) error {
 		if mt != websocket.TextMessage {
 			return fmt.Errorf("invalid websocket message type: %d", mt)
 		}
-		c.WSConn.SetReadDeadline(time.Now().Add(s.ReadTimeout))
+		if s.ReadTimeout > 0 {
+			c.WSConn.SetReadDeadline(time.Now().Add(s.ReadTimeout))
+		}
 
 		msg, err := unmarshalMessage(r)
 		if err != nil {

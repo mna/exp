@@ -1,11 +1,5 @@
 package juggler
 
-type ConnHandlerFunc func(*Conn)
-
-func (h ConnHandlerFunc) Handle(c *Conn) {
-	h(c)
-}
-
 type MsgHandlerFunc func(*Conn, Msg)
 
 func (h MsgHandlerFunc) Handle(c *Conn, msg Msg) {
