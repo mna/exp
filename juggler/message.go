@@ -7,32 +7,32 @@ import (
 	"github.com/pborman/uuid"
 )
 
-/*
-The juggler.1 subprotocol defines the following messages for the client:
-
-- AUTH : for authentication
-- CALL : to call an RPC function
-- SUB  : to subscribe to a pub/sub channel
-- PUB  : to publish to a pub/sub channel
-
-And the following messages for the server:
-
-- ERR  : in response to an invalid AUTH, CALL, SUB or PUB
-- OK   : successful AUTH, SUB or PUB
-- RES  : the result of a successful CALL message
-- EVNT : an event triggered on a channel that the client is subscribed to
-
-Closing the communication is done via the standard websocket close
-process.
-
-All messages must be of type websocket.TextMessage. Failing to properly
-speak the protocol terminates the connection without notice from the
-peer. That includes sending binary messages and sending unknown message
-types.
-*/
-
+// MessageType defines the supported types of messages.
+//
+// The juggler.0 subprotocol defines the following messages for the client:
+//
+// - AUTH : for authentication
+// - CALL : to call an RPC function
+// - SUB  : to subscribe to a pub/sub channel
+// - PUB  : to publish to a pub/sub channel
+//
+// And the following messages for the server:
+//
+// - ERR  : in response to an invalid AUTH, CALL, SUB or PUB
+// - OK   : successful AUTH, SUB or PUB
+// - RES  : the result of a successful CALL message
+// - EVNT : an event triggered on a channel that the client is subscribed to
+//
+// Closing the communication is done via the standard websocket close
+// process.
+//
+// All messages must be of type websocket.TextMessage. Failing to properly
+// speak the protocol terminates the connection without notice from the
+// peer. That includes sending binary messages and sending unknown message
+// types.
 type MessageType int
 
+// The list of supported message types.
 const (
 	startRead MessageType = iota
 	AuthMsg
@@ -60,6 +60,7 @@ var lookupMessageType = []string{
 	EvntMsg: "EVNT",
 }
 
+// String returns the human-readable representation of message types.
 func (mt MessageType) String() string {
 	if mt > 0 && int(mt) < len(lookupMessageType) {
 		return lookupMessageType[mt]
@@ -67,10 +68,22 @@ func (mt MessageType) String() string {
 	return fmt.Sprintf("<unknown: %d>", mt)
 }
 
+// Msg defines the common methods implemented by all messages.
 type Msg interface {
+	// Type returns the message type.
 	Type() MessageType
+
+	// UUID is the unique identifier of the message.
 	UUID() uuid.UUID
+
+	// IsRead returns true if the message type is a "read" from the
+	// point of view of the server (that is, if this is a message
+	// that was sent by a client).
 	IsRead() bool
+
+	// IsWrite returns true if the message type is a "write" from the
+	// point of view of the server (that is, if this is a message
+	// that is being sent by the server).
 	IsWrite() bool
 }
 
