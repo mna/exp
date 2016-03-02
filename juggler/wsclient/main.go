@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -17,26 +18,32 @@ Welcome to the websocket client. Enter ? or help for the available
 commands. Press ^D (ctrl-D) to exit.
 `
 
-var commands map[string]*cmd
-
-var connections []*websocket.Conn
+var (
+	commands    map[string]*cmd
+	connections []*websocket.Conn
+	term        *terminal.Terminal
+)
 
 func init() {
 	commands = map[string]*cmd{
-		"?":    helpCmd,
-		"help": helpCmd,
+		"?":          helpCmd,
+		"help":       helpCmd,
+		"connect":    connectCmd,
+		"disconnect": disconnectCmd,
 		/*
-			"connect":    connect,
-			"disconnect": disconnect,
 			"send":       send,
 		*/
 	}
 }
 
-var term *terminal.Terminal
+var (
+	defaultConnFlag = flag.String("addr", "ws://localhost:9000/ws", "default dial address to use in connect commands")
+)
 
 func main() {
 	var exitCode int
+
+	flag.Parse()
 
 	// call os.Exit in a defer, otherwise defer to reset the terminal
 	// will not be run.
@@ -58,7 +65,7 @@ func main() {
 			if err == io.EOF {
 				return
 			}
-			log.Printf("wsclient: failed to read line: %v", err)
+			printErr("wsclient: failed to read line: %v", err)
 			exitCode = 1
 			return
 		}
@@ -68,7 +75,7 @@ func main() {
 			if cmd := commands[args[0]]; cmd != nil {
 				cmd.Run(args[1:]...)
 			} else {
-				print("unknown command %q", args[0])
+				printErr("unknown command %q", args[0])
 			}
 		}
 	}
@@ -94,66 +101,13 @@ func print(msg string, args ...interface{}) {
 	fmt.Fprintf(term, msg+"\n", args...)
 }
 
+func printErr(msg string, args ...interface{}) {
+	term.Write(term.Escape.Red)
+	print(msg, args...)
+	term.Write(term.Escape.Reset)
+}
+
 /*
-func connect(args ...string) {
-	var d websocket.Dialer
-
-	if len(args) < 1 {
-		fmt.Print("usage: connect URL [PROTO]\r\n")
-		return
-	}
-
-	var h http.Header
-	if len(args) == 2 {
-		h = http.Header{"Sec-WebSocket-Protocol": {args[1]}}
-	}
-	conn, _, err := d.Dial(args[0], h)
-	if err != nil {
-		fmt.Printf("error: %v\r\n", err)
-		return
-	}
-	connections = append(connections, conn)
-	fmt.Printf("connected to %s [%d]\r\n", args[0], len(connections))
-	go read(len(connections), conn)
-}
-
-func read(ix int, c *websocket.Conn) {
-	for {
-		_, b, err := c.ReadMessage()
-		if err != nil {
-			fmt.Printf("[%d] NextReader failed: %v; closing connection\r\n", ix, err)
-			c.Close()
-			return
-		}
-		fmt.Printf("[%d] %v\r\n", ix, string(b))
-	}
-}
-
-func getConn(arg string) (*websocket.Conn, int) {
-	ix, err := strconv.Atoi(arg)
-	if err != nil {
-		fmt.Printf("argument error: %v\r\n", err)
-		return nil, 0
-	}
-	if ix > 0 && ix <= len(connections) {
-		if c := connections[ix-1]; c != nil {
-			return c, ix - 1
-		}
-	}
-	return nil, 0
-}
-
-func disconnect(args ...string) {
-	if len(args) != 1 {
-		fmt.Print("usage: disconnect CONN_ID\r\n")
-		return
-	}
-	if c, ix := getConn(args[0]); c != nil {
-		c.Close()
-		connections[ix] = nil
-	}
-}
-
 func send(args ...string) {
 	if len(args) < 2 {
 		fmt.Print("usage: send CONN_ID MSG\r\n")
