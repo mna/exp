@@ -69,11 +69,13 @@ func (w *exclusiveWriter) Write(p []byte) (int, error) {
 		case <-w.c.wmu:
 			w.init = true
 			wc, err := w.c.WSConn.NextWriter(websocket.TextMessage)
-			// TODO : set write deadline
 			if err != nil {
 				return 0, err
 			}
 			w.w = wc
+			if w.c.srv.WriteTimeout > 0 {
+				w.c.WSConn.SetWriteDeadline(time.Now().Add(w.c.srv.WriteTimeout))
+			}
 		}
 	}
 
@@ -86,7 +88,7 @@ func (w *exclusiveWriter) Close() error {
 		return nil
 	}
 	err := w.w.Close()
-	// TODO : reset write deadline
+	w.c.WSConn.SetWriteDeadline(time.Time{})
 	w.c.wmu <- struct{}{}
 	return err
 }
