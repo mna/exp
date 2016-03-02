@@ -31,10 +31,6 @@ peer. That includes sending binary messages and sending unknown message
 types.
 */
 
-type MsgHandler interface {
-	Handle(*Conn, Msg)
-}
-
 type MessageType int
 
 const (

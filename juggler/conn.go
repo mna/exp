@@ -172,6 +172,8 @@ func (c *Conn) receive() {
 	for {
 		c.WSConn.SetReadDeadline(time.Time{})
 
+		// NextReader returns with an error once a connection is closed,
+		// so this loop doesn't need to check the c.kill channel.
 		mt, r, err := c.WSConn.NextReader()
 		if err != nil {
 			c.Close(err)
