@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// LogFunc is the function called to log events. It should never be
+// LogFunc is the function called to log events. It must never be
 // set to nil, use DiscardLog instead to disable logging. By default,
 // it logs using log.Printf.
 var LogFunc = log.Printf
@@ -24,7 +24,16 @@ func DiscardLog(f string, args ...interface{}) {}
 // package. It should be set as-is on the websocket.Upgrader Subprotocols
 // field.
 var Subprotocols = []string{
-	"juggler.1",
+	"juggler.0",
+}
+
+func isIn(list []string, v string) bool {
+	for _, vv := range list {
+		if vv == v {
+			return true
+		}
+	}
+	return false
 }
 
 // Server is a juggler server. Once a websocket handshake has been
@@ -66,6 +75,25 @@ type Server struct {
 	WriteHandler MsgHandler
 }
 
+// ListenAndServe starts a default HTTP server by calling
+// http.ListenAndServe on the provided address, and upgrades requests
+// made to path to a websocket connection for a supported juggler
+// subprotocol. The provided read and write MsgHandlers are used
+// to process messages.
+func ListenAndServe(addr, path string, read, write MsgHandler) error {
+	upg := &websocket.Upgrader{Subprotocols: Subprotocols}
+	srv := &Server{ReadHandler: read, WriteHandler: write}
+	mux := http.NewServeMux()
+	mux.Handle(path, Upgrade(upg, srv))
+	return http.ListenAndServe(addr, mux)
+}
+
+// Upgrade returns an http.Handler that upgrades connections to
+// the websocket protocol using upgrader. The websocket connection
+// must be upgraded to a supported juggler subprotocol otherwise
+// the connection is dropped.
+//
+// Once connected, the websocket connection is served via srv.
 func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// upgrade the HTTP connection to the websocket protocol
@@ -74,7 +102,7 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 			return
 		}
 		defer wsConn.Close()
-		if wsConn.Subprotocol() == "" {
+		if wsConn.Subprotocol() == "" || !isIn(Subprotocols, wsConn.Subprotocol()) {
 			LogFunc("juggler: no supported subprotocol, closing connection")
 			return
 		}
