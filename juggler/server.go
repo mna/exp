@@ -73,19 +73,12 @@ type Server struct {
 	// it is assumed that it will call ProcessMsg at some point,
 	// or otherwise manually process the messages.
 	WriteHandler MsgHandler
-}
 
-// ListenAndServe starts a default HTTP server by calling
-// http.ListenAndServe on the provided address, and upgrades requests
-// made to path to a websocket connection for a supported juggler
-// subprotocol. The provided read and write MsgHandlers are used
-// to process messages.
-func ListenAndServe(addr, path string, read, write MsgHandler) error {
-	upg := &websocket.Upgrader{Subprotocols: Subprotocols}
-	srv := &Server{ReadHandler: read, WriteHandler: write}
-	mux := http.NewServeMux()
-	mux.Handle(path, Upgrade(upg, srv))
-	return http.ListenAndServe(addr, mux)
+	// CallPool is the redis pool to use to process RPC calls.
+	CallPool RedisPool
+
+	// PubSubPool is the redis pool to use for pub/sub.
+	PubSubPool RedisPool
 }
 
 // Upgrade returns an http.Handler that upgrades connections to
