@@ -3,6 +3,7 @@ package juggler
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/pborman/uuid"
 )
@@ -11,25 +12,26 @@ import (
 //
 // The juggler.0 subprotocol defines the following messages for the client:
 //
-// - AUTH : for authentication
-// - CALL : to call an RPC function
-// - SUB  : to subscribe to a pub/sub channel
-// - PUB  : to publish to a pub/sub channel
+//     - AUTH : for authentication
+//     - CALL : to call an RPC function
+//     - SUB  : to subscribe to a pub/sub channel
+//     - PUB  : to publish to a pub/sub channel
 //
 // And the following messages for the server:
 //
-// - ERR  : in response to an invalid AUTH, CALL, SUB or PUB
-// - OK   : successful AUTH, SUB or PUB
-// - RES  : the result of a successful CALL message
-// - EVNT : an event triggered on a channel that the client is subscribed to
+//     - ERR  : in response to an invalid AUTH, CALL, SUB or PUB
+//     - OK   : successful AUTH, SUB or PUB
+//     - RES  : the result of a successful CALL message
+//     - EVNT : an event triggered on a channel that the client is subscribed to
 //
 // Closing the communication is done via the standard websocket close
 // process.
 //
 // All messages must be of type websocket.TextMessage. Failing to properly
 // speak the protocol terminates the connection without notice from the
-// peer. That includes sending binary messages and sending unknown message
-// types.
+// peer. That includes sending binary messages and sending unknown (or
+// invalid for the peer) message types.
+//
 type MessageType int
 
 // The list of supported message types.
@@ -62,8 +64,10 @@ var lookupMessageType = []string{
 
 // String returns the human-readable representation of message types.
 func (mt MessageType) String() string {
-	if mt > 0 && int(mt) < len(lookupMessageType) {
-		return lookupMessageType[mt]
+	if mt >= 0 && int(mt) < len(lookupMessageType) {
+		if s := lookupMessageType[mt]; s != "" {
+			return lookupMessageType[mt]
+		}
 	}
 	return fmt.Sprintf("<unknown: %d>", mt)
 }
@@ -97,34 +101,41 @@ type partialMsg struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
+// Type returns the message type.
 func (m meta) Type() MessageType {
 	return m.T
 }
 
+// UUID returns the message's unique identifier.
 func (m meta) UUID() uuid.UUID {
 	return m.U
 }
 
+// IsRead returns true if the message is an incoming message from the client.
 func (m meta) IsRead() bool {
 	return startRead < m.T && m.T < endRead
 }
 
+// IsWrite returns true if the message is an outgoing message from the server.
 func (m meta) IsWrite() bool {
 	return startWrite < m.T && m.T < endWrite
 }
 
+// Auth is an authentication message.
 type Auth struct {
 	meta
-	AuthType string `json:"auth_type"`
-	Token    string `json:"token,omitempty"`
-	ID       string `json:"id,omitempty"`
-	Secret   string `json:"secret,omitempty"`
+	AuthType string        `json:"auth_type"`
+	Token    string        `json:"token,omitempty"`
+	ID       string        `json:"id,omitempty"`
+	Secret   string        `json:"secret,omitempty"`
+	Timeout  time.Duration `json:"timeout"`
 }
 
 type Call struct {
 	meta
-	URI  string          `json:"uri"`
-	Args json.RawMessage `json:"args"`
+	URI     string          `json:"uri"`
+	Timeout time.Duration   `json:"timeout"`
+	Args    json.RawMessage `json:"args"`
 }
 
 type Sub struct {
