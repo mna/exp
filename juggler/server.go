@@ -8,11 +8,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// LogFunc is the function called to log events. It must never be
-// set to nil, use DiscardLog instead to disable logging. By default,
-// it logs using log.Printf.
-var LogFunc = log.Printf
-
 // DiscardLog is a helper no-op function that can be assigned to LogFunc
 // to disable logging.
 func DiscardLog(f string, args ...interface{}) {}
@@ -55,6 +50,11 @@ type Server struct {
 	// writing each message. The default of 0 means no timeout.
 	WriteTimeout time.Duration
 
+	// AcquireWriteLockTimeout is the time to wait for the exclusive
+	// write lock for a connection. If the lock cannot be acquired
+	// before the timeout, the connection is dropped.
+	AcquireWriteLockTimeout time.Duration
+
 	// ConnState specifies an optional callback function that is called
 	// when a connection changes state. It is called for Connected and
 	// Closing states.
@@ -79,6 +79,11 @@ type Server struct {
 
 	// PubSubPool is the redis pool to use for pub/sub.
 	PubSubPool RedisPool
+
+	// LogFunc is the function called to log events. By default,
+	// it logs using log.Printf. Logging can be disabled by setting
+	// LogFunc to DiscardLog.
+	LogFunc func(string, ...interface{})
 }
 
 // Upgrade returns an http.Handler that upgrades connections to
@@ -98,7 +103,7 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 
 		// the agreed-upon subprotocol must be one of the supported ones.
 		if wsConn.Subprotocol() == "" || !isIn(Subprotocols, wsConn.Subprotocol()) {
-			LogFunc("juggler: no supported subprotocol, closing connection")
+			logf(srv, "juggler: no supported subprotocol, closing connection")
 			return
 		}
 
@@ -119,4 +124,12 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 		go c.receive()
 		<-kill
 	})
+}
+
+func logf(s *Server, f string, args ...interface{}) {
+	if s.LogFunc != nil {
+		s.LogFunc(f, args...)
+	} else {
+		log.Printf(f, args...)
+	}
 }

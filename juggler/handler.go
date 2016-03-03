@@ -49,7 +49,7 @@ func PanicRecover(h MsgHandler, close bool) MsgHandler {
 					c.Close(err)
 				}
 
-				LogFunc("%v: recovered from panic %v; serving message %v %s", c.UUID, e, msg.UUID(), msg.Type())
+				logf(c.srv, "%v: recovered from panic %v; serving message %v %s", c.UUID, e, msg.UUID(), msg.Type())
 			}
 		}()
 		h.Handle(c, msg)
@@ -61,9 +61,9 @@ func PanicRecover(h MsgHandler, close bool) MsgHandler {
 func LogConn(c *Conn, state ConnState) {
 	switch state {
 	case Connected:
-		LogFunc("%v: connected from %v with subprotocol %q", c.UUID, c.WSConn.RemoteAddr(), c.WSConn.Subprotocol())
+		logf(c.srv, "%v: connected from %v with subprotocol %q", c.UUID, c.WSConn.RemoteAddr(), c.WSConn.Subprotocol())
 	case Closing:
-		LogFunc("%v: closing from %v with error %v", c.UUID, c.WSConn.RemoteAddr(), c.CloseErr)
+		logf(c.srv, "%v: closing from %v with error %v", c.UUID, c.WSConn.RemoteAddr(), c.CloseErr)
 	}
 }
 
@@ -71,9 +71,9 @@ func LogConn(c *Conn, state ConnState) {
 // c to LogFunc.
 func LogMsg(c *Conn, msg Msg) {
 	if msg.IsRead() {
-		LogFunc("%v: received message %v %s", c.UUID, msg.UUID(), msg.Type())
+		logf(c.srv, "%v: received message %v %s", c.UUID, msg.UUID(), msg.Type())
 	} else if msg.IsWrite() {
-		LogFunc("%v: sending message %v %s", c.UUID, msg.UUID(), msg.Type())
+		logf(c.srv, "%v: sending message %v %s", c.UUID, msg.UUID(), msg.Type())
 	}
 }
 
@@ -85,7 +85,6 @@ func LogMsg(c *Conn, msg Msg) {
 // it should at some point call ProcessMsg so the expected behaviour
 // happens.
 func ProcessMsg(c *Conn, msg Msg) {
-	// TODO : default handling based on the type of msg
 	switch msg := msg.(type) {
 	case *Auth:
 	case *Call:
@@ -99,24 +98,24 @@ func ProcessMsg(c *Conn, msg Msg) {
 	case *Pub:
 	case *Sub:
 
-	case *OK:
-	case *Err:
-		// TODO : OK, err, evnt and res all similar
-		w, err := c.Writer()
-		if err != nil {
-			if err == ErrLockWriterTimeout {
-				// TODO : if lock timeout, try again, but log?
-			}
-			c.Close(err)
-		}
-		if err := json.NewEncoder(w).Encode(msg); err != nil {
-			// TODO : just log? should never happen
-		}
-		if err := w.Close(); err != nil {
-			// TODO : just log? should never happen
-		}
+	case *OK, *Err, *Evnt, *Res:
+		writeMsg(c, msg)
 
-	case *Evnt:
-	case *Res:
+	default:
+		logf(c.srv, "unknown message in ProcessMsg: %T", msg)
+	}
+}
+
+func writeMsg(c *Conn, msg Msg) {
+	w := c.Writer(c.srv.AcquireWriteLockTimeout)
+	defer w.Close()
+
+	if err := json.NewEncoder(w).Encode(msg); err != nil {
+		if err == ErrLockWriterTimeout {
+			c.Close(fmt.Errorf("writeMsg failed: %v; closing connection", err))
+			return
+		}
+		logf(c.srv, "%v: writeMsg %v failed: %v", c.UUID, msg.UUID(), err)
+		return
 	}
 }
