@@ -229,7 +229,7 @@ type OK struct {
 
 func NewOK(from Msg) *OK {
 	ok := &OK{
-		Meta: newMeta(ErrMsg),
+		Meta: newMeta(OKMsg),
 	}
 	ok.Payload.For = from.UUID()
 	ok.Payload.ForType = from.Type()

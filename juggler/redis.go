@@ -27,8 +27,8 @@ const (
 )
 
 type callPayload struct {
-	UUID uuid.UUID
-	Args json.RawMessage
+	UUID uuid.UUID       `json:"uuid"`
+	Args json.RawMessage `json:"args,omitempty"`
 }
 
 func (s *Server) redisCall(m *msg.Call) error {
@@ -57,9 +57,9 @@ func (s *Server) redisCall(m *msg.Call) error {
 	// TODO : use {} to ensure both keys are on the same node/slot when
 	// using redis-cluster. (e.g. timeout key is juggler:call:{uri}:uuid).
 
-	to := m.Payload.Timeout / time.Millisecond
+	to := int(m.Payload.Timeout / time.Millisecond)
 	if to == 0 {
-		to = defaultCallTimeout / time.Millisecond
+		to = int(defaultCallTimeout / time.Millisecond)
 	}
 	if err := c.Send("SET", fmt.Sprintf(callTimeoutKey, m.UUID()), to, "PX", to); err != nil {
 		return err
