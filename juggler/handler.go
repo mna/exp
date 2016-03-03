@@ -1,6 +1,9 @@
 package juggler
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // MsgHandler defines the method required to handle a send or receive
 // of a Msg over a connection.
@@ -83,4 +86,37 @@ func LogMsg(c *Conn, msg Msg) {
 // happens.
 func ProcessMsg(c *Conn, msg Msg) {
 	// TODO : default handling based on the type of msg
+	switch msg := msg.(type) {
+	case *Auth:
+	case *Call:
+		if err := c.srv.redisCall(msg); err != nil {
+			e := newErr(msg, 500, err.Error()) // TODO : use HTTP-like error codes?
+			c.Send(e)
+		}
+		ok := newOK(msg)
+		c.Send(ok)
+
+	case *Pub:
+	case *Sub:
+
+	case *OK:
+	case *Err:
+		// TODO : OK, err, evnt and res all similar
+		w, err := c.Writer()
+		if err != nil {
+			if err == ErrLockWriterTimeout {
+				// TODO : if lock timeout, try again, but log?
+			}
+			c.Close(err)
+		}
+		if err := json.NewEncoder(w).Encode(msg); err != nil {
+			// TODO : just log? should never happen
+		}
+		if err := w.Close(); err != nil {
+			// TODO : just log? should never happen
+		}
+
+	case *Evnt:
+	case *Res:
+	}
 }

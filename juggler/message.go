@@ -152,13 +152,37 @@ type Pub struct {
 
 type Err struct {
 	meta
-	For      uuid.UUID `json:"for"`
-	ForType  int       `json:"for_type"`
-	AuthType string    `json:"auth_type,omitempty"` // when in response to an AUTH
-	URI      string    `json:"uri,omitempty"`       // when in response to a CALL
-	Channel  string    `json:"channel,omitempty"`   // when in response to a PUB or SUB
-	Code     int       `json:"code"`
-	Message  string    `json:"message"`
+	For      uuid.UUID   `json:"for"`
+	ForType  MessageType `json:"for_type"`
+	AuthType string      `json:"auth_type,omitempty"` // when in response to an AUTH
+	URI      string      `json:"uri,omitempty"`       // when in response to a CALL
+	Channel  string      `json:"channel,omitempty"`   // when in response to a PUB or SUB
+	Code     int         `json:"code"`
+	Message  string      `json:"message"`
+}
+
+func newErr(from Msg, code int, message string) *Err {
+	err := &Err{
+		meta: meta{
+			T: ErrMsg,
+			U: uuid.NewRandom(),
+		},
+		For:     from.UUID(),
+		ForType: from.Type(),
+		Code:    code,
+		Message: message,
+	}
+	switch from := from.(type) {
+	case *Auth:
+		err.AuthType = from.AuthType
+	case *Call:
+		err.URI = from.URI
+	case *Pub:
+		err.Channel = from.Channel
+	case *Sub:
+		err.Channel = from.Channel
+	}
+	return err
 }
 
 type OK struct {
