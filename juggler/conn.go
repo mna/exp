@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
 	"github.com/pborman/uuid"
 )
@@ -160,11 +161,11 @@ func (c *Conn) Writer(timeout time.Duration) io.WriteCloser {
 
 // Send sends the msg to the client. It calls the Server's
 // WriteHandler if any, or ProcessMsg if nil.
-func (c *Conn) Send(msg Msg) {
+func (c *Conn) Send(m msg.Msg) {
 	if c.srv.WriteHandler != nil {
-		c.srv.WriteHandler.Handle(c, msg)
+		c.srv.WriteHandler.Handle(c, m)
 	} else {
-		ProcessMsg(c, msg)
+		ProcessMsg(c, m)
 	}
 }
 
@@ -201,13 +202,13 @@ func (c *Conn) receive() {
 	}
 }
 
-func unmarshalMessage(r io.Reader) (Msg, error) {
-	var pm partialMsg
+func unmarshalMessage(r io.Reader) (msg.Msg, error) {
+	var pm msg.PartialMsg
 	if err := json.NewDecoder(r).Decode(&pm); err != nil {
 		return nil, fmt.Errorf("invalid JSON message: %v", err)
 	}
 
-	genericUnmarshal := func(v interface{}, metaDst *meta) error {
+	genericUnmarshal := func(v interface{}, metaDst *msg.Meta) error {
 		if err := json.Unmarshal(pm.Payload, v); err != nil {
 			return fmt.Errorf("invalid %s message: %v", pm.Meta.T, err)
 		}
@@ -215,41 +216,41 @@ func unmarshalMessage(r io.Reader) (Msg, error) {
 		return nil
 	}
 
-	var msg Msg
+	var m msg.Msg
 	switch pm.Meta.T {
-	case AuthMsg:
-		var auth Auth
-		if err := genericUnmarshal(&auth, &auth.meta); err != nil {
+	case msg.AuthMsg:
+		var auth msg.Auth
+		if err := genericUnmarshal(&auth, &auth.Meta); err != nil {
 			return nil, err
 		}
-		msg = &auth
+		m = &auth
 
-	case CallMsg:
-		var call Call
-		if err := genericUnmarshal(&call, &call.meta); err != nil {
+	case msg.CallMsg:
+		var call msg.Call
+		if err := genericUnmarshal(&call, &call.Meta); err != nil {
 			return nil, err
 		}
-		msg = &call
+		m = &call
 
-	case SubMsg:
-		var sub Sub
-		if err := genericUnmarshal(&sub, &sub.meta); err != nil {
+	case msg.SubMsg:
+		var sub msg.Sub
+		if err := genericUnmarshal(&sub, &sub.Meta); err != nil {
 			return nil, err
 		}
-		msg = &sub
+		m = &sub
 
-	case PubMsg:
-		var pub Pub
-		if err := genericUnmarshal(&pub, &pub.meta); err != nil {
+	case msg.PubMsg:
+		var pub msg.Pub
+		if err := genericUnmarshal(&pub, &pub.Meta); err != nil {
 			return nil, err
 		}
-		msg = &pub
+		m = &pub
 
-	case ErrMsg, OKMsg, ResMsg, EvntMsg:
+	case msg.ErrMsg, msg.OKMsg, msg.ResMsg, msg.EvntMsg:
 		return nil, fmt.Errorf("invalid message %s for client peer", pm.Meta.T)
 	default:
 		return nil, fmt.Errorf("unknown message %s", pm.Meta.T)
 	}
 
-	return msg, nil
+	return m, nil
 }

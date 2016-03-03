@@ -21,7 +21,13 @@ var (
 func main() {
 	flag.Parse()
 
-	h := juggler.PanicRecover(juggler.MsgHandlerFunc(juggler.LogMsg), true)
+	// wrap LogMsg and ProcessMsg in a PanicRecover handler
+	h := juggler.PanicRecover(
+		juggler.Chain(
+			juggler.MsgHandlerFunc(juggler.LogMsg),
+			juggler.MsgHandlerFunc(juggler.ProcessMsg),
+		), true, true)
+
 	upg := &websocket.Upgrader{Subprotocols: juggler.Subprotocols}
 	srv := &juggler.Server{
 		ReadLimit:    int64(*readLimitFlag),

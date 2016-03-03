@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
 )
 
@@ -68,6 +70,8 @@ var disconnectCmd = &cmd{
 		if c, ix := getConn(args[0]); c != nil {
 			c.Close()
 			connections[ix] = nil
+		} else {
+			printErr("invalid connection ID")
 		}
 	},
 }
@@ -87,12 +91,14 @@ var closeCmd = &cmd{
 			}
 			c.Close()
 			connections[ix] = nil
+		} else {
+			printErr("invalid connection ID")
 		}
 	},
 }
 
 var sendCmd = &cmd{
-	Help: "usage: send CONN_ID MSG\n\tsend MSG to the connection identified by CONN_ID",
+	Help: "usage: send CONN_ID MSG\n\tsend free-form MSG to the connection identified by CONN_ID",
 
 	Run: func(args ...string) {
 		if len(args) < 2 {
@@ -104,6 +110,47 @@ var sendCmd = &cmd{
 				printErr("WriteMessage failed: %v", err)
 				return
 			}
+		} else {
+			printErr("invalid connection ID")
+		}
+	},
+}
+
+var callCmd = &cmd{
+	Help: "usage: call CONN_ID URI [TIMEOUT_SEC [ARGS]]\n\tsend a CALL message to the connection identified by CONN_ID\n\tto URI with optional ARGS as JSON",
+
+	Run: func(args ...string) {
+		if len(args) < 2 {
+			printErr("usage: call CONN_ID URI [ARGS]")
+			return
+		}
+		if c, _ := getConn(args[0]); c != nil {
+			var to time.Duration
+			if len(args) > 2 {
+				d, err := time.ParseDuration(args[2])
+				if err != nil {
+					printErr("invalid timeout: %v", err)
+					return
+				}
+				to = d
+			}
+
+			var v json.RawMessage
+			if len(args) > 3 {
+				v = json.RawMessage(args[3])
+			}
+
+			call, err := msg.NewCall(args[1], to, v)
+			if err != nil {
+				printErr("failed to create CALL message: %v", err)
+				return
+			}
+			if err := c.WriteJSON(call); err != nil {
+				printErr("WriteJSON failed: %v", err)
+				return
+			}
+		} else {
+			printErr("invalid connection ID")
 		}
 	},
 }

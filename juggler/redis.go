@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/garyburd/redigo/redis"
 	"github.com/pborman/uuid"
 )
@@ -30,11 +31,11 @@ type callPayload struct {
 	Args json.RawMessage
 }
 
-func (s *Server) redisCall(msg *Call) error {
+func (s *Server) redisCall(m *msg.Call) error {
 	c := s.CallPool.Get()
 	defer c.Close()
 
-	pld := &callPayload{UUID: msg.UUID(), Args: msg.Args}
+	pld := &callPayload{UUID: m.UUID(), Args: m.Payload.Args}
 	b, err := json.Marshal(pld)
 	if err != nil {
 		return err
@@ -56,13 +57,13 @@ func (s *Server) redisCall(msg *Call) error {
 	// TODO : use {} to ensure both keys are on the same node/slot when
 	// using redis-cluster. (e.g. timeout key is juggler:call:{uri}:uuid).
 
-	to := msg.Timeout / time.Millisecond
+	to := m.Payload.Timeout / time.Millisecond
 	if to == 0 {
 		to = defaultCallTimeout / time.Millisecond
 	}
-	if err := c.Send("SET", fmt.Sprintf(callTimeoutKey, msg.UUID()), msg.Timeout, "PX", to); err != nil {
+	if err := c.Send("SET", fmt.Sprintf(callTimeoutKey, m.UUID()), to, "PX", to); err != nil {
 		return err
 	}
-	_, err = c.Do("LPUSH", msg.URI, b)
+	_, err = c.Do("LPUSH", m.Payload.URI, b)
 	return err
 }

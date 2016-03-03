@@ -32,6 +32,7 @@ func init() {
 		"disconnect": disconnectCmd,
 		"send":       sendCmd,
 		"close":      closeCmd,
+		"call":       callCmd,
 	}
 }
 
