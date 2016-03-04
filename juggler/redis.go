@@ -23,19 +23,37 @@ type RedisPool interface {
 
 const (
 	defaultCallTimeout = time.Minute
-	callTimeoutKey     = "juggler:calls:{%s}"
+
+	// CALL: callee BRPOPs on callKey. On a new payload, it checks if
+	// callTimeoutKey is still valid and for how long (PTTL). If it is
+	// still valid, it processes the call, otherwise it drops it.
+	// callTimeoutKey is deleted.
+	callKey        = "juggler:calls:{%s}"            // 1: URI
+	callTimeoutKey = "juggler:calls:timeout:{%s}:%s" // 1: URI, 2: mUUID
+
+	// RES: callee stores the result of the call in resKey (LPUSH) and
+	// sets resTimeoutKey with an expiration of callTimeoutKey PTTL minus
+	// the time of the call invocation.
+	//
+	// Caller BRPOPs on resKey. On a new payload, it checks if resTimeoutKey
+	// is still valid. If it is, it sends the result on the connection,
+	// otherwise it drops it. resTimeoutKey is deleted.
+	resKey        = "juggler:results:{%s}"            // 1: cUUID
+	resTimeoutKey = "juggler:results:timeout:{%s}:%s" // 1: cUUID, 2: mUUID
 )
 
 type callPayload struct {
-	UUID uuid.UUID       `json:"uuid"`
-	Args json.RawMessage `json:"args,omitempty"`
+	ConnUUID uuid.UUID       `json:"conn_uuid"`
+	MsgUUID  uuid.UUID       `json:"msg_uuid"`
+	Args     json.RawMessage `json:"args,omitempty"`
 }
 
-func (s *Server) redisCall(m *msg.Call) error {
-	c := s.CallPool.Get()
-	defer c.Close()
-
-	pld := &callPayload{UUID: m.UUID(), Args: m.Payload.Args}
+func (s *Server) pushRedisCall(connUUID uuid.UUID, m *msg.Call) error {
+	pld := &callPayload{
+		ConnUUID: connUUID,
+		MsgUUID:  m.UUID(),
+		Args:     m.Payload.Args,
+	}
 	b, err := json.Marshal(pld)
 	if err != nil {
 		return err
@@ -54,16 +72,16 @@ func (s *Server) redisCall(m *msg.Call) error {
 	// it processes the call and stores the response payload under a new
 	// key with an expiration of PTTL.
 
-	// TODO : use {} to ensure both keys are on the same node/slot when
-	// using redis-cluster. (e.g. timeout key is juggler:call:{uri}:uuid).
+	c := s.CallPool.Get()
+	defer c.Close()
 
 	to := int(m.Payload.Timeout / time.Millisecond)
 	if to == 0 {
 		to = int(defaultCallTimeout / time.Millisecond)
 	}
-	if err := c.Send("SET", fmt.Sprintf(callTimeoutKey, m.UUID()), to, "PX", to); err != nil {
+	if err := c.Send("SET", fmt.Sprintf(callTimeoutKey, m.Payload.URI, m.UUID()), to, "PX", to); err != nil {
 		return err
 	}
-	_, err = c.Do("LPUSH", m.Payload.URI, b)
+	_, err = c.Do("LPUSH", fmt.Sprintf(callKey, m.Payload.URI), b)
 	return err
 }
