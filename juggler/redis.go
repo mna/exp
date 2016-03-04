@@ -48,6 +48,7 @@ type callPayload struct {
 	Args     json.RawMessage `json:"args,omitempty"`
 }
 
+// called by the server to push a call request in the call list key.
 func (s *Server) pushRedisCall(connUUID uuid.UUID, m *msg.Call) error {
 	pld := &callPayload{
 		ConnUUID: connUUID,
@@ -84,4 +85,10 @@ func (s *Server) pushRedisCall(connUUID uuid.UUID, m *msg.Call) error {
 	}
 	_, err = c.Do("LPUSH", fmt.Sprintf(callKey, m.Payload.URI), b)
 	return err
+}
+
+// called by the callee to push a result in the result list key.
+// TODO : move to a callee package or something.
+func (s *Server) pushRedisRes() error {
+	return nil
 }

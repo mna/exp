@@ -2,7 +2,9 @@ package juggler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"runtime"
 
 	"github.com/PuerkitoBio/exp/juggler/msg"
@@ -110,23 +112,64 @@ func ProcessMsg(c *Conn, m msg.Msg) {
 	case *msg.Sub:
 
 	case *msg.OK, *msg.Err, *msg.Evnt, *msg.Res:
-		writeMsg(c, m)
+		if err := writeMsg(c, m); err != nil {
+			switch err {
+			case ErrLockWriterTimeout:
+				c.Close(fmt.Errorf("writeMsg failed: %v; closing connection", err))
+			case errWriteLimitExceeded:
+				logf(c.srv, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
+				// TODO : no good http code for this case
+				if err := writeMsg(c, msg.NewErr(m, 550, err)); err != nil {
+					if err == ErrLockWriterTimeout {
+						c.Close(fmt.Errorf("writeMsg failed: %v; closing connection", err))
+					} else {
+						logf(c.srv, "%v: writeMsg %v for write limit exceeded notification failed: %v", c.UUID, m.UUID(), err)
+					}
+					return
+				}
+			default:
+				logf(c.srv, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
+			}
+		}
 
 	default:
 		logf(c.srv, "unknown message in ProcessMsg: %T", m)
 	}
 }
 
-func writeMsg(c *Conn, m msg.Msg) {
+var errWriteLimitExceeded = errors.New("write limit exceeded")
+
+type limitedWriter struct {
+	w io.Writer
+	n int64
+}
+
+func limitWriter(w io.Writer, limit int64) io.Writer {
+	const minLimit = 4096
+	if limit < minLimit {
+		limit = minLimit
+	}
+	return &limitedWriter{w: w, n: limit}
+}
+
+func (w *limitedWriter) Write(p []byte) (int, error) {
+	w.n -= int64(len(p))
+	if w.n < 0 {
+		return 0, errWriteLimitExceeded
+	}
+	return w.w.Write(p)
+}
+
+func writeMsg(c *Conn, m msg.Msg) error {
 	w := c.Writer(c.srv.AcquireWriteLockTimeout)
 	defer w.Close()
 
-	if err := json.NewEncoder(w).Encode(m); err != nil {
-		if err == ErrLockWriterTimeout {
-			c.Close(fmt.Errorf("writeMsg failed: %v; closing connection", err))
-			return
-		}
-		logf(c.srv, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
-		return
+	lw := io.Writer(w)
+	if c.srv.WriteLimit > 0 {
+		lw = limitWriter(w, c.srv.WriteLimit)
 	}
+	if err := json.NewEncoder(lw).Encode(m); err != nil {
+		return err
+	}
+	return nil
 }

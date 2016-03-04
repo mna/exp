@@ -45,6 +45,11 @@ type Server struct {
 	// reading each message. The default of 0 means no timeout.
 	ReadTimeout time.Duration
 
+	// WriteLimit defines the maximum size, in bytes, of outgoing
+	// messages. If a message exceeds this limit, it is dropped and
+	// an ERR message is sent to the client instead.
+	WriteLimit int64
+
 	// WriteTimeout is the timeout to write an outgoing message. It is
 	// set on the websocket connection with SetWriteDeadline before
 	// writing each message. The default of 0 means no timeout.

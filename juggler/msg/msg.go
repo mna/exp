@@ -212,6 +212,31 @@ func NewErr(from Msg, code int, e error) *Err {
 		err.Payload.Channel = from.Payload.Channel
 	case *Sub:
 		err.Payload.Channel = from.Payload.Channel
+
+		// other cases can happen e.g. if the message is too large
+		// instead of sending the "from" info from the never-sent
+		// OK, Err, Evnt or Res message, send back the origin "from"
+		// information.
+	case *OK:
+		err.Payload.For = from.Payload.For
+		err.Payload.ForType = from.Payload.ForType
+		err.Payload.AuthType = from.Payload.AuthType
+		err.Payload.URI = from.Payload.URI
+		err.Payload.Channel = from.Payload.Channel
+	case *Err:
+		err.Payload.For = from.Payload.For
+		err.Payload.ForType = from.Payload.ForType
+		err.Payload.AuthType = from.Payload.AuthType
+		err.Payload.URI = from.Payload.URI
+		err.Payload.Channel = from.Payload.Channel
+	case *Evnt:
+		err.Payload.For = from.Payload.For
+		err.Payload.ForType = PubMsg
+		err.Payload.Channel = from.Payload.Channel
+	case *Res:
+		err.Payload.For = from.Payload.For
+		err.Payload.ForType = CallMsg
+		err.Payload.URI = from.Payload.URI
 	}
 	return err
 }
