@@ -239,6 +239,13 @@ func unmarshalMessage(r io.Reader) (msg.Msg, error) {
 		}
 		m = &sub
 
+	case msg.UnsbMsg:
+		var uns msg.Unsb
+		if err := genericUnmarshal(&uns, &uns.Meta); err != nil {
+			return nil, err
+		}
+		m = &uns
+
 	case msg.PubMsg:
 		var pub msg.Pub
 		if err := genericUnmarshal(&pub, &pub.Meta); err != nil {
