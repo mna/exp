@@ -22,8 +22,6 @@ type RedisPool interface {
 }
 
 const (
-	defaultCallTimeout = time.Minute
-
 	// CALL: callee BRPOPs on callKey. On a new payload, it checks if
 	// callTimeoutKey is still valid and for how long (PTTL). If it is
 	// still valid, it processes the call, otherwise it drops it.
@@ -51,9 +49,11 @@ type callPayload struct {
 type resPayload callPayload
 
 // called by the server to push a call request in the call list key.
-func (s *Server) pushRedisCall(connUUID uuid.UUID, m *msg.Call) error {
+func pushRedisCall(c *Conn, m *msg.Call) error {
+	const defaultCallTimeout = time.Minute
+
 	pld := &callPayload{
-		ConnUUID: connUUID,
+		ConnUUID: c.UUID,
 		MsgUUID:  m.UUID(),
 		Args:     m.Payload.Args,
 	}
@@ -75,45 +75,64 @@ func (s *Server) pushRedisCall(connUUID uuid.UUID, m *msg.Call) error {
 	// it processes the call and stores the response payload under a new
 	// key with an expiration of PTTL.
 
-	c := s.CallPool.Get()
-	defer c.Close()
+	rc := c.srv.CallPool.Get()
+	defer rc.Close()
 
 	to := int(m.Payload.Timeout / time.Millisecond)
 	if to == 0 {
 		to = int(defaultCallTimeout / time.Millisecond)
 	}
-	if err := c.Send("SET", fmt.Sprintf(callTimeoutKey, m.Payload.URI, m.UUID()), to, "PX", to); err != nil {
+	if err := rc.Send("SET", fmt.Sprintf(callTimeoutKey, m.Payload.URI, m.UUID()), to, "PX", to); err != nil {
 		return err
 	}
-	_, err = c.Do("LPUSH", fmt.Sprintf(callKey, m.Payload.URI), b)
+	_, err = rc.Do("LPUSH", fmt.Sprintf(callKey, m.Payload.URI), b)
 	return err
 }
 
 // called by the callee to push a result in the result list key.
 // TODO : move to a callee package or something.
-func (s *Server) pushRedisRes() error {
+func pushRedisRes() error {
 	return nil
 }
 
-func (c *Conn) pullRedisRes() {
+func pullRedisRes(c *Conn) {
+	const minTimeoutSecs = 1
+
 	rc := c.srv.CallPool.Get()
 	defer rc.Close()
 
 	for {
+		// check for stop signal
 		select {
 		case <-c.kill:
 			return
 		default:
 		}
-		b, err := redis.Bytes(rc.Do("BRPOP", fmt.Sprintf(resKey, c.UUID), int(c.srv.ResPullTimeout/time.Second)))
+
+		// get the next call result
+		toSecs := int(c.srv.ResBrpopTimeout / time.Second)
+		if toSecs <= minTimeoutSecs {
+			toSecs = minTimeoutSecs
+		}
+		b, err := redis.Bytes(rc.Do("BRPOP", fmt.Sprintf(resKey, c.UUID), toSecs))
 		if err != nil {
 			// TODO : do not return
 		}
 
 		var m resPayload
 		if err := json.Unmarshal(b, &m); err != nil {
-
+			// TODO
 		}
-		msg.NewRes(m)
+
+		// check if it is still expected (not timed-out)
+		cnt, err := rc.Do("DEL", fmt.Sprintf(resTimeoutKey, c.UUID, m.MsgUUID))
+		if err != nil {
+			// TODO
+		}
+
+		if cnt == 1 {
+			res := msg.NewRes(m)
+			c.Send(res)
+		}
 	}
 }

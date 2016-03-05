@@ -82,6 +82,10 @@ type Server struct {
 	// CallPool is the redis pool to use to process RPC calls.
 	CallPool RedisPool
 
+	// ResBrpopTimeout is the timeout of the BRPOP operation
+	// to get a result to process. Only seconds are meaningful.
+	ResBrpopTimeout time.Duration
+
 	// PubSubPool is the redis pool to use for pub/sub.
 	PubSubPool RedisPool
 
