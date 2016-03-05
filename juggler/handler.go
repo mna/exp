@@ -117,6 +117,7 @@ func ProcessMsg(c *Conn, m msg.Msg) {
 			switch err {
 			case ErrLockWriterTimeout:
 				c.Close(fmt.Errorf("writeMsg failed: %v; closing connection", err))
+
 			case errWriteLimitExceeded:
 				logf(c.srv, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
 				// TODO : no good http code for this case
@@ -128,6 +129,7 @@ func ProcessMsg(c *Conn, m msg.Msg) {
 					}
 					return
 				}
+
 			default:
 				logf(c.srv, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
 			}

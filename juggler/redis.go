@@ -48,6 +48,8 @@ type callPayload struct {
 	Args     json.RawMessage `json:"args,omitempty"`
 }
 
+type resPayload callPayload
+
 // called by the server to push a call request in the call list key.
 func (s *Server) pushRedisCall(connUUID uuid.UUID, m *msg.Call) error {
 	pld := &callPayload{
@@ -91,4 +93,27 @@ func (s *Server) pushRedisCall(connUUID uuid.UUID, m *msg.Call) error {
 // TODO : move to a callee package or something.
 func (s *Server) pushRedisRes() error {
 	return nil
+}
+
+func (c *Conn) pullRedisRes() {
+	rc := c.srv.CallPool.Get()
+	defer rc.Close()
+
+	for {
+		select {
+		case <-c.kill:
+			return
+		default:
+		}
+		b, err := redis.Bytes(rc.Do("BRPOP", fmt.Sprintf(resKey, c.UUID), int(c.srv.ResPullTimeout/time.Second)))
+		if err != nil {
+			// TODO : do not return
+		}
+
+		var m resPayload
+		if err := json.Unmarshal(b, &m); err != nil {
+
+		}
+		msg.NewRes(m)
+	}
 }
