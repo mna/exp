@@ -120,7 +120,7 @@ func (w *exclusiveWriter) Write(p []byte) (int, error) {
 }
 
 func (w *exclusiveWriter) Close() error {
-	if !w.init {
+	if !w.init || w.w == nil {
 		// no write, Close is a no-op
 		return nil
 	}

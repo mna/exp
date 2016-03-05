@@ -80,14 +80,14 @@ type Server struct {
 	WriteHandler MsgHandler
 
 	// CallPool is the redis pool to use to process RPC calls.
-	CallPool RedisPool
+	CallPool RedisPool // TODO : move to redis abstraction
 
 	// ResBrpopTimeout is the timeout of the BRPOP operation
 	// to get a result to process. Only seconds are meaningful.
-	ResBrpopTimeout time.Duration
+	ResBrpopTimeout time.Duration // TODO : move to redis abstraction
 
 	// PubSubPool is the redis pool to use for pub/sub.
-	PubSubPool RedisPool
+	PubSubPool RedisPool // TODO : move to redis abstraction
 
 	// LogFunc is the function called to log events. By default,
 	// it logs using log.Printf. Logging can be disabled by setting
