@@ -130,7 +130,10 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 		}
 
 		kill := c.CloseNotify()
+		// receive, results loop, pub/sub loop
 		go c.receive()
+		go pullRedisRes(c)
+		// TODO : pub/sub loop
 		<-kill
 	})
 }
