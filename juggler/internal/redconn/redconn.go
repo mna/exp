@@ -3,6 +3,8 @@ package redconn
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"math/rand"
 	"time"
 
 	"github.com/PuerkitoBio/exp/juggler/msg"
@@ -25,6 +27,8 @@ type Connector struct {
 }
 
 const (
+	defaultBlockingTimeout = 5 * time.Second
+
 	// CALL: callee BRPOPs on callKey. On a new payload, it checks if
 	// callTimeoutKey is still valid and for how long (PTTL). If it is
 	// still valid, it processes the call, otherwise it drops it.
@@ -44,14 +48,15 @@ const (
 	resTimeoutKey = "juggler:results:timeout:{%s}:%s" // 1: cUUID, 2: mUUID
 )
 
-type callPayload struct {
+// TODO: not redis-specific, should go elsewhere...
+type CallPayload struct {
 	ConnUUID uuid.UUID       `json:"conn_uuid"`
 	MsgUUID  uuid.UUID       `json:"msg_uuid"`
 	Args     json.RawMessage `json:"args,omitempty"`
 }
 
 func (c *Connector) Call(connUUID uuid.UUID, m *msg.Call) error {
-	pld := &callPayload{
+	pld := &CallPayload{
 		ConnUUID: connUUID,
 		MsgUUID:  m.UUID(),
 		Args:     m.Payload.Args,
@@ -85,11 +90,39 @@ func (c *Connector) Call(connUUID uuid.UUID, m *msg.Call) error {
 		return err
 	}
 	_, err = rc.Do("LPUSH", fmt.Sprintf(callKey, m.Payload.URI), b)
+
+	// TODO : support capping the list with LTRIM
+
 	return err
 }
 
-func (c *Connector) ProcessCalls() {
+var prng = rand.New(rand.NewSource(time.Now().UnixNano()))
 
+func expJitterDelay(att int, base, max time.Duration) time.Duration {
+	exp := math.Pow(2, float64(att))
+	top := float64(base) * exp
+	return time.Duration(
+		prng.Int63n(int64(math.Min(float64(max), top))),
+	)
+}
+
+func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *CallPayload {
+	ch := make(chan *CallPayload)
+	go func() {
+		defer close(ch)
+
+		rc := c.Pool.Get()
+		defer rc.Close()
+		k := fmt.Sprintf(callKey, uri)
+		to := int(c.BlockingTimeout / time.Second)
+		if to == 0 {
+			to = int(defaultBlockingTimeout / time.Second)
+		}
+		for {
+			vals, err := rc.Do("BRPOP", k, to)
+		}
+	}()
+	return ch
 }
 
 func (c *Connector) ProcessResults() {
