@@ -133,6 +133,7 @@ func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *CallP
 			}
 		}()
 
+		var attempt int
 		for {
 			// check for the stop signal
 			select {
@@ -151,10 +152,13 @@ func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *CallP
 			switch err {
 			case redis.ErrNil:
 				// no value available
+				attempt = 0 // successful redis call
 				continue
 
 			case nil:
 				// got a call payload, process it
+				attempt = 0 // successful redis call
+
 				var b []byte
 				_, err := redis.Scan(vals, nil, b)
 				if err != nil {
@@ -188,14 +192,24 @@ func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *CallP
 					continue
 				}
 
+				cp.ReadTimestamp = time.Now().UTC()
+				cp.TTLAfterRead = time.Duration(pttl) * time.Millisecond
 				ch <- &cp
 
 			default:
 				// error, try again with a different redis connection, in
 				// case that node went down.
-				// TODO : jitter/exponential backoff
 				rc.Close()
 				rc = nil
+
+				delay := expJitterDelay(attempt, time.Second, time.Minute)
+				select {
+				case <-stop:
+					return
+				case <-time.After(delay):
+					// go on
+					attempt++
+				}
 			}
 		}
 	}()
