@@ -50,17 +50,9 @@ const (
 	resTimeoutKey = "juggler:results:timeout:{%s}:%s" // 1: cUUID, 2: mUUID
 )
 
-// TODO: not redis-specific, should go elsewhere...
-type CallPayload struct {
-	ConnUUID      uuid.UUID       `json:"conn_uuid"`
-	MsgUUID       uuid.UUID       `json:"msg_uuid"`
-	Args          json.RawMessage `json:"args,omitempty"`
-	TTLAfterRead  time.Duration   `json:"-"`
-	ReadTimestamp time.Time       `json:"-"`
-}
-
+// Call registers a call request in the connector.
 func (c *Connector) Call(connUUID uuid.UUID, m *msg.Call) error {
-	pld := &CallPayload{
+	pld := &msg.CallPayload{
 		ConnUUID: connUUID,
 		MsgUUID:  m.UUID(),
 		Args:     m.Payload.Args,
@@ -114,8 +106,8 @@ func expJitterDelay(att int, base, max time.Duration) time.Duration {
 // for the specified URI. When the stop channel signals a stop, the
 // returned channel is closed and the goroutine that listens for call
 // requests is properly terminated.
-func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *CallPayload {
-	ch := make(chan *CallPayload)
+func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *msg.CallPayload {
+	ch := make(chan *msg.CallPayload)
 	go func() {
 		defer close(ch)
 
@@ -166,7 +158,7 @@ func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *CallP
 					continue
 				}
 
-				var cp CallPayload
+				var cp msg.CallPayload
 				if err := json.Unmarshal(b, &cp); err != nil {
 					logf(c, "ProcessCalls: BRPOP failed to unmarshal call payload: %v", err)
 					continue
