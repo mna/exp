@@ -3,6 +3,7 @@ package redconn
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"time"
@@ -24,6 +25,7 @@ type Pool interface {
 type Connector struct {
 	Pool            Pool
 	BlockingTimeout time.Duration
+	LogFunc         func(string, ...interface{})
 }
 
 const (
@@ -111,17 +113,52 @@ func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *CallP
 	go func() {
 		defer close(ch)
 
-		rc := c.Pool.Get()
-		defer rc.Close()
 		k := fmt.Sprintf(callKey, uri)
 		to := int(c.BlockingTimeout / time.Second)
 		if to == 0 {
 			to = int(defaultBlockingTimeout / time.Second)
 		}
+
+		var rc redis.Conn
+		defer func() {
+			if rc != nil {
+				rc.Close()
+			}
+		}()
+
 		for {
-			vals, err := rc.Do("BRPOP", k, to)
+			if rc == nil {
+				rc = c.Pool.Get()
+			}
+			vals, err := redis.Values(rc.Do("BRPOP", k, to))
+			switch err {
+			case redis.ErrNil:
+				// no value available
+				continue
+
+			case nil:
+				// got a call payload, process it
+				var b []byte
+				_, err := redis.Scan(vals, nil, b)
+				if err != nil {
+					// TODO : ?
+				}
+
+				var cp CallPayload
+				if err := json.Unmarshal(b, &cp); err != nil {
+					// TODO : ?
+				}
+				ch <- &cp
+
+			default:
+				// error, try again with a different redis connection, in
+				// case that node went down.
+				rc.Close()
+				rc = nil
+			}
 		}
 	}()
+
 	return ch
 }
 
@@ -153,6 +190,7 @@ var subUnsubCmds = map[struct{ pat, sub bool }]string{
 }
 
 func (c *Connector) subUnsub(ch string, pat bool, sub bool) error {
+	// TODO : no, must be on the same connection always...
 	rc := c.Pool.Get()
 	defer rc.Close()
 
@@ -162,5 +200,13 @@ func (c *Connector) subUnsub(ch string, pat bool, sub bool) error {
 }
 
 func (c *Connector) ProcessEvents() {
+	// TODO : must be on the same connection as the sub
+}
 
+func logf(c *Connector, f string, args ...interface{}) {
+	if c.LogFunc != nil {
+		c.LogFunc(f, args...)
+	} else {
+		log.Printf(f, args...)
+	}
 }
