@@ -25,3 +25,11 @@ type CallPayload struct {
 	// as clocks may vary (sometimes wildly) between computers.
 	ReadTimestamp time.Time `json:"-"`
 }
+
+// ResPayload is the payload stored in the connector for a result
+// of a call request.
+type ResPayload struct {
+	ConnUUID uuid.UUID       `json:"conn_uuid"`
+	MsgUUID  uuid.UUID       `json:"msg_uuid"`
+	Args     json.RawMessage `json:"args,omitempty"`
+}

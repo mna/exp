@@ -10,7 +10,6 @@ import (
 
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/garyburd/redigo/redis"
-	"github.com/pborman/uuid"
 )
 
 // Pool defines the methods required for a redis pool that provides
@@ -23,9 +22,16 @@ type Pool interface {
 // Connector is a redis connector that provides the methods to
 // interact with Redis using the juggler protocol.
 type Connector struct {
-	Pool            Pool
+	// Pool is the redis pool to use to get connections.
+	Pool Pool
+
+	// BlockingTimeout is the time to wait for a value on calls to
+	// BRPOP.
 	BlockingTimeout time.Duration
-	LogFunc         func(string, ...interface{})
+
+	// LogFunc is the logging function to use. If nil, log.Printf
+	// is used. It can be set to juggler.DiscardLog to disable logging.
+	LogFunc func(string, ...interface{})
 }
 
 const (
@@ -51,13 +57,8 @@ const (
 )
 
 // Call registers a call request in the connector.
-func (c *Connector) Call(connUUID uuid.UUID, m *msg.Call) error {
-	pld := &msg.CallPayload{
-		ConnUUID: connUUID,
-		MsgUUID:  m.UUID(),
-		Args:     m.Payload.Args,
-	}
-	b, err := json.Marshal(pld)
+func (c *Connector) Call(uri string, cp *msg.CallPayload, timeout time.Duration) error {
+	b, err := json.Marshal(cp)
 	if err != nil {
 		return err
 	}
@@ -78,18 +79,22 @@ func (c *Connector) Call(connUUID uuid.UUID, m *msg.Call) error {
 	rc := c.Pool.Get()
 	defer rc.Close()
 
-	to := int(m.Payload.Timeout / time.Millisecond)
+	to := int(timeout / time.Millisecond)
 	if to == 0 {
 		to = int(defaultCallTimeout / time.Millisecond)
 	}
-	if err := rc.Send("SET", fmt.Sprintf(callTimeoutKey, m.Payload.URI, m.UUID()), to, "PX", to); err != nil {
+	if err := rc.Send("SET", fmt.Sprintf(callTimeoutKey, uri, cp.MsgUUID), to, "PX", to); err != nil {
 		return err
 	}
-	_, err = rc.Do("LPUSH", fmt.Sprintf(callKey, m.Payload.URI), b)
+	_, err = rc.Do("LPUSH", fmt.Sprintf(callKey, uri), b)
 
 	// TODO : support capping the list with LTRIM
 
 	return err
+}
+
+func (c *Connector) Result(rp *msg.ResPayload) error {
+
 }
 
 var prng = rand.New(rand.NewSource(time.Now().UnixNano()))
