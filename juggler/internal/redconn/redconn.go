@@ -52,9 +52,11 @@ const (
 
 // TODO: not redis-specific, should go elsewhere...
 type CallPayload struct {
-	ConnUUID uuid.UUID       `json:"conn_uuid"`
-	MsgUUID  uuid.UUID       `json:"msg_uuid"`
-	Args     json.RawMessage `json:"args,omitempty"`
+	ConnUUID      uuid.UUID       `json:"conn_uuid"`
+	MsgUUID       uuid.UUID       `json:"msg_uuid"`
+	Args          json.RawMessage `json:"args,omitempty"`
+	TTLAfterRead  time.Duration   `json:"-"`
+	ReadTimestamp time.Time       `json:"-"`
 }
 
 func (c *Connector) Call(connUUID uuid.UUID, m *msg.Call) error {
@@ -108,11 +110,16 @@ func expJitterDelay(att int, base, max time.Duration) time.Duration {
 	)
 }
 
+// ProcessCalls returns a channel that returns a stream of call requests
+// for the specified URI. When the stop channel signals a stop, the
+// returned channel is closed and the goroutine that listens for call
+// requests is properly terminated.
 func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *CallPayload {
 	ch := make(chan *CallPayload)
 	go func() {
 		defer close(ch)
 
+		// compute the key and blocking timeout
 		k := fmt.Sprintf(callKey, uri)
 		to := int(c.BlockingTimeout / time.Second)
 		if to == 0 {
@@ -127,9 +134,19 @@ func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *CallP
 		}()
 
 		for {
+			// check for the stop signal
+			select {
+			case <-stop:
+				return
+			default:
+			}
+
+			// grab a redis connection if we don't have any valid one.
 			if rc == nil {
 				rc = c.Pool.Get()
 			}
+
+			// block checking for a call request to process.
 			vals, err := redis.Values(rc.Do("BRPOP", k, to))
 			switch err {
 			case redis.ErrNil:
@@ -141,18 +158,42 @@ func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *CallP
 				var b []byte
 				_, err := redis.Scan(vals, nil, b)
 				if err != nil {
-					// TODO : ?
+					logf(c, "ProcessCalls: BRPOP failed to scan redis value: %v", err)
+					continue
 				}
 
 				var cp CallPayload
 				if err := json.Unmarshal(b, &cp); err != nil {
-					// TODO : ?
+					logf(c, "ProcessCalls: BRPOP failed to unmarshal call payload: %v", err)
+					continue
 				}
+
+				toKey := fmt.Sprintf(callTimeoutKey, uri, cp.MsgUUID)
+				if err := rc.Send("PTTL", toKey); err != nil {
+					logf(c, "ProcessCalls: PTTL send failed: %v", err)
+					continue
+				}
+				res, err := redis.Values(rc.Do("DEL", toKey))
+				if err != nil {
+					logf(c, "ProcessCalls: PTTL/DEL failed: %v", err)
+					continue
+				}
+				var pttl int
+				if _, err := redis.Scan(res, &pttl); err != nil {
+					logf(c, "ProcessCalls: PTTL/DEL failed to scan redis value: %v", err)
+					continue
+				}
+				if pttl <= 0 {
+					logf(c, "ProcessCalls: message %v expired, dropping call", cp.MsgUUID)
+					continue
+				}
+
 				ch <- &cp
 
 			default:
 				// error, try again with a different redis connection, in
 				// case that node went down.
+				// TODO : jitter/exponential backoff
 				rc.Close()
 				rc = nil
 			}
