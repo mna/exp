@@ -1,6 +1,7 @@
 package redisbroker
 
 import (
+	"encoding/json"
 	"sync"
 
 	"github.com/PuerkitoBio/exp/juggler/msg"
@@ -8,7 +9,8 @@ import (
 )
 
 type pubSubConn struct {
-	c redis.Conn
+	c     redis.Conn
+	logFn func(string, ...interface{})
 
 	// wmu controls writes (sub/unsub calls) to the connection.
 	wmu sync.Mutex
@@ -20,6 +22,10 @@ type pubSubConn struct {
 	// errmu protects access to err.
 	errmu sync.Mutex
 	err   error
+}
+
+func newPubSubConn(rc redis.Conn, logFn func(string, ...interface{})) *pubSubConn {
+	return &pubSubConn{c: rc, logFn: logFn}
 }
 
 // Subscribe subscribes the redis connection to the channel, which may
@@ -63,7 +69,21 @@ func (c *pubSubConn) Events() <-chan *msg.EvntPayload {
 			for {
 				switch v := psc.Receive().(type) {
 				case redis.Message:
+					ep, err := newEvntPayload(v.Channel, "", v.Data)
+					if err != nil {
+						logf(c.logFn, "Events: failed to unmarshal event payload: %v", err)
+						continue
+					}
+					c.evch <- ep
+
 				case redis.PMessage:
+					ep, err := newEvntPayload(v.Channel, v.Pattern, v.Data)
+					if err != nil {
+						logf(c.logFn, "Events: failed to unmarshal event payload: %v", err)
+						continue
+					}
+					c.evch <- ep
+
 				case error:
 					// possibly because the pub-sub connection was closed, but
 					// in any case, the pub-sub is now broken, terminate the
@@ -78,6 +98,20 @@ func (c *pubSubConn) Events() <-chan *msg.EvntPayload {
 	})
 
 	return c.evch
+}
+
+func newEvntPayload(channel, pattern string, pld []byte) (*msg.EvntPayload, error) {
+	var pp msg.PubPayload
+	if err := json.Unmarshal(pld, &pp); err != nil {
+		return nil, err
+	}
+	ep := &msg.EvntPayload{
+		MsgUUID: pp.MsgUUID,
+		Channel: channel,
+		Pattern: pattern,
+		Args:    pp.Args,
+	}
+	return ep, nil
 }
 
 // EventsErr returns the error that caused the events channel to close.

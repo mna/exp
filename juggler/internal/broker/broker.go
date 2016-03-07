@@ -1,4 +1,4 @@
-package juggler
+package broker
 
 import "github.com/PuerkitoBio/exp/juggler/msg"
 

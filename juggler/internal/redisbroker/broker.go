@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/PuerkitoBio/exp/juggler/internal/broker"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/garyburd/redigo/redis"
 )
@@ -225,6 +226,13 @@ func (b *Broker) Publish(channel string, pp *msg.PubPayload) error {
 
 	_, err = rc.Do("PUBLISH", channel, p)
 	return err
+}
+
+// PubSub returns a pub-sub connection that can be used to subscribe and
+// unsubscribe to channels, and to process incoming events.
+func (b *Broker) PubSub() (broker.PubSubConn, error) {
+	rc := b.Pool.Get()
+	return newPubSubConn(rc, b.LogFunc), nil
 }
 
 func logf(fn func(string, ...interface{}), f string, args ...interface{}) {
