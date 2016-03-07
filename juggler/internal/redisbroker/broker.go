@@ -1,4 +1,4 @@
-package redconn
+package redisbroker
 
 import (
 	"encoding/json"
@@ -22,9 +22,9 @@ type Pool interface {
 	Close() error
 }
 
-// Connector is a redis connector that provides the methods to
+// Broker is a broker that provides the methods to
 // interact with Redis using the juggler protocol.
-type Connector struct {
+type Broker struct {
 	// Pool is the redis pool to use to get connections.
 	Pool Pool
 
@@ -38,6 +38,7 @@ type Connector struct {
 }
 
 const (
+	// if no Broker.BlockingTimeout is provided.
 	defaultBlockingTimeout = 5 * time.Second
 
 	// CALL: callee BRPOPs on callKey. On a new payload, it checks if
@@ -59,27 +60,14 @@ const (
 	resTimeoutKey = "juggler:results:timeout:{%s}:%s" // 1: cUUID, 2: mUUID
 )
 
-// Call registers a call request in the connector.
-func (c *Connector) Call(uri string, cp *msg.CallPayload, timeout time.Duration) error {
-	b, err := json.Marshal(cp)
+// Call registers a call request in the broker.
+func (b *Broker) Call(uri string, cp *msg.CallPayload, timeout time.Duration) error {
+	p, err := json.Marshal(cp)
 	if err != nil {
 		return err
 	}
 
-	// a call generates two redis key values:
-	// - SET that expires after timeout
-	// - LPUSH that adds the call payload to the list of calls under URI
-	//
-	// A callee will read with BRPOP on the list, and will check the
-	// expiring key to see if it still exists. If it doesn't, the call is
-	// dropped, unprocessed, as the client is not waiting for the response
-	// anymore.
-	//
-	// If it is still there, the callee gets its PTTL and deletes it, and
-	// it processes the call and stores the response payload under a new
-	// key with an expiration of PTTL.
-
-	rc := c.Pool.Get()
+	rc := b.Pool.Get()
 	defer rc.Close()
 
 	to := int(timeout / time.Millisecond)
@@ -89,15 +77,15 @@ func (c *Connector) Call(uri string, cp *msg.CallPayload, timeout time.Duration)
 	if err := rc.Send("SET", fmt.Sprintf(callTimeoutKey, uri, cp.MsgUUID), to, "PX", to); err != nil {
 		return err
 	}
-	_, err = rc.Do("LPUSH", fmt.Sprintf(callKey, uri), b)
+	_, err = rc.Do("LPUSH", fmt.Sprintf(callKey, uri), p)
 
 	// TODO : support capping the list with LTRIM
 
 	return err
 }
 
-// Result registers a call result in the connector.
-func (c *Connector) Result(rp *msg.ResPayload) error {
+// Result registers a call result in the broker.
+func (b *Broker) Result(rp *msg.ResPayload) error {
 	// TODO : implement...
 	return nil
 }
@@ -116,14 +104,14 @@ func expJitterDelay(att int, base, max time.Duration) time.Duration {
 // for the specified URI. When the stop channel signals a stop, the
 // returned channel is closed and the goroutine that listens for call
 // requests is properly terminated.
-func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *msg.CallPayload {
+func (b *Broker) ProcessCalls(uri string, stop <-chan struct{}) <-chan *msg.CallPayload {
 	ch := make(chan *msg.CallPayload)
 	go func() {
 		defer close(ch)
 
 		// compute the key and blocking timeout
 		k := fmt.Sprintf(callKey, uri)
-		to := int(c.BlockingTimeout / time.Second)
+		to := int(b.BlockingTimeout / time.Second)
 		if to == 0 {
 			to = int(defaultBlockingTimeout / time.Second)
 		}
@@ -146,7 +134,7 @@ func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *msg.C
 
 			// grab a redis connection if we don't have any valid one.
 			if rc == nil {
-				rc = c.Pool.Get()
+				rc = b.Pool.Get()
 			}
 
 			// block checking for a call request to process.
@@ -161,36 +149,36 @@ func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *msg.C
 				// got a call payload, process it
 				attempt = 0 // successful redis call
 
-				var b []byte
-				_, err := redis.Scan(vals, nil, b)
+				var p []byte
+				_, err := redis.Scan(vals, nil, p)
 				if err != nil {
-					logf(c, "ProcessCalls: BRPOP failed to scan redis value: %v", err)
+					logf(b.LogFunc, "ProcessCalls: BRPOP failed to scan redis value: %v", err)
 					continue
 				}
 
 				var cp msg.CallPayload
-				if err := json.Unmarshal(b, &cp); err != nil {
-					logf(c, "ProcessCalls: BRPOP failed to unmarshal call payload: %v", err)
+				if err := json.Unmarshal(p, &cp); err != nil {
+					logf(b.LogFunc, "ProcessCalls: BRPOP failed to unmarshal call payload: %v", err)
 					continue
 				}
 
 				toKey := fmt.Sprintf(callTimeoutKey, uri, cp.MsgUUID)
 				if err := rc.Send("PTTL", toKey); err != nil {
-					logf(c, "ProcessCalls: PTTL send failed: %v", err)
+					logf(b.LogFunc, "ProcessCalls: PTTL send failed: %v", err)
 					continue
 				}
 				res, err := redis.Values(rc.Do("DEL", toKey))
 				if err != nil {
-					logf(c, "ProcessCalls: PTTL/DEL failed: %v", err)
+					logf(b.LogFunc, "ProcessCalls: PTTL/DEL failed: %v", err)
 					continue
 				}
 				var pttl int
 				if _, err := redis.Scan(res, &pttl); err != nil {
-					logf(c, "ProcessCalls: PTTL/DEL failed to scan redis value: %v", err)
+					logf(b.LogFunc, "ProcessCalls: PTTL/DEL failed to scan redis value: %v", err)
 					continue
 				}
 				if pttl <= 0 {
-					logf(c, "ProcessCalls: message %v expired, dropping call", cp.MsgUUID)
+					logf(b.LogFunc, "ProcessCalls: message %v expired, dropping call", cp.MsgUUID)
 					continue
 				}
 
@@ -219,34 +207,34 @@ func (c *Connector) ProcessCalls(uri string, stop <-chan struct{}) <-chan *msg.C
 	return ch
 }
 
-func (c *Connector) ProcessResults() {
+func (b *Broker) ProcessResults() {
 
 }
 
 // Publish publishes an event to a channel.
-func (c *Connector) Publish(channel string, pp *msg.PubPayload) error {
-	b, err := json.Marshal(pp)
+func (b *Broker) Publish(channel string, pp *msg.PubPayload) error {
+	p, err := json.Marshal(pp)
 	if err != nil {
 		return err
 	}
 
-	rc := c.Pool.Get()
+	rc := b.Pool.Get()
 	defer rc.Close()
 
-	_, err = rc.Do("PUBLISH", channel, b)
+	_, err = rc.Do("PUBLISH", channel, p)
 	return err
 }
 
 // Subscribe subscribes the redis connection to the channel, which may
 // be a pattern.
-func (c *Connector) Subscribe(rc redis.Conn, channel string, pattern bool) error {
-	return c.subUnsub(rc, channel, pattern, true)
+func (b *Broker) Subscribe(rc redis.Conn, channel string, pattern bool) error {
+	return subUnsub(rc, channel, pattern, true)
 }
 
 // Unsubscribe unsubscribes the redis connection from the channel, which
 // may be a pattern.
-func (c *Connector) Unsubscribe(rc redis.Conn, channel string, pattern bool) error {
-	return c.subUnsub(rc, channel, pattern, false)
+func (b *Broker) Unsubscribe(rc redis.Conn, channel string, pattern bool) error {
+	return subUnsub(rc, channel, pattern, false)
 }
 
 var subUnsubCmds = map[struct{ pat, sub bool }]string{
@@ -256,13 +244,17 @@ var subUnsubCmds = map[struct{ pat, sub bool }]string{
 	{false, false}: "UNSUBSCRIBE",
 }
 
-func (c *Connector) subUnsub(rc redis.Conn, ch string, pat bool, sub bool) error {
+func subUnsub(rc redis.Conn, ch string, pat bool, sub bool) error {
 	cmd := subUnsubCmds[struct{ pat, sub bool }{pat, sub}]
 	_, err := rc.Do(cmd, ch)
 	return err
 }
 
-func (c *Connector) ProcessEvents(rc redis.Conn) <-chan *msg.EvntPayload {
+// ProcessEvents returns a stream of event payloads from events published
+// on channels that the provided rc redis connection is subscribed to.
+// The channel is closed when the redis connection is closed, or when an
+// error is received.
+func (b *Broker) ProcessEvents(rc redis.Conn) <-chan *msg.EvntPayload {
 	ch := make(chan *msg.EvntPayload)
 
 	go func() {
@@ -278,7 +270,7 @@ func (c *Connector) ProcessEvents(rc redis.Conn) <-chan *msg.EvntPayload {
 				// in any case, the pub-sub is now broken, terminate the
 				// loop.
 				// TODO : should close the juggler conn in some way?
-				logf(c, "ProcessEvents: Receive failed with %v", v)
+				logf(b.LogFunc, "ProcessEvents: Receive failed with %v", v)
 				return
 			}
 		}
@@ -287,9 +279,9 @@ func (c *Connector) ProcessEvents(rc redis.Conn) <-chan *msg.EvntPayload {
 	return ch
 }
 
-func logf(c *Connector, f string, args ...interface{}) {
-	if c.LogFunc != nil {
-		c.LogFunc(f, args...)
+func logf(fn func(string, ...interface{}), f string, args ...interface{}) {
+	if fn != nil {
+		fn(f, args...)
 	} else {
 		log.Printf(f, args...)
 	}

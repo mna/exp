@@ -82,7 +82,10 @@ type Server struct {
 	// LogFunc is the function called to log events. By default,
 	// it logs using log.Printf. Logging can be disabled by setting
 	// LogFunc to DiscardLog.
-	LogFunc func(string, ...interface{})
+	LogFunc func(string, ...interface{}) // TODO : normalize calls so that order of args is somewhat predictable
+
+	PubSubBroker PubSubBroker
+	RPCBroker    RPCBroker
 }
 
 // Upgrade returns an http.Handler that upgrades connections to
