@@ -33,3 +33,17 @@ type ResPayload struct {
 	MsgUUID  uuid.UUID       `json:"msg_uuid"`
 	Args     json.RawMessage `json:"args,omitempty"`
 }
+
+// PubPayload is the payload to publish an event.
+type PubPayload struct {
+	MsgUUID uuid.UUID       `json:"msg_uuid"`
+	Args    json.RawMessage `json:"args,omitempty"`
+}
+
+// EvntPayload is the payload of an event received by a subscriber.
+type EvntPayload struct {
+	MsgUUID uuid.UUID       `json:"msg_uuid"`
+	Channel string          `json:"channel"`           // channel on which the event was sent
+	Pattern string          `json:"pattern,omitempty"` // if received because of a pattern-based subscription
+	Args    json.RawMessage `json:"args,omitempty"`
+}

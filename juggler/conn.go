@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/exp/juggler/msg"
+	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/websocket"
 	"github.com/pborman/uuid"
 )
@@ -44,10 +45,11 @@ type Conn struct {
 	CloseErr error
 
 	// TODO : some connection state (authenticated, etc.)?
-	wmu       chan struct{} // write lock
-	srv       *Server
-	kill      chan struct{} // signal channel, closed when Close is called
-	closeOnce sync.Once
+	wmu        chan struct{} // write lock
+	srv        *Server
+	kill       chan struct{} // signal channel, closed when Close is called
+	pubSubConn redis.Conn    // the dedicated pub-sub connection (TODO : warning, do not use concurrently! 1-read, 1-write)
+	closeOnce  sync.Once
 }
 
 func newConn(c *websocket.Conn, srv *Server) *Conn {
@@ -78,6 +80,9 @@ func (c *Conn) CloseNotify() <-chan struct{} {
 func (c *Conn) Close(err error) {
 	c.closeOnce.Do(func() {
 		c.CloseErr = err
+		if c.pubSubConn != nil {
+			c.pubSubConn.Close()
+		}
 		close(c.kill)
 	})
 }
@@ -172,6 +177,7 @@ func (c *Conn) Send(m msg.Msg) {
 	}
 }
 
+// receive is the read loop, started in its own goroutine.
 func (c *Conn) receive() {
 	for {
 		c.WSConn.SetReadDeadline(time.Time{})

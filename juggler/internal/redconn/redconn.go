@@ -96,8 +96,10 @@ func (c *Connector) Call(uri string, cp *msg.CallPayload, timeout time.Duration)
 	return err
 }
 
+// Result registers a call result in the connector.
 func (c *Connector) Result(rp *msg.ResPayload) error {
-
+	// TODO : implement...
+	return nil
 }
 
 var prng = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -222,8 +224,8 @@ func (c *Connector) ProcessResults() {
 }
 
 // Publish publishes an event to a channel.
-func (c *Connector) Publish(channel string, v interface{}) error {
-	b, err := json.Marshal(v)
+func (c *Connector) Publish(channel string, pp *msg.PubPayload) error {
+	b, err := json.Marshal(pp)
 	if err != nil {
 		return err
 	}
@@ -260,8 +262,29 @@ func (c *Connector) subUnsub(rc redis.Conn, ch string, pat bool, sub bool) error
 	return err
 }
 
-func (c *Connector) ProcessEvents() {
-	// TODO : must be on the same connection as the sub
+func (c *Connector) ProcessEvents(rc redis.Conn) <-chan *msg.EvntPayload {
+	ch := make(chan *msg.EvntPayload)
+
+	go func() {
+		defer close(ch)
+
+		psc := redis.PubSubConn{Conn: rc}
+		for {
+			switch v := psc.Receive().(type) {
+			case redis.Message:
+			case redis.PMessage:
+			case error:
+				// possibly because the pub-sub connection was closed, but
+				// in any case, the pub-sub is now broken, terminate the
+				// loop.
+				// TODO : should close the juggler conn in some way?
+				logf(c, "ProcessEvents: Receive failed with %v", v)
+				return
+			}
+		}
+	}()
+
+	return ch
 }
 
 func logf(c *Connector, f string, args ...interface{}) {

@@ -325,7 +325,7 @@ type Evnt struct {
 	Meta    `json:"meta"`
 	Payload struct {
 		For     uuid.UUID       `json:"for"` // no ForType, because always PUB
-		Channel string          `json:"channel"`
+		Channel string          `json:"channel,omitempty"`
 		Pattern string          `json:"pattern,omitempty"` // if triggered because of a pattern-based subscription
 		Args    json.RawMessage `json:"args"`
 	} `json:"payload"`
