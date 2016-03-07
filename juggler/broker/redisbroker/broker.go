@@ -48,7 +48,7 @@ const (
 	// if no Broker.BlockingTimeout is provided.
 	defaultBlockingTimeout = 5 * time.Second
 
-	callScript = `
+	callOrResScript = `
 		redis.call("SET", KEYS[1], ARGV[1], "PX", ARGV[1])
 		local res = redis.call("LPUSH", KEYS[2], ARGV[2])
 		if res > ARGV[3] and ARGV[3] > 0 then
@@ -57,52 +57,53 @@ const (
 		end
 		return res
 	`
-	callKey            = "juggler:calls:{%s}"            // 1: URI
-	callTimeoutKey     = "juggler:calls:timeout:{%s}:%s" // 1: URI, 2: mUUID
-	defaultCallTimeout = time.Minute
+	defaultCallOrResTimeout = time.Minute
 
-	// RES: callee stores the result of the call in resKey (LPUSH) and
-	// sets resTimeoutKey with an expiration of callTimeoutKey PTTL minus
-	// the time of the call invocation.
-	//
-	// Caller BRPOPs on resKey. On a new payload, it checks if resTimeoutKey
-	// is still valid. If it is, it sends the result on the connection,
-	// otherwise it drops it. resTimeoutKey is deleted.
+	callKey        = "juggler:calls:{%s}"            // 1: URI
+	callTimeoutKey = "juggler:calls:timeout:{%s}:%s" // 1: URI, 2: mUUID
+
 	resKey        = "juggler:results:{%s}"            // 1: cUUID
 	resTimeoutKey = "juggler:results:timeout:{%s}:%s" // 1: cUUID, 2: mUUID
 )
 
 // Call registers a call request in the broker.
 func (b *Broker) Call(cp *msg.CallPayload, timeout time.Duration) error {
-	p, err := json.Marshal(cp)
-	if err != nil {
-		return err
-	}
-
-	rc := b.Pool.Get()
-	defer rc.Close()
-
-	to := int(timeout / time.Millisecond)
-	if to == 0 {
-		to = int(defaultCallTimeout / time.Millisecond)
-	}
-
-	_, err = rc.Do("EVAL",
-		callScript,
-		2, // the number of keys
-		fmt.Sprintf(callTimeoutKey, cp.URI, cp.MsgUUID), // key[1] : the SET key with expiration
-		fmt.Sprintf(callKey, cp.URI),                    // key[2] : the LIST key
-		to,        // argv[1] : the timeout in milliseconds
-		p,         // argv[2] : the call payload
-		b.CallCap, // argv[3] : the LIST capacity
-	)
-	return err
+	k1 := fmt.Sprintf(callTimeoutKey, cp.URI, cp.MsgUUID)
+	k2 := fmt.Sprintf(callKey, cp.URI)
+	return registerCallOrRes(b.Pool, cp, timeout, b.CallCap, k1, k2)
 }
 
 // Result registers a call result in the broker.
 func (b *Broker) Result(rp *msg.ResPayload, timeout time.Duration) error {
-	// TODO : implement...
-	return nil
+	k1 := fmt.Sprintf(resTimeoutKey, rp.ConnUUID, rp.MsgUUID)
+	k2 := fmt.Sprintf(resKey, rp.ConnUUID)
+	return registerCallOrRes(b.Pool, rp, timeout, b.ResultCap, k1, k2)
+}
+
+func registerCallOrRes(pool Pool, pld interface{}, timeout time.Duration, cap int, k1, k2 string) error {
+	p, err := json.Marshal(pld)
+	if err != nil {
+		return err
+	}
+
+	rc := pool.Get()
+	defer rc.Close()
+
+	to := int(timeout / time.Millisecond)
+	if to == 0 {
+		to = int(defaultCallOrResTimeout / time.Millisecond)
+	}
+
+	_, err = rc.Do("EVAL",
+		callOrResScript,
+		2,   // the number of keys
+		k1,  // key[1] : the SET key with expiration
+		k2,  // key[2] : the LIST key
+		to,  // argv[1] : the timeout in milliseconds
+		p,   // argv[2] : the call payload
+		cap, // argv[3] : the LIST capacity
+	)
+	return err
 }
 
 // Publish publishes an event to a channel.
