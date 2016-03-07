@@ -10,37 +10,37 @@ import (
 	"github.com/PuerkitoBio/exp/juggler/msg"
 )
 
-// MsgHandler defines the method required to handle a send or receive
+// Handler defines the method required to handle a send or receive
 // of a Msg over a connection.
-type MsgHandler interface {
+type Handler interface {
 	Handle(*Conn, msg.Msg)
 }
 
-// MsgHandlerFunc is a function signature that implements the MsgHandler
+// HandlerFunc is a function signature that implements the Handler
 // interface.
-type MsgHandlerFunc func(*Conn, msg.Msg)
+type HandlerFunc func(*Conn, msg.Msg)
 
-// Handle implements MsgHandler for the MsgHandlerFunc by calling the
+// Handle implements Handler for the HandlerFunc by calling the
 // function itself.
-func (h MsgHandlerFunc) Handle(c *Conn, m msg.Msg) {
+func (h HandlerFunc) Handle(c *Conn, m msg.Msg) {
 	h(c, m)
 }
 
-// Chain returns a MsgHandler that calls the provided handlers
+// Chain returns a Handler that calls the provided handlers
 // in order, one after the other.
-func Chain(hs ...MsgHandler) MsgHandler {
-	return MsgHandlerFunc(func(c *Conn, m msg.Msg) {
+func Chain(hs ...Handler) Handler {
+	return HandlerFunc(func(c *Conn, m msg.Msg) {
 		for _, h := range hs {
 			h.Handle(c, m)
 		}
 	})
 }
 
-// PanicRecover returns a MsgHandler that recovers from panics that
+// PanicRecover returns a Handler that recovers from panics that
 // may happen in h and logs the panic to LogFunc. If close is true,
 // the connection is closed on a panic.
-func PanicRecover(h MsgHandler, closeConn bool, printStack bool) MsgHandler {
-	return MsgHandlerFunc(func(c *Conn, m msg.Msg) {
+func PanicRecover(h Handler, closeConn bool, printStack bool) Handler {
+	return HandlerFunc(func(c *Conn, m msg.Msg) {
 		defer func() {
 			if e := recover(); e != nil {
 				if closeConn {
@@ -77,7 +77,7 @@ func LogConn(c *Conn, state ConnState) {
 	}
 }
 
-// LogMsg is a MsgHandlerFunc that logs messages received or sent on
+// LogMsg is a HandlerFunc that logs messages received or sent on
 // c to LogFunc.
 func LogMsg(c *Conn, m msg.Msg) {
 	if m.Type().IsRead() {

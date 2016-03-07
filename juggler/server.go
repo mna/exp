@@ -70,14 +70,14 @@ type Server struct {
 	// if the default nil value is set. If a custom handler is set,
 	// it is assumed that it will call ProcessMsg at some point,
 	// or otherwise manually process the messages.
-	ReadHandler MsgHandler
+	ReadHandler Handler
 
 	// WriteHandler is the handler that is called when an outgoing
 	// message is processed. The ProcessMsg function is called
 	// if the default nil value is set. If a custom handler is set,
 	// it is assumed that it will call ProcessMsg at some point,
 	// or otherwise manually process the messages.
-	WriteHandler MsgHandler
+	WriteHandler Handler
 
 	// LogFunc is the function called to log events. By default,
 	// it logs using log.Printf. Logging can be disabled by setting

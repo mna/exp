@@ -25,8 +25,8 @@ func main() {
 	// wrap LogMsg and ProcessMsg in a PanicRecover handler
 	h := juggler.PanicRecover(
 		juggler.Chain(
-			juggler.MsgHandlerFunc(juggler.LogMsg),
-			juggler.MsgHandlerFunc(juggler.ProcessMsg),
+			juggler.HandlerFunc(juggler.LogMsg),
+			juggler.HandlerFunc(juggler.ProcessMsg),
 		), true, true)
 
 	//pool := newRedisPool(":6379")
