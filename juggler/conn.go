@@ -120,15 +120,18 @@ func (w *exclusiveWriter) Write(p []byte) (int, error) {
 }
 
 func (w *exclusiveWriter) Close() error {
-	if !w.init || w.w == nil {
+	if !w.init {
 		// no write, Close is a no-op
 		return nil
 	}
 
-	// if w.init is true, then NextWriter was called and that writer
-	// must be properly closed.
-	err := w.w.Close()
-	w.c.WSConn.SetWriteDeadline(time.Time{})
+	var err error
+	if w.w != nil {
+		// if w.init is true, then NextWriter was called and that writer
+		// must be properly closed.
+		err = w.w.Close()
+		w.c.WSConn.SetWriteDeadline(time.Time{})
+	}
 
 	// release the write lock
 	w.c.wmu <- struct{}{}
