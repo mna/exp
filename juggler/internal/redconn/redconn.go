@@ -15,7 +15,10 @@ import (
 // Pool defines the methods required for a redis pool that provides
 // a method to get a connection and to release the pool's resources.
 type Pool interface {
+	// Get returns a redis connection.
 	Get() redis.Conn
+
+	// Close releases the resources used by the pool.
 	Close() error
 }
 
@@ -218,20 +221,30 @@ func (c *Connector) ProcessResults() {
 
 }
 
-func (c *Connector) Publish(m *msg.Pub) error {
+// Publish publishes an event to a channel.
+func (c *Connector) Publish(channel string, v interface{}) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
 	rc := c.Pool.Get()
 	defer rc.Close()
 
-	_, err := rc.Do("PUBLISH", m.Payload.Channel, m.Payload.Args)
+	_, err = rc.Do("PUBLISH", channel, b)
 	return err
 }
 
-func (c *Connector) Subscribe(m *msg.Sub) error {
-	return c.subUnsub(m.Payload.Channel, m.Payload.Pattern, true)
+// Subscribe subscribes the redis connection to the channel, which may
+// be a pattern.
+func (c *Connector) Subscribe(rc redis.Conn, channel string, pattern bool) error {
+	return c.subUnsub(rc, channel, pattern, true)
 }
 
-func (c *Connector) Unsubscribe(m *msg.Unsb) error {
-	return c.subUnsub(m.Payload.Channel, m.Payload.Pattern, false)
+// Unsubscribe unsubscribes the redis connection from the channel, which
+// may be a pattern.
+func (c *Connector) Unsubscribe(rc redis.Conn, channel string, pattern bool) error {
+	return c.subUnsub(rc, channel, pattern, false)
 }
 
 var subUnsubCmds = map[struct{ pat, sub bool }]string{
@@ -241,11 +254,7 @@ var subUnsubCmds = map[struct{ pat, sub bool }]string{
 	{false, false}: "UNSUBSCRIBE",
 }
 
-func (c *Connector) subUnsub(ch string, pat bool, sub bool) error {
-	// TODO : no, must be on the same connection always...
-	rc := c.Pool.Get()
-	defer rc.Close()
-
+func (c *Connector) subUnsub(rc redis.Conn, ch string, pat bool, sub bool) error {
 	cmd := subUnsubCmds[struct{ pat, sub bool }{pat, sub}]
 	_, err := rc.Do(cmd, ch)
 	return err
