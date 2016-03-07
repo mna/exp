@@ -100,11 +100,12 @@ func ProcessMsg(c *Conn, m msg.Msg) {
 		// TODO : think about it some more...
 
 	case *msg.Call:
-		if err := c.srv.pushRedisCall(c.UUID, m); err != nil {
-			e := msg.NewErr(m, 500, err) // TODO : use HTTP-like error codes?
-			c.Send(e)
-			return
-		}
+		// TODO : use redconn.Call
+		// if err := c.srv.pushRedisCall(c.UUID, m); err != nil {
+		// 	e := msg.NewErr(m, 500, err) // TODO : use HTTP-like error codes?
+		// 	c.Send(e)
+		// 	return
+		// }
 		ok := msg.NewOK(m)
 		c.Send(ok)
 

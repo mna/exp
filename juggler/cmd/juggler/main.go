@@ -29,7 +29,7 @@ func main() {
 			juggler.MsgHandlerFunc(juggler.ProcessMsg),
 		), true, true)
 
-	pool := newRedisPool(":6379")
+	//pool := newRedisPool(":6379")
 	upg := &websocket.Upgrader{Subprotocols: juggler.Subprotocols}
 	srv := &juggler.Server{
 		ReadLimit:               int64(*readLimitFlag),
@@ -39,8 +39,6 @@ func main() {
 		ConnState:               juggler.LogConn,
 		ReadHandler:             h,
 		WriteHandler:            h,
-		CallPool:                pool,
-		PubSubPool:              pool,
 	}
 	http.Handle("/ws", juggler.Upgrade(upg, srv))
 

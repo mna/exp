@@ -79,16 +79,6 @@ type Server struct {
 	// or otherwise manually process the messages.
 	WriteHandler MsgHandler
 
-	// CallPool is the redis pool to use to process RPC calls.
-	CallPool RedisPool // TODO : move to redis abstraction
-
-	// ResBrpopTimeout is the timeout of the BRPOP operation
-	// to get a result to process. Only seconds are meaningful.
-	ResBrpopTimeout time.Duration // TODO : move to redis abstraction
-
-	// PubSubPool is the redis pool to use for pub/sub.
-	PubSubPool RedisPool // TODO : move to redis abstraction
-
 	// LogFunc is the function called to log events. By default,
 	// it logs using log.Printf. Logging can be disabled by setting
 	// LogFunc to DiscardLog.
@@ -132,8 +122,7 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 		kill := c.CloseNotify()
 		// receive, results loop, pub/sub loop
 		go c.receive()
-		go pullRedisRes(c)
-		// TODO : pub/sub loop
+		// TODO : result, pub/sub loop
 		<-kill
 	})
 }
