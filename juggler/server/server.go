@@ -1,10 +1,11 @@
-package juggler
+package server
 
 import (
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/PuerkitoBio/exp/juggler/broker"
 	"github.com/gorilla/websocket"
 )
 
@@ -84,8 +85,11 @@ type Server struct {
 	// LogFunc to DiscardLog.
 	LogFunc func(string, ...interface{}) // TODO : normalize calls so that order of args is somewhat predictable
 
-	PubSubBroker PubSubBroker
-	RPCBroker    RPCBroker
+	// PubSubBroker is the broker to use for pub-sub messages.
+	PubSubBroker broker.PubSubBroker
+
+	// CallerBroker is the broker to use for caller messages.
+	CallerBroker broker.CallerBroker
 }
 
 // Upgrade returns an http.Handler that upgrades connections to

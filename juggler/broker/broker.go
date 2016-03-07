@@ -25,11 +25,17 @@ type PubSubBroker interface {
 type ResultsConn interface {
 	Results() <-chan *msg.ResPayload
 	ResultsErr() error
+
+	// Close closes the connection.
+	Close() error
 }
 
 type CallsConn interface {
 	Calls() <-chan *msg.CallPayload
 	CallsErr() error
+
+	// Close closes the connection.
+	Close() error
 }
 
 // PubSubConn defines the methods to manage subscriptions to events
@@ -58,4 +64,7 @@ type PubSubConn interface {
 	// EventsErr returns the error that caused the channel returned from
 	// Events to be closed. Is only non-nil once the channel is closed.
 	EventsErr() error
+
+	// Close closes the connection.
+	Close() error
 }
