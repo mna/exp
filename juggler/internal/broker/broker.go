@@ -1,6 +1,36 @@
 package broker
 
-import "github.com/PuerkitoBio/exp/juggler/msg"
+import (
+	"time"
+
+	"github.com/PuerkitoBio/exp/juggler/msg"
+	"github.com/pborman/uuid"
+)
+
+type CallerBroker interface {
+	Results(uuid.UUID) (ResultsConn, error)
+	Call(cp *msg.CallPayload, timeout time.Duration) error
+}
+
+type CalleeBroker interface {
+	Calls() (CallsConn, error)
+	Result(rp *msg.ResPayload, timeout time.Duration) error
+}
+
+type PubSubBroker interface {
+	PubSub() (PubSubConn, error)
+	Publish(channel string, pp *msg.PubPayload) error
+}
+
+type ResultsConn interface {
+	Results() <-chan *msg.ResPayload
+	ResultsErr() error
+}
+
+type CallsConn interface {
+	Calls() <-chan *msg.CallPayload
+	CallsErr() error
+}
 
 // PubSubConn defines the methods to manage subscriptions to events
 // for a connection.

@@ -12,6 +12,7 @@ import (
 type CallPayload struct {
 	ConnUUID uuid.UUID       `json:"conn_uuid"`
 	MsgUUID  uuid.UUID       `json:"msg_uuid"`
+	URI      string          `json:"uri"`
 	Args     json.RawMessage `json:"args,omitempty"`
 
 	// TTLAfterRead is the time-to-live remaining for the call request
@@ -31,6 +32,7 @@ type CallPayload struct {
 type ResPayload struct {
 	ConnUUID uuid.UUID       `json:"conn_uuid"`
 	MsgUUID  uuid.UUID       `json:"msg_uuid"`
+	URI      string          `json:"uri"`
 	Args     json.RawMessage `json:"args,omitempty"`
 }
 

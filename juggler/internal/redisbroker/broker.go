@@ -62,7 +62,7 @@ const (
 )
 
 // Call registers a call request in the broker.
-func (b *Broker) Call(uri string, cp *msg.CallPayload, timeout time.Duration) error {
+func (b *Broker) Call(cp *msg.CallPayload, timeout time.Duration) error {
 	p, err := json.Marshal(cp)
 	if err != nil {
 		return err
@@ -77,18 +77,39 @@ func (b *Broker) Call(uri string, cp *msg.CallPayload, timeout time.Duration) er
 	}
 
 	// TODO : use script instead
-	if err := rc.Send("SET", fmt.Sprintf(callTimeoutKey, uri, cp.MsgUUID), to, "PX", to); err != nil {
+	if err := rc.Send("SET", fmt.Sprintf(callTimeoutKey, cp.URI, cp.MsgUUID), to, "PX", to); err != nil {
 		return err
 	}
-	_, err = rc.Do("LPUSH", fmt.Sprintf(callKey, uri), p)
+	_, err = rc.Do("LPUSH", fmt.Sprintf(callKey, cp.URI), p)
 
 	// TODO : support capping the list with LTRIM
 
 	return err
 }
 
+// Publish publishes an event to a channel.
+func (b *Broker) Publish(channel string, pp *msg.PubPayload) error {
+	p, err := json.Marshal(pp)
+	if err != nil {
+		return err
+	}
+
+	rc := b.Pool.Get()
+	defer rc.Close()
+
+	_, err = rc.Do("PUBLISH", channel, p)
+	return err
+}
+
+// PubSub returns a pub-sub connection that can be used to subscribe and
+// unsubscribe to channels, and to process incoming events.
+func (b *Broker) PubSub() (broker.PubSubConn, error) {
+	rc := b.Pool.Get()
+	return newPubSubConn(rc, b.LogFunc), nil
+}
+
 // Result registers a call result in the broker.
-func (b *Broker) Result(rp *msg.ResPayload) error {
+func (b *Broker) Result(rp *msg.ResPayload, timeout time.Duration) error {
 	// TODO : implement...
 	return nil
 }
@@ -103,11 +124,11 @@ func expJitterDelay(att int, base, max time.Duration) time.Duration {
 	)
 }
 
-// ProcessCalls returns a channel that returns a stream of call requests
+// Calls returns a channel that returns a stream of call requests
 // for the specified URI. When the stop channel signals a stop, the
 // returned channel is closed and the goroutine that listens for call
 // requests is properly terminated.
-func (b *Broker) ProcessCalls(uri string, stop <-chan struct{}) <-chan *msg.CallPayload {
+func (b *Broker) Calls(uri string, stop <-chan struct{}) <-chan *msg.CallPayload {
 	ch := make(chan *msg.CallPayload)
 	go func() {
 		defer close(ch)
@@ -210,29 +231,8 @@ func (b *Broker) ProcessCalls(uri string, stop <-chan struct{}) <-chan *msg.Call
 	return ch
 }
 
-func (b *Broker) ProcessResults() {
+func (b *Broker) Results() {
 
-}
-
-// Publish publishes an event to a channel.
-func (b *Broker) Publish(channel string, pp *msg.PubPayload) error {
-	p, err := json.Marshal(pp)
-	if err != nil {
-		return err
-	}
-
-	rc := b.Pool.Get()
-	defer rc.Close()
-
-	_, err = rc.Do("PUBLISH", channel, p)
-	return err
-}
-
-// PubSub returns a pub-sub connection that can be used to subscribe and
-// unsubscribe to channels, and to process incoming events.
-func (b *Broker) PubSub() (broker.PubSubConn, error) {
-	rc := b.Pool.Get()
-	return newPubSubConn(rc, b.LogFunc), nil
 }
 
 func logf(fn func(string, ...interface{}), f string, args ...interface{}) {
