@@ -7,8 +7,13 @@ import (
 	"github.com/pborman/uuid"
 )
 
+// CallerBroker defines the methods for a broker in the caller role.
 type CallerBroker interface {
+	// Results returns a ResultsConn that can be used to process results
+	// from calls for the specified connection UUID.
 	Results(uuid.UUID) (ResultsConn, error)
+
+	// Call registers a call request in the broker.
 	Call(cp *msg.CallPayload, timeout time.Duration) error
 }
 
@@ -22,13 +27,32 @@ type CalleeBroker interface {
 	Result(rp *msg.ResPayload, timeout time.Duration) error
 }
 
+// PubSubBroker defines the methods for a broker in the pub-sub role.
 type PubSubBroker interface {
+	// PubSub returns a PubSubConn that can be used to manage subscriptions
+	// to pub-sub channels, and to process events sent on subscribed
+	// channels.
 	PubSub() (PubSubConn, error)
+
+	// Publish publishes an event on the specified channel.
 	Publish(channel string, pp *msg.PubPayload) error
 }
 
+// ResultsConn defines the methods to list the results from calls
+// made on the ResultsConn connection UUID.
 type ResultsConn interface {
+	// Results returns a stream of call results for the connection UUID used
+	// to create the ResultsConn. The returned channel is closed when the
+	// connection is closed, or when an error occurs. Callers can call
+	// ResultsErr to check the error that caused the channel to be closed.
+	//
+	// Only the first call to Results starts the goroutine that checks
+	// for results. Subsequent calls return the same channel, so that many
+	// consumers can process results.
 	Results() <-chan *msg.ResPayload
+
+	// ResultsErr returns the error that caused the channel returned from
+	// Results to be closed. Is only non-nil once the channel is closed.
 	ResultsErr() error
 
 	// Close closes the connection.
