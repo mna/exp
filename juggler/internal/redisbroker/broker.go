@@ -74,6 +74,8 @@ func (b *Broker) Call(uri string, cp *msg.CallPayload, timeout time.Duration) er
 	if to == 0 {
 		to = int(defaultCallTimeout / time.Millisecond)
 	}
+
+	// TODO : use script instead
 	if err := rc.Send("SET", fmt.Sprintf(callTimeoutKey, uri, cp.MsgUUID), to, "PX", to); err != nil {
 		return err
 	}
@@ -223,60 +225,6 @@ func (b *Broker) Publish(channel string, pp *msg.PubPayload) error {
 
 	_, err = rc.Do("PUBLISH", channel, p)
 	return err
-}
-
-// Subscribe subscribes the redis connection to the channel, which may
-// be a pattern.
-func (b *Broker) Subscribe(rc redis.Conn, channel string, pattern bool) error {
-	return subUnsub(rc, channel, pattern, true)
-}
-
-// Unsubscribe unsubscribes the redis connection from the channel, which
-// may be a pattern.
-func (b *Broker) Unsubscribe(rc redis.Conn, channel string, pattern bool) error {
-	return subUnsub(rc, channel, pattern, false)
-}
-
-var subUnsubCmds = map[struct{ pat, sub bool }]string{
-	{true, true}:   "PSUBSCRIBE",
-	{true, false}:  "PUNSUBSCRIBE",
-	{false, true}:  "SUBSCRIBE",
-	{false, false}: "UNSUBSCRIBE",
-}
-
-func subUnsub(rc redis.Conn, ch string, pat bool, sub bool) error {
-	cmd := subUnsubCmds[struct{ pat, sub bool }{pat, sub}]
-	_, err := rc.Do(cmd, ch)
-	return err
-}
-
-// ProcessEvents returns a stream of event payloads from events published
-// on channels that the provided rc redis connection is subscribed to.
-// The channel is closed when the redis connection is closed, or when an
-// error is received.
-func (b *Broker) ProcessEvents(rc redis.Conn) <-chan *msg.EvntPayload {
-	ch := make(chan *msg.EvntPayload)
-
-	go func() {
-		defer close(ch)
-
-		psc := redis.PubSubConn{Conn: rc}
-		for {
-			switch v := psc.Receive().(type) {
-			case redis.Message:
-			case redis.PMessage:
-			case error:
-				// possibly because the pub-sub connection was closed, but
-				// in any case, the pub-sub is now broken, terminate the
-				// loop.
-				// TODO : should close the juggler conn in some way?
-				logf(b.LogFunc, "ProcessEvents: Receive failed with %v", v)
-				return
-			}
-		}
-	}()
-
-	return ch
 }
 
 func logf(fn func(string, ...interface{}), f string, args ...interface{}) {
