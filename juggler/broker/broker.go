@@ -12,8 +12,13 @@ type CallerBroker interface {
 	Call(cp *msg.CallPayload, timeout time.Duration) error
 }
 
+// CalleeBroker defines the methods for a broker in the callee role.
 type CalleeBroker interface {
-	Calls() (CallsConn, error)
+	// Calls returns a CallsConn that can be used to process call requests
+	// for the specified URIs.
+	Calls(uris ...string) (CallsConn, error)
+
+	// Result registers a call result in the broker.
 	Result(rp *msg.ResPayload, timeout time.Duration) error
 }
 
@@ -30,8 +35,21 @@ type ResultsConn interface {
 	Close() error
 }
 
+// CallsConn defines the methods to list the call requests using this
+// connection.
 type CallsConn interface {
+	// Calls returns a stream of call requests for the URI used to
+	// create the CallConn. The returned channel is closed when the
+	// connection is closed, or when an error occurs. Callers can call
+	// CallsErr to check the error that caused the channel to be closed.
+	//
+	// Only the first call to Calls starts the goroutine that checks
+	// for requests. Subsequent calls return the same channel, so that many
+	// consumers can process calls.
 	Calls() <-chan *msg.CallPayload
+
+	// CallsErr returns the error that caused the channel returned from
+	// Calls to be closed. Is only non-nil once the channel is closed.
 	CallsErr() error
 
 	// Close closes the connection.
@@ -53,8 +71,7 @@ type PubSubConn interface {
 	// on channels that the connection is subscribed to.
 	// The returned channel is closed when the connection is closed,
 	// or when an error is received. Callers can call EventsErr on the
-	// PubSubConn to check the error that caused the channel to be closed,
-	// if any.
+	// PubSubConn to check the error that caused the channel to be closed.
 	//
 	// Only the first call to Events starts the goroutine that listens to
 	// events. Subsequent calls return the same channel, so that many

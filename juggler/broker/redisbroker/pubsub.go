@@ -28,6 +28,11 @@ func newPubSubConn(rc redis.Conn, logFn func(string, ...interface{})) *pubSubCon
 	return &pubSubConn{c: rc, logFn: logFn}
 }
 
+// Close closes the connection.
+func (c *pubSubConn) Close() error {
+	return c.c.Close()
+}
+
 // Subscribe subscribes the redis connection to the channel, which may
 // be a pattern.
 func (c *pubSubConn) Subscribe(channel string, pattern bool) error {

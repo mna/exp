@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math"
-	"math/rand"
 	"time"
 
 	"github.com/PuerkitoBio/exp/juggler/broker"
@@ -36,16 +34,29 @@ type Broker struct {
 	// LogFunc is the logging function to use. If nil, log.Printf
 	// is used. It can be set to juggler.DiscardLog to disable logging.
 	LogFunc func(string, ...interface{})
+
+	// CallCap is the capacity of the CALL queue. If it is exceeded,
+	// Broker.Call calls fail with an error.
+	CallCap int
+
+	// ResultCap is the capacity of the RES queue. If it is exceeded,
+	// Broker.Result calls fail with an error.
+	ResultCap int
 }
 
 const (
 	// if no Broker.BlockingTimeout is provided.
 	defaultBlockingTimeout = 5 * time.Second
 
-	// CALL: callee BRPOPs on callKey. On a new payload, it checks if
-	// callTimeoutKey is still valid and for how long (PTTL). If it is
-	// still valid, it processes the call, otherwise it drops it.
-	// callTimeoutKey is deleted.
+	callScript = `
+		redis.call("SET", KEYS[1], ARGV[1], "PX", ARGV[1])
+		local res = redis.call("LPUSH", KEYS[2], ARGV[2])
+		if res > ARGV[3] and ARGV[3] > 0 then
+			redis.call("LTRIM", KEYS[2], 1, ARGV[3] + 1)
+			return redis.error_reply("list capacity exceeded")
+		end
+		return res
+	`
 	callKey            = "juggler:calls:{%s}"            // 1: URI
 	callTimeoutKey     = "juggler:calls:timeout:{%s}:%s" // 1: URI, 2: mUUID
 	defaultCallTimeout = time.Minute
@@ -76,15 +87,22 @@ func (b *Broker) Call(cp *msg.CallPayload, timeout time.Duration) error {
 		to = int(defaultCallTimeout / time.Millisecond)
 	}
 
-	// TODO : use script instead
-	if err := rc.Send("SET", fmt.Sprintf(callTimeoutKey, cp.URI, cp.MsgUUID), to, "PX", to); err != nil {
-		return err
-	}
-	_, err = rc.Do("LPUSH", fmt.Sprintf(callKey, cp.URI), p)
-
-	// TODO : support capping the list with LTRIM
-
+	_, err = rc.Do("EVAL",
+		callScript,
+		2, // the number of keys
+		fmt.Sprintf(callTimeoutKey, cp.URI, cp.MsgUUID), // key[1] : the SET key with expiration
+		fmt.Sprintf(callKey, cp.URI),                    // key[2] : the LIST key
+		to,        // argv[1] : the timeout in milliseconds
+		p,         // argv[2] : the call payload
+		b.CallCap, // argv[3] : the LIST capacity
+	)
 	return err
+}
+
+// Result registers a call result in the broker.
+func (b *Broker) Result(rp *msg.ResPayload, timeout time.Duration) error {
+	// TODO : implement...
+	return nil
 }
 
 // Publish publishes an event to a channel.
@@ -108,131 +126,11 @@ func (b *Broker) PubSub() (broker.PubSubConn, error) {
 	return newPubSubConn(rc, b.LogFunc), nil
 }
 
-// Result registers a call result in the broker.
-func (b *Broker) Result(rp *msg.ResPayload, timeout time.Duration) error {
-	// TODO : implement...
-	return nil
-}
-
-var prng = rand.New(rand.NewSource(time.Now().UnixNano()))
-
-func expJitterDelay(att int, base, max time.Duration) time.Duration {
-	exp := math.Pow(2, float64(att))
-	top := float64(base) * exp
-	return time.Duration(
-		prng.Int63n(int64(math.Min(float64(max), top))),
-	)
-}
-
-// Calls returns a channel that returns a stream of call requests
-// for the specified URI. When the stop channel signals a stop, the
-// returned channel is closed and the goroutine that listens for call
-// requests is properly terminated.
-func (b *Broker) Calls(uri string, stop <-chan struct{}) <-chan *msg.CallPayload {
-	ch := make(chan *msg.CallPayload)
-	go func() {
-		defer close(ch)
-
-		// compute the key and blocking timeout
-		k := fmt.Sprintf(callKey, uri)
-		to := int(b.BlockingTimeout / time.Second)
-		if to == 0 {
-			to = int(defaultBlockingTimeout / time.Second)
-		}
-
-		var rc redis.Conn
-		defer func() {
-			if rc != nil {
-				rc.Close()
-			}
-		}()
-
-		var attempt int
-		for {
-			// check for the stop signal
-			select {
-			case <-stop:
-				return
-			default:
-			}
-
-			// grab a redis connection if we don't have any valid one.
-			if rc == nil {
-				rc = b.Pool.Get()
-			}
-
-			// block checking for a call request to process.
-			vals, err := redis.Values(rc.Do("BRPOP", k, to))
-			switch err {
-			case redis.ErrNil:
-				// no value available
-				attempt = 0 // successful redis call
-				continue
-
-			case nil:
-				// got a call payload, process it
-				attempt = 0 // successful redis call
-
-				var p []byte
-				_, err := redis.Scan(vals, nil, p)
-				if err != nil {
-					logf(b.LogFunc, "ProcessCalls: BRPOP failed to scan redis value: %v", err)
-					continue
-				}
-
-				var cp msg.CallPayload
-				if err := json.Unmarshal(p, &cp); err != nil {
-					logf(b.LogFunc, "ProcessCalls: BRPOP failed to unmarshal call payload: %v", err)
-					continue
-				}
-
-				toKey := fmt.Sprintf(callTimeoutKey, uri, cp.MsgUUID)
-				if err := rc.Send("PTTL", toKey); err != nil {
-					logf(b.LogFunc, "ProcessCalls: PTTL send failed: %v", err)
-					continue
-				}
-				res, err := redis.Values(rc.Do("DEL", toKey))
-				if err != nil {
-					logf(b.LogFunc, "ProcessCalls: PTTL/DEL failed: %v", err)
-					continue
-				}
-				var pttl int
-				if _, err := redis.Scan(res, &pttl); err != nil {
-					logf(b.LogFunc, "ProcessCalls: PTTL/DEL failed to scan redis value: %v", err)
-					continue
-				}
-				if pttl <= 0 {
-					logf(b.LogFunc, "ProcessCalls: message %v expired, dropping call", cp.MsgUUID)
-					continue
-				}
-
-				cp.ReadTimestamp = time.Now().UTC()
-				cp.TTLAfterRead = time.Duration(pttl) * time.Millisecond
-				ch <- &cp
-
-			default:
-				// error, try again with a different redis connection, in
-				// case that node went down.
-				rc.Close()
-				rc = nil
-
-				delay := expJitterDelay(attempt, time.Second, time.Minute)
-				select {
-				case <-stop:
-					return
-				case <-time.After(delay):
-					// go on
-					attempt++
-				}
-			}
-		}
-	}()
-
-	return ch
-}
-
-func (b *Broker) Results() {
-
+// Calls returns a calls connection that can be used to process the call
+// requests for the specified URIs.
+func (b *Broker) Calls(uris ...string) (broker.CallsConn, error) {
+	rc := b.Pool.Get()
+	return newCallsConn(rc, b.LogFunc, uris...), nil
 }
 
 func logf(fn func(string, ...interface{}), f string, args ...interface{}) {
