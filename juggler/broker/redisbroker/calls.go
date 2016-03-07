@@ -30,6 +30,38 @@ func (c *callsConn) Close() error {
 	return c.c.Close()
 }
 
+// Calls returns a stream of call requests for the URIs specified when
+// creating the callsConn.
+func (c *callsConn) Calls() <-chan *msg.CallPayload {
+	c.once.Do(func() {
+		c.ch = make(chan *msg.CallPayload)
+
+		go func() {
+			defer close(c.ch)
+
+			for {
+				v, err := redis.Bytes(c.c.Do("BRPOP", "", 0))
+				if err != nil {
+					if err == redis.ErrNil {
+						continue
+					}
+
+					// possibly a closed connection, in any case stop
+					// the loop.
+					c.errmu.Lock()
+					c.err = err
+					c.errmu.Unlock()
+					return
+				}
+
+				// TODO : process v as call payload
+			}
+		}()
+	})
+
+	return c.ch
+}
+
 /*
 // Calls returns a channel that returns a stream of call requests
 // for the specified URI. When the stop channel signals a stop, the

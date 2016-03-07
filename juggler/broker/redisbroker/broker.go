@@ -9,6 +9,7 @@ import (
 	"github.com/PuerkitoBio/exp/juggler/broker"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/garyburd/redigo/redis"
+	"github.com/pborman/uuid"
 )
 
 // Pool defines the methods required for a redis pool that provides
@@ -132,6 +133,13 @@ func (b *Broker) PubSub() (broker.PubSubConn, error) {
 func (b *Broker) Calls(uris ...string) (broker.CallsConn, error) {
 	rc := b.Pool.Get()
 	return newCallsConn(rc, b.LogFunc, uris...), nil
+}
+
+// Results returns a results connection that can be used to process the call
+// results for the specified connection UUID.
+func (b *Broker) Results(connUUID uuid.UUID) (broker.ResultsConn, error) {
+	rc := b.Pool.Get()
+	return newResultsConn(rc, b.LogFunc, connUUID), nil
 }
 
 func logf(fn func(string, ...interface{}), f string, args ...interface{}) {

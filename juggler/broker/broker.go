@@ -1,3 +1,6 @@
+// Package broker defines the generic interfaces that a broker must
+// implement in order to act as a juggler broker. The redisbroker
+// package implements those interfaces against a Redis backend.
 package broker
 
 import (
