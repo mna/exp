@@ -1,7 +1,9 @@
 package poctest
 
 import (
+	"errors"
 	"io"
+	"sync"
 	"testing"
 	"time"
 
@@ -12,26 +14,57 @@ import (
 )
 
 func TestClosedConnErr(t *testing.T) {
+	const stopAfter = 100 * time.Millisecond
+
 	cmd, port := redistest.StartRedisServer(t, nil)
 	defer cmd.Process.Kill()
 
-	conn, err := redis.Dial("tcp", ":"+port)
-	require.NoError(t, err, "dial")
-	defer conn.Close()
+	ch := make(chan struct{})
+	ch2 := make(chan struct{})
+	wg := &sync.WaitGroup{}
+	wg.Add(3)
+	go runRedisCmdExpectClose(t, wg, ch, stopAfter, port, "BRPOP", "some-key", 2)
+	go runRedisCmdExpectClose(t, wg, ch, stopAfter, port, "LISTEN")
+	go runRedisCmdExpectClose(t, wg, ch2, 0, port, "GET", "some-key") // runs AFTER server is closed
 
 	go func() {
-		time.Sleep(100 * time.Millisecond)
+		close(ch)
+		time.Sleep(stopAfter)
 		cmd.Process.Kill()
+		close(ch2)
 	}()
 
+	wg.Wait()
+}
+
+func runRedisCmdExpectClose(t *testing.T, wg *sync.WaitGroup, start <-chan struct{}, expectDelay time.Duration, port, cmd string, args ...interface{}) {
+	defer wg.Done()
+
+	conn, err := redis.Dial("tcp", ":"+port)
+	require.NoError(t, err, "dial for %s", cmd)
+	defer conn.Close()
+
+	// wait to run the command
+	<-start
+
 	before := time.Now()
-	_, err = conn.Do("BRPOP", "some-key", 2)
+
+	if cmd == "LISTEN" {
+		// special case, listen for pub-sub events
+		psc := redis.PubSubConn{Conn: conn}
+		got := psc.Receive()
+		require.IsType(t, errors.New(""), got, "receive pub-sub returns an error")
+		err = got.(error)
+	} else {
+		_, err = conn.Do(cmd, args...)
+	}
+
 	after := time.Now()
-	assert.Error(t, err, "redis-server stopped during BRPOP")
+	assert.Error(t, err, "stopped redis-server caused error")
 
 	// A closed redis connection returns io.EOF
 	assert.Equal(t, io.EOF, err, "error is io.EOF")
 
-	assert.WithinDuration(t, before.Add(100*time.Millisecond), after, 100*time.Millisecond, "BRPOP returned as soon as the server stopped")
+	assert.WithinDuration(t, before.Add(expectDelay), after, 100*time.Millisecond, "returned as soon as the server stopped")
 	t.Logf("%T %[1]v", err)
 }
