@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/PuerkitoBio/exp/juggler/server"
+	"github.com/PuerkitoBio/exp/juggler"
+	"github.com/PuerkitoBio/exp/juggler/broker/redisbroker"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/websocket"
 )
 
 var (
+	// TODO : work out a config file for all server and broker options
 	portFlag      = flag.Int("port", 9000, "port to listen on")
 	readLimitFlag = flag.Int("read-limit", 4096, "read message size limit")
 	readTOFlag    = flag.Duration("read-timeout", 10*time.Second, "read deadline duration")
@@ -23,24 +25,33 @@ func main() {
 	flag.Parse()
 
 	// wrap LogMsg and ProcessMsg in a PanicRecover handler
-	h := server.PanicRecover(
-		server.Chain(
-			server.HandlerFunc(server.LogMsg),
-			server.HandlerFunc(server.ProcessMsg),
+	h := juggler.PanicRecover(
+		juggler.Chain(
+			juggler.HandlerFunc(juggler.LogMsg),
+			juggler.HandlerFunc(juggler.ProcessMsg),
 		), true, true)
 
-	//pool := newRedisPool(":6379")
-	upg := &websocket.Upgrader{Subprotocols: server.Subprotocols}
-	srv := &server.Server{
+	pool := newRedisPool(":6379")
+	broker := &redisbroker.Broker{
+		Pool:      pool,
+		CallCap:   100,
+		ResultCap: 100,
+	}
+
+	upg := &websocket.Upgrader{Subprotocols: juggler.Subprotocols}
+	srv := &juggler.Server{
 		ReadLimit:               int64(*readLimitFlag),
 		ReadTimeout:             *readTOFlag,
+		WriteLimit:              4096,
 		WriteTimeout:            *writeTOFlag,
 		AcquireWriteLockTimeout: 200 * time.Millisecond,
-		ConnState:               server.LogConn,
+		ConnState:               juggler.LogConn,
 		ReadHandler:             h,
 		WriteHandler:            h,
+		PubSubBroker:            broker,
+		CallerBroker:            broker,
 	}
-	http.Handle("/ws", server.Upgrade(upg, srv))
+	http.Handle("/ws", juggler.Upgrade(upg, srv))
 
 	log.Printf("juggler: listening on port %d", *portFlag)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", *portFlag), nil); err != nil {
