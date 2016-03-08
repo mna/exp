@@ -12,6 +12,13 @@ import (
 	"github.com/pborman/uuid"
 )
 
+var (
+	// static check that *Broker implements all the broker interfaces
+	_ broker.CallerBroker = (*Broker)(nil)
+	_ broker.CalleeBroker = (*Broker)(nil)
+	_ broker.PubSubBroker = (*Broker)(nil)
+)
+
 // Pool defines the methods required for a redis pool that provides
 // a method to get a connection and to release the pool's resources.
 type Pool interface {
@@ -29,7 +36,7 @@ type Broker struct {
 	Pool Pool
 
 	// BlockingTimeout is the time to wait for a value on calls to
-	// BRPOP.
+	// BRPOP before trying again. The default of 0 means no timeout.
 	BlockingTimeout time.Duration
 
 	// LogFunc is the logging function to use. If nil, log.Printf
@@ -46,9 +53,6 @@ type Broker struct {
 }
 
 const (
-	// if no Broker.BlockingTimeout is provided.
-	defaultBlockingTimeout = 5 * time.Second
-
 	callOrResScript = `
 		redis.call("SET", KEYS[1], ARGV[1], "PX", ARGV[1])
 		local res = redis.call("LPUSH", KEYS[2], ARGV[2])
@@ -132,14 +136,14 @@ func (b *Broker) PubSub() (broker.PubSubConn, error) {
 // requests for the specified URIs.
 func (b *Broker) Calls(uris ...string) (broker.CallsConn, error) {
 	rc := b.Pool.Get()
-	return newCallsConn(rc, b.LogFunc, uris...), nil
+	return newCallsConn(rc, uris, b.BlockingTimeout, b.LogFunc), nil
 }
 
 // Results returns a results connection that can be used to process the call
 // results for the specified connection UUID.
 func (b *Broker) Results(connUUID uuid.UUID) (broker.ResultsConn, error) {
 	rc := b.Pool.Get()
-	return newResultsConn(rc, b.LogFunc, connUUID), nil
+	return newResultsConn(rc, connUUID, b.BlockingTimeout, b.LogFunc), nil
 }
 
 func logf(fn func(string, ...interface{}), f string, args ...interface{}) {
