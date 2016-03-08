@@ -102,17 +102,19 @@ func (c *Conn) Close(err error) {
 
 // writer that acquires the connection's write lock prior to writing.
 type exclusiveWriter struct {
-	w       io.WriteCloser
-	c       *Conn
-	timeout time.Duration
-	init    bool
+	w            io.WriteCloser
+	init         bool
+	writeLock    chan struct{}
+	lockTimeout  time.Duration
+	writeTimeout time.Duration
+	wsConn       *websocket.Conn
 }
 
 func (w *exclusiveWriter) Write(p []byte) (int, error) {
 	if !w.init {
 		var wait <-chan time.Time
-		if w.timeout > 0 {
-			wait = time.After(w.timeout)
+		if to := w.lockTimeout; to > 0 {
+			wait = time.After(to)
 		}
 
 		// try to acquire the write lock before the timeout
@@ -120,16 +122,16 @@ func (w *exclusiveWriter) Write(p []byte) (int, error) {
 		case <-wait:
 			return 0, ErrLockWriterTimeout
 
-		case <-w.c.wmu:
+		case <-w.writeLock:
 			// lock acquired, get next writer from the websocket connection
 			w.init = true
-			wc, err := w.c.wsConn.NextWriter(websocket.TextMessage)
+			wc, err := w.wsConn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				return 0, err
 			}
 			w.w = wc
-			if to := w.c.srv.WriteTimeout; to > 0 {
-				w.c.wsConn.SetWriteDeadline(time.Now().Add(to))
+			if to := w.writeTimeout; to > 0 {
+				w.wsConn.SetWriteDeadline(time.Now().Add(to))
 			}
 		}
 	}
@@ -148,11 +150,11 @@ func (w *exclusiveWriter) Close() error {
 		// if w.init is true, then NextWriter was called and that writer
 		// must be properly closed.
 		err = w.w.Close()
-		w.c.wsConn.SetWriteDeadline(time.Time{})
+		w.wsConn.SetWriteDeadline(time.Time{})
 	}
 
 	// release the write lock
-	w.c.wmu <- struct{}{}
+	w.writeLock <- struct{}{}
 	return err
 }
 
@@ -175,8 +177,10 @@ func (w *exclusiveWriter) Close() error {
 // as all Conn methods, Writer can be called concurrently.
 func (c *Conn) Writer(timeout time.Duration) io.WriteCloser {
 	return &exclusiveWriter{
-		c:       c,
-		timeout: timeout,
+		writeLock:    c.wmu,
+		lockTimeout:  timeout,
+		writeTimeout: c.srv.WriteTimeout,
+		wsConn:       c.wsConn,
 	}
 }
 
