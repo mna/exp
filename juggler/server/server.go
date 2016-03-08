@@ -92,12 +92,49 @@ type Server struct {
 	CallerBroker broker.CallerBroker
 }
 
+// ServeConn serves the websocket connection as a juggler connection. It
+// blocks until the juggler connection is closed, leaving the websocket
+// connection open.
+func (srv *Server) ServeConn(conn *websocket.Conn) {
+	conn.SetReadLimit(srv.ReadLimit)
+	c := newConn(conn, srv)
+	if srv.ConnState != nil {
+		defer func() {
+			srv.ConnState(c, Closing)
+		}()
+	}
+
+	// start lifecycle of the connection
+	if srv.ConnState != nil {
+		srv.ConnState(c, Connected)
+	}
+
+	// receive, results loop, pub/sub loop
+	resConn, err := srv.CallerBroker.Results(c.UUID)
+	if err != nil {
+		logf(srv, "failed to create results connection: %v; closing connection", err)
+		return
+	}
+	pubSubConn, err := srv.PubSubBroker.PubSub()
+	if err != nil {
+		logf(srv, "failed to create pubsub connection: %v; closing connection", err)
+		return
+	}
+	go c.receive()
+	go c.results(resConn)
+	go c.pubSub(pubSubConn)
+
+	kill := c.CloseNotify()
+	<-kill
+}
+
 // Upgrade returns an http.Handler that upgrades connections to
 // the websocket protocol using upgrader. The websocket connection
 // must be upgraded to a supported juggler subprotocol otherwise
 // the connection is dropped.
 //
-// Once connected, the websocket connection is served via srv.
+// Once connected, the websocket connection is served via srv. The
+// websocket connection is closed when the juggler connection is closed.
 func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// upgrade the HTTP connection to the websocket protocol
@@ -113,36 +150,8 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 			return
 		}
 
-		wsConn.SetReadLimit(srv.ReadLimit)
-		c := newConn(wsConn, srv)
-		if srv.ConnState != nil {
-			defer func() {
-				srv.ConnState(c, Closing)
-			}()
-		}
-
-		// start lifecycle of the connection
-		if srv.ConnState != nil {
-			srv.ConnState(c, Connected)
-		}
-
-		// receive, results loop, pub/sub loop
-		resConn, err := srv.CallerBroker.Results(c.UUID)
-		if err != nil {
-			logf(srv, "failed to create results connection: %v; closing connection", err)
-			return
-		}
-		pubSubConn, err := srv.PubSubBroker.PubSub()
-		if err != nil {
-			logf(srv, "failed to create pubsub connection: %v; closing connection", err)
-			return
-		}
-		go c.receive()
-		go c.results(resConn)
-		go c.pubSub(pubSubConn)
-
-		kill := c.CloseNotify()
-		<-kill
+		// this call blocks until the juggler connection is closed
+		srv.ServeConn(wsConn)
 	})
 }
 
