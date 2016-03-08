@@ -102,16 +102,29 @@ func ProcessMsg(ctx context.Context, c *Conn, m msg.Msg) {
 		// TODO : think about it some more...
 
 	case *msg.Call:
-		// TODO : use redconn.Call
-		// if err := c.srv.pushRedisCall(c.UUID, m); err != nil {
-		// 	e := msg.NewErr(m, 500, err) // TODO : use HTTP-like error codes?
-		// 	c.Send(e)
-		// 	return
-		// }
-		ok := msg.NewOK(m)
-		c.Send(ok)
+		cp := &msg.CallPayload{
+			ConnUUID: c.UUID,
+			MsgUUID:  m.UUID(),
+			URI:      m.Payload.URI,
+			Args:     m.Payload.Args,
+		}
+		if err := c.srv.CallerBroker.Call(cp, m.Payload.Timeout); err != nil {
+			c.Send(msg.NewErr(m, 500, err))
+			return
+		}
+		c.Send(msg.NewOK(m))
 
 	case *msg.Pub:
+		pp := &msg.PubPayload{
+			MsgUUID: m.UUID(),
+			Args:    m.Payload.Args,
+		}
+		if err := c.srv.PubSubBroker.Publish(m.Payload.Channel, pp); err != nil {
+			c.Send(msg.NewErr(m, 500, err))
+			return
+		}
+		c.Send(msg.NewOK(m))
+
 	case *msg.Sub:
 	case *msg.Unsb:
 
