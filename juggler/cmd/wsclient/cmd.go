@@ -30,7 +30,9 @@ func init() {
 		"call":       callCmd,
 		"pub":        pubCmd,
 		"sub":        subCmd,
+		"psub":       psubCmd,
 		"unsb":       unsbCmd,
+		"punsb":      punsbCmd,
 	}
 }
 
@@ -142,7 +144,7 @@ var closeCmd = &cmd{
 var sendCmd = &cmd{
 	Usage:   "usage: send CONN_ID MSG",
 	MinArgs: 2,
-	Help:    "send free-form MSG to the connection identified by CONN_ID",
+	Help:    "send raw MSG (sent as-is) to the connection identified by CONN_ID",
 
 	Run: func(cmd *cmd, args ...string) {
 		if len(args) < cmd.MinArgs {
@@ -225,6 +227,41 @@ var pubCmd = &cmd{
 			printErr("invalid connection ID")
 		}
 	},
+}
+
+var subCmd = &cmd{
+	Usage:   "usage: sub CONN_ID CHANNEL",
+	MinArgs: 2,
+	Help:    "send a SUB message to the connection identified by CONN_ID\n\tto subscribe the connection to the CHANNEL",
+
+	Run: getSubFunc(false),
+}
+
+var psubCmd = &cmd{
+	Usage:   "usage: psub CONN_ID CHANNEL_PATTERN",
+	MinArgs: 2,
+	Help:    "send a SUB message to the connection identified by CONN_ID\n\tto subscribe the connection to the pattern CHANNEL_PATTERN",
+
+	Run: getSubFunc(true),
+}
+
+func getSubFunc(pattern bool) func(*cmd, ...string) {
+	return func(cmd *cmd, args ...string) {
+		if len(args) < cmd.MinArgs {
+			printErr(cmd.Usage)
+			return
+		}
+		if c, ix := getConn(args[0]); c != nil {
+			uuid, err := c.Sub(args[1], pattern)
+			if err != nil {
+				printErr("failed to send SUB message: %v", err)
+				return
+			}
+			printf("[%d] sent SUB message %v", ix, uuid)
+		} else {
+			printErr("invalid connection ID")
+		}
+	}
 }
 
 func getConn(arg string) (*juggler.Client, int) {
