@@ -143,7 +143,7 @@ type Call struct {
 // identifies the function to call. The args value is marshaled to JSON
 // and used as the parameters to the call. If the result is not available
 // before the timeout, it is dropped.
-func NewCall(uri string, timeout time.Duration, args interface{}) (*Call, error) {
+func NewCall(uri string, args interface{}, timeout time.Duration) (*Call, error) {
 	b, err := json.Marshal(args)
 	if err != nil {
 		return nil, err
