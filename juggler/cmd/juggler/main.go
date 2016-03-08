@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/PuerkitoBio/exp/juggler"
+	"github.com/PuerkitoBio/exp/juggler/server"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/websocket"
 )
@@ -23,24 +23,24 @@ func main() {
 	flag.Parse()
 
 	// wrap LogMsg and ProcessMsg in a PanicRecover handler
-	h := juggler.PanicRecover(
-		juggler.Chain(
-			juggler.HandlerFunc(juggler.LogMsg),
-			juggler.HandlerFunc(juggler.ProcessMsg),
+	h := server.PanicRecover(
+		server.Chain(
+			server.HandlerFunc(server.LogMsg),
+			server.HandlerFunc(server.ProcessMsg),
 		), true, true)
 
 	//pool := newRedisPool(":6379")
-	upg := &websocket.Upgrader{Subprotocols: juggler.Subprotocols}
-	srv := &juggler.Server{
+	upg := &websocket.Upgrader{Subprotocols: server.Subprotocols}
+	srv := &server.Server{
 		ReadLimit:               int64(*readLimitFlag),
 		ReadTimeout:             *readTOFlag,
 		WriteTimeout:            *writeTOFlag,
 		AcquireWriteLockTimeout: 200 * time.Millisecond,
-		ConnState:               juggler.LogConn,
+		ConnState:               server.LogConn,
 		ReadHandler:             h,
 		WriteHandler:            h,
 	}
-	http.Handle("/ws", juggler.Upgrade(upg, srv))
+	http.Handle("/ws", server.Upgrade(upg, srv))
 
 	log.Printf("juggler: listening on port %d", *portFlag)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", *portFlag), nil); err != nil {
