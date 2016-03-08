@@ -139,7 +139,10 @@ type Call struct {
 	} `json:"payload"`
 }
 
-// NewCall creates a Call message using the provided arguments.
+// NewCall creates a Call message using the provided arguments. The uri
+// identifies the function to call. The args value is marshaled to JSON
+// and used as the parameters to the call. If the result is not available
+// before the timeout, it is dropped.
 func NewCall(uri string, timeout time.Duration, args interface{}) (*Call, error) {
 	b, err := json.Marshal(args)
 	if err != nil {
@@ -166,10 +169,34 @@ type Sub struct {
 	} `json:"payload"`
 }
 
+// NewSub creates a Sub message using the provided arguments. The
+// channel indicates the pub-sub channel to subscribe to. It is
+// treated as a pattern if pattern is true.
+func NewSub(channel string, pattern bool) *Sub {
+	sub := &Sub{
+		Meta: newMeta(SubMsg),
+	}
+	sub.Payload.Channel = channel
+	sub.Payload.Pattern = pattern
+	return sub
+}
+
 // Unsb is an unsubscription message. It unsubscribes the caller from
 // the Channel, which is treated as a pattern if Pattern is true. The
 // pattern behaviour is the same as that of Redis.
 type Unsb Sub
+
+// NewUnsb creates an Unsb message using the provided arguments. The
+// channel indicates the pub-sub channel to unsubscribe from. It is
+// treated as a pattern if pattern is true.
+func NewUnsb(channel string, pattern bool) *Unsb {
+	un := &Unsb{
+		Meta: newMeta(UnsbMsg),
+	}
+	un.Payload.Channel = channel
+	un.Payload.Pattern = pattern
+	return un
+}
 
 // Pub is a publish message. It publishes an event on the specified
 // Channel. The Args opaque field is transferred as-is to subscribers
@@ -180,6 +207,23 @@ type Pub struct {
 		Channel string          `json:"channel"`
 		Args    json.RawMessage `json:"args"`
 	} `json:"payload"`
+}
+
+// NewPub creates a Pub message using the provided arguments. The channel
+// identifies the channel on which this event is published. The args value
+// is marshaled to JSON and used as the payload of the event.
+func NewPub(channel string, args interface{}) (*Pub, error) {
+	b, err := json.Marshal(args)
+	if err != nil {
+		return nil, err
+	}
+
+	p := &Pub{
+		Meta: newMeta(PubMsg),
+	}
+	p.Payload.Channel = channel
+	p.Payload.Args = json.RawMessage(b)
+	return p, nil
 }
 
 // Err is an error message. It indicates the source message that
