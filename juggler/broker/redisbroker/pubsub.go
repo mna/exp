@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"sync"
 
+	"github.com/PuerkitoBio/exp/juggler/broker"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/garyburd/redigo/redis"
 )
+
+var _ broker.PubSubConn = (*pubSubConn)(nil)
 
 type pubSubConn struct {
 	c     redis.Conn
