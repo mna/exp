@@ -1,7 +1,6 @@
 package redisbroker
 
 import (
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -76,13 +75,8 @@ func (c *resultsConn) Results() <-chan *msg.ResPayload {
 				}
 
 				// unmarshal the payload
-				var p []byte
-				if _, err = redis.Scan(v, nil, p); err != nil {
-					logf(c.logFn, "Results: BRPOP failed to scan redis value: %v", err)
-					continue
-				}
 				var rp msg.ResPayload
-				if err := json.Unmarshal(p, &rp); err != nil {
+				if err := unmarshalBRPOPValue(&rp, v); err != nil {
 					logf(c.logFn, "Results: BRPOP failed to unmarshal result payload: %v", err)
 					continue
 				}

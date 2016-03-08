@@ -88,13 +88,8 @@ func (c *callsConn) Calls() <-chan *msg.CallPayload {
 				}
 
 				// unmarshal the payload
-				var p []byte
-				if _, err = redis.Scan(v, nil, p); err != nil {
-					logf(c.logFn, "Calls: BRPOP failed to scan redis value: %v", err)
-					continue
-				}
 				var cp msg.CallPayload
-				if err := json.Unmarshal(p, &cp); err != nil {
+				if err := unmarshalBRPOPValue(&cp, v); err != nil {
 					logf(c.logFn, "Calls: BRPOP failed to unmarshal call payload: %v", err)
 					continue
 				}
@@ -119,4 +114,15 @@ func (c *callsConn) Calls() <-chan *msg.CallPayload {
 	})
 
 	return c.ch
+}
+
+func unmarshalBRPOPValue(dst interface{}, src []interface{}) error {
+	var p []byte
+	if _, err := redis.Scan(src, nil, p); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(p, dst); err != nil {
+		return err
+	}
+	return nil
 }
