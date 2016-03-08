@@ -1,7 +1,6 @@
 package juggler
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -239,69 +238,16 @@ func (c *Conn) receive() {
 			c.wsConn.SetReadDeadline(time.Now().Add(to))
 		}
 
-		msg, err := unmarshalMessage(r)
+		m, err := msg.Unmarshal(r)
 		if err != nil {
 			c.Close(err)
 			return
 		}
 
 		if rh := c.srv.ReadHandler; rh != nil {
-			rh.Handle(context.Background(), c, msg)
+			rh.Handle(context.Background(), c, m)
 		} else {
-			ProcessMsg(context.Background(), c, msg)
+			ProcessMsg(context.Background(), c, m)
 		}
 	}
-}
-
-func unmarshalMessage(r io.Reader) (msg.Msg, error) {
-	var pm msg.PartialMsg
-	if err := json.NewDecoder(r).Decode(&pm); err != nil {
-		return nil, fmt.Errorf("invalid JSON message: %v", err)
-	}
-
-	genericUnmarshal := func(v interface{}, metaDst *msg.Meta) error {
-		if err := json.Unmarshal(pm.Payload, v); err != nil {
-			return fmt.Errorf("invalid %s message: %v", pm.Meta.T, err)
-		}
-		*metaDst = pm.Meta
-		return nil
-	}
-
-	var m msg.Msg
-	switch pm.Meta.T {
-	case msg.CallMsg:
-		var call msg.Call
-		if err := genericUnmarshal(&call, &call.Meta); err != nil {
-			return nil, err
-		}
-		m = &call
-
-	case msg.SubMsg:
-		var sub msg.Sub
-		if err := genericUnmarshal(&sub, &sub.Meta); err != nil {
-			return nil, err
-		}
-		m = &sub
-
-	case msg.UnsbMsg:
-		var uns msg.Unsb
-		if err := genericUnmarshal(&uns, &uns.Meta); err != nil {
-			return nil, err
-		}
-		m = &uns
-
-	case msg.PubMsg:
-		var pub msg.Pub
-		if err := genericUnmarshal(&pub, &pub.Meta); err != nil {
-			return nil, err
-		}
-		m = &pub
-
-	case msg.ErrMsg, msg.OKMsg, msg.ResMsg, msg.EvntMsg:
-		return nil, fmt.Errorf("invalid message %s for client peer", pm.Meta.T)
-	default:
-		return nil, fmt.Errorf("unknown message %s", pm.Meta.T)
-	}
-
-	return m, nil
 }

@@ -2,6 +2,7 @@ package juggler
 
 import (
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/exp/juggler/msg"
@@ -35,19 +36,41 @@ type Client struct {
 	CallTimeout time.Duration
 
 	// Handler is the message handler that is called with each message
-	// received from the server.
+	// received from the server. Each invocation runs in its own
+	// goroutine, so proper synchronization must be used when accessing
+	// shared data.
 	Handler MsgHandler
 
+	wg   sync.WaitGroup
 	conn *websocket.Conn
 }
 
 // NewClient creates a juggler client using the provided websocket
-// connection and response header.
+// connection and response header. Received messages are sent to
+// the MsgHandler h.
 func NewClient(conn *websocket.Conn, resHeader http.Header, h MsgHandler) *Client {
-	return &Client{
+	c := &Client{
 		ResponseHeader: resHeader,
 		Handler:        h,
 		conn:           conn,
+	}
+	c.wg.Add(1)
+	go handleMessages(conn, h, &c.wg)
+	return c
+}
+
+func handleMessages(conn *websocket.Conn, h MsgHandler, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		_, r, err := conn.NextReader()
+		if err != nil {
+			return
+		}
+		m, err := msg.Unmarshal(r)
+		if err != nil {
+			// TODO : skip
+		}
+		go h.Handle(m)
 	}
 }
 

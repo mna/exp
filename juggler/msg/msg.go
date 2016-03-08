@@ -28,6 +28,7 @@ package msg
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -107,10 +108,9 @@ func newMeta(t MessageType) Meta {
 	return Meta{T: t, U: uuid.NewRandom()}
 }
 
-// PartialMsg is a message that decodes only the metadata, leaving
-// the payload in raw JSON. Primarily used by the server to
-// decode the minimal part required to process a message.
-type PartialMsg struct {
+// partialMsg is a message that decodes only the metadata, leaving
+// the payload in raw JSON.
+type partialMsg struct {
 	Meta    Meta            `json:"meta"`
 	Payload json.RawMessage `json:"payload"`
 }
@@ -372,4 +372,59 @@ func NewEvnt(pld *EvntPayload) *Evnt {
 	ev.Payload.For = pld.MsgUUID
 	ev.Payload.Args = pld.Args
 	return ev
+}
+
+// Unmarshal unmarshals a JSON-encoded message from r into the correct
+// concrete message type.
+func Unmarshal(r io.Reader) (Msg, error) {
+	var pm partialMsg
+	if err := json.NewDecoder(r).Decode(&pm); err != nil {
+		return nil, fmt.Errorf("invalid JSON message: %v", err)
+	}
+
+	genericUnmarshal := func(v interface{}, metaDst *Meta) error {
+		if err := json.Unmarshal(pm.Payload, v); err != nil {
+			return fmt.Errorf("invalid %s message: %v", pm.Meta.T, err)
+		}
+		*metaDst = pm.Meta
+		return nil
+	}
+
+	var m Msg
+	switch pm.Meta.T {
+	case CallMsg:
+		var call Call
+		if err := genericUnmarshal(&call, &call.Meta); err != nil {
+			return nil, err
+		}
+		m = &call
+
+	case SubMsg:
+		var sub Sub
+		if err := genericUnmarshal(&sub, &sub.Meta); err != nil {
+			return nil, err
+		}
+		m = &sub
+
+	case UnsbMsg:
+		var uns Unsb
+		if err := genericUnmarshal(&uns, &uns.Meta); err != nil {
+			return nil, err
+		}
+		m = &uns
+
+	case PubMsg:
+		var pub Pub
+		if err := genericUnmarshal(&pub, &pub.Meta); err != nil {
+			return nil, err
+		}
+		m = &pub
+
+	case ErrMsg, OKMsg, ResMsg, EvntMsg:
+		return nil, fmt.Errorf("invalid message %s for client peer", pm.Meta.T)
+	default:
+		return nil, fmt.Errorf("unknown message %s", pm.Meta.T)
+	}
+
+	return m, nil
 }
