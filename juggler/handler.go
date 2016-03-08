@@ -1,4 +1,4 @@
-package server
+package juggler
 
 import (
 	"encoding/json"
