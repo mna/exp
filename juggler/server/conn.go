@@ -39,15 +39,15 @@ type Conn struct {
 	// UUID is the unique identifier of the connection.
 	UUID uuid.UUID
 
-	// WSConn is the underlying websocket connection.
-	WSConn *websocket.Conn // TODO : hide/show only as needed
-
 	// CloseErr is the error, if any, that caused the connection
 	// to close. Must only be accessed after the close notification
 	// has been received (i.e. after a <-conn.CloseNotify()).
 	CloseErr error
 
 	// TODO : some connection state (authenticated, etc.)?
+
+	// the underlying websocket connection.
+	wsConn *websocket.Conn
 
 	wmu  chan struct{} // write lock
 	srv  *Server
@@ -67,11 +67,18 @@ func newConn(c *websocket.Conn, srv *Server) *Conn {
 
 	return &Conn{
 		UUID:   uuid.NewRandom(),
-		WSConn: c,
+		wsConn: c,
 		wmu:    wmu,
 		srv:    srv,
 		kill:   make(chan struct{}),
 	}
+}
+
+// UnderlyingConn returns the underlying websocket connection. Great
+// care should be taken when using the websocket connection directly,
+// as it may interfere and create data races with the juggler connection.
+func (c *Conn) UnderlyingConn() *websocket.Conn {
+	return c.wsConn
 }
 
 // CloseNotify returns a signal channel that is closed when the
@@ -116,13 +123,13 @@ func (w *exclusiveWriter) Write(p []byte) (int, error) {
 		case <-w.c.wmu:
 			// lock acquired, get next writer from the websocket connection
 			w.init = true
-			wc, err := w.c.WSConn.NextWriter(websocket.TextMessage)
+			wc, err := w.c.wsConn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				return 0, err
 			}
 			w.w = wc
 			if w.c.srv.WriteTimeout > 0 {
-				w.c.WSConn.SetWriteDeadline(time.Now().Add(w.c.srv.WriteTimeout))
+				w.c.wsConn.SetWriteDeadline(time.Now().Add(w.c.srv.WriteTimeout))
 			}
 		}
 	}
@@ -141,7 +148,7 @@ func (w *exclusiveWriter) Close() error {
 		// if w.init is true, then NextWriter was called and that writer
 		// must be properly closed.
 		err = w.w.Close()
-		w.c.WSConn.SetWriteDeadline(time.Time{})
+		w.c.wsConn.SetWriteDeadline(time.Time{})
 	}
 
 	// release the write lock
@@ -211,11 +218,11 @@ func (c *Conn) pubSub() {
 // receive is the read loop, started in its own goroutine.
 func (c *Conn) receive() {
 	for {
-		c.WSConn.SetReadDeadline(time.Time{})
+		c.wsConn.SetReadDeadline(time.Time{})
 
 		// NextReader returns with an error once a connection is closed,
 		// so this loop doesn't need to check the c.kill channel.
-		mt, r, err := c.WSConn.NextReader()
+		mt, r, err := c.wsConn.NextReader()
 		if err != nil {
 			c.Close(err)
 			return
@@ -225,7 +232,7 @@ func (c *Conn) receive() {
 			return
 		}
 		if c.srv.ReadTimeout > 0 {
-			c.WSConn.SetReadDeadline(time.Now().Add(c.srv.ReadTimeout))
+			c.wsConn.SetReadDeadline(time.Now().Add(c.srv.ReadTimeout))
 		}
 
 		msg, err := unmarshalMessage(r)

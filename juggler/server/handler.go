@@ -73,9 +73,9 @@ func PanicRecover(h Handler, closeConn bool, printStack bool) Handler {
 func LogConn(c *Conn, state ConnState) {
 	switch state {
 	case Connected:
-		logf(c.srv, "%v: connected from %v with subprotocol %q", c.UUID, c.WSConn.RemoteAddr(), c.WSConn.Subprotocol())
+		logf(c.srv, "%v: connected from %v with subprotocol %q", c.UUID, c.wsConn.RemoteAddr(), c.wsConn.Subprotocol())
 	case Closing:
-		logf(c.srv, "%v: closing from %v with error %v", c.UUID, c.WSConn.RemoteAddr(), c.CloseErr)
+		logf(c.srv, "%v: closing from %v with error %v", c.UUID, c.wsConn.RemoteAddr(), c.CloseErr)
 	}
 }
 
