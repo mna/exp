@@ -87,6 +87,8 @@ func (c *Conn) CloseNotify() <-chan struct{} {
 func (c *Conn) Close(err error) {
 	c.closeOnce.Do(func() {
 		c.CloseErr = err
+		c.psc.Close()
+		c.resc.Close()
 		close(c.kill)
 	})
 }

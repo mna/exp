@@ -68,3 +68,35 @@ func runRedisCmdExpectClose(t *testing.T, wg *sync.WaitGroup, start <-chan struc
 	assert.WithinDuration(t, before.Add(expectDelay), after, 100*time.Millisecond, "returned as soon as the server stopped")
 	t.Logf("%T %[1]v", err)
 }
+
+func TestCloseConnWhileBlocked(t *testing.T) {
+	cmd, port := redistest.StartRedisServer(t, nil)
+	defer cmd.Process.Kill()
+
+	conn, err := redis.Dial("tcp", ":"+port)
+	require.NoError(t, err, "dial for %s", cmd)
+	defer conn.Close()
+
+	ch := make(chan struct{})
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		ch <- struct{}{}
+		_, err := conn.Do("BRPOP", "key", 5)
+		assert.Contains(t, err.Error(), "use of closed network connection", "blocked conn returned with error")
+		t.Logf("%T %[1]v", err)
+	}()
+
+	<-ch
+	time.Sleep(100 * time.Millisecond)
+
+	before := time.Now()
+	err = conn.Close()
+	require.NoError(t, err, "close without error")
+	wg.Wait()
+	after := time.Now()
+	assert.WithinDuration(t, before, after, 100*time.Millisecond, "returned as soon as the connection closed")
+}
