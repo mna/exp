@@ -41,6 +41,12 @@ type Client struct {
 	// shared data.
 	Handler MsgHandler
 
+	// LogFunc is used to log errors that occur outside the handler calls,
+	// such as when a message fails to be unmarshaled. If nil, it logs
+	// using log.Prinf. It can be set to juggler.DiscardLog to disable
+	// logging.
+	LogFunc func(string, ...interface{})
+
 	wg   sync.WaitGroup
 	conn *websocket.Conn
 }
@@ -55,22 +61,24 @@ func NewClient(conn *websocket.Conn, resHeader http.Header, h MsgHandler) *Clien
 		conn:           conn,
 	}
 	c.wg.Add(1)
-	go handleMessages(conn, h, &c.wg)
+	go c.handleMessages()
 	return c
 }
 
-func handleMessages(conn *websocket.Conn, h MsgHandler, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (c *Client) handleMessages() {
+	defer c.wg.Done()
 	for {
-		_, r, err := conn.NextReader()
+		_, r, err := c.conn.NextReader()
 		if err != nil {
+			logf(c.LogFunc, "client: NextReader failed: %v; stopping read loop", err)
 			return
 		}
 		m, err := msg.Unmarshal(r)
 		if err != nil {
-			// TODO : skip
+			logf(c.LogFunc, "client: Unmarshal failed: %v; skipping message", err)
+			continue
 		}
-		go h.Handle(m)
+		go c.Handler.Handle(m)
 	}
 }
 
@@ -90,7 +98,9 @@ func Dial(d *websocket.Dialer, urlStr string, reqHeader http.Header, h MsgHandle
 
 // Close closes the connection.
 func (c *Client) Close() error {
-	return c.conn.Close()
+	err := c.conn.Close()
+	c.wg.Wait()
+	return err
 }
 
 // UnderlyingConn returns the underlying websocket connection used by the

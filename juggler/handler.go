@@ -56,11 +56,11 @@ func PanicRecover(h Handler, closeConn bool, printStack bool) Handler {
 					c.Close(err)
 				}
 
-				logf(c.srv, "%v: recovered from panic %v; serving message %v %s", c.UUID, e, m.UUID(), m.Type())
+				logf(c.srv.LogFunc, "%v: recovered from panic %v; serving message %v %s", c.UUID, e, m.UUID(), m.Type())
 				if printStack {
 					b := make([]byte, 4096)
 					n := runtime.Stack(b, false)
-					logf(c.srv, string(b[:n]))
+					logf(c.srv.LogFunc, string(b[:n]))
 				}
 			}
 		}()
@@ -73,9 +73,9 @@ func PanicRecover(h Handler, closeConn bool, printStack bool) Handler {
 func LogConn(c *Conn, state ConnState) {
 	switch state {
 	case Connected:
-		logf(c.srv, "%v: connected from %v with subprotocol %q", c.UUID, c.wsConn.RemoteAddr(), c.wsConn.Subprotocol())
+		logf(c.srv.LogFunc, "%v: connected from %v with subprotocol %q", c.UUID, c.wsConn.RemoteAddr(), c.wsConn.Subprotocol())
 	case Closing:
-		logf(c.srv, "%v: closing from %v with error %v", c.UUID, c.wsConn.RemoteAddr(), c.CloseErr)
+		logf(c.srv.LogFunc, "%v: closing from %v with error %v", c.UUID, c.wsConn.RemoteAddr(), c.CloseErr)
 	}
 }
 
@@ -83,9 +83,9 @@ func LogConn(c *Conn, state ConnState) {
 // c to LogFunc.
 func LogMsg(ctx context.Context, c *Conn, m msg.Msg) {
 	if m.Type().IsRead() {
-		logf(c.srv, "%v: received message %v %s", c.UUID, m.UUID(), m.Type())
+		logf(c.srv.LogFunc, "%v: received message %v %s", c.UUID, m.UUID(), m.Type())
 	} else if m.Type().IsWrite() {
-		logf(c.srv, "%v: sending message %v %s", c.UUID, m.UUID(), m.Type())
+		logf(c.srv.LogFunc, "%v: sending message %v %s", c.UUID, m.UUID(), m.Type())
 	}
 }
 
@@ -141,24 +141,24 @@ func ProcessMsg(ctx context.Context, c *Conn, m msg.Msg) {
 				c.Close(fmt.Errorf("writeMsg failed: %v; closing connection", err))
 
 			case errWriteLimitExceeded:
-				logf(c.srv, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
+				logf(c.srv.LogFunc, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
 				// no good http code for this case
 				if err := writeMsg(c, msg.NewErr(m, 599, err)); err != nil {
 					if err == ErrLockWriterTimeout {
 						c.Close(fmt.Errorf("writeMsg failed: %v; closing connection", err))
 					} else {
-						logf(c.srv, "%v: writeMsg %v for write limit exceeded notification failed: %v", c.UUID, m.UUID(), err)
+						logf(c.srv.LogFunc, "%v: writeMsg %v for write limit exceeded notification failed: %v", c.UUID, m.UUID(), err)
 					}
 					return
 				}
 
 			default:
-				logf(c.srv, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
+				logf(c.srv.LogFunc, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
 			}
 		}
 
 	default:
-		logf(c.srv, "unknown message in ProcessMsg: %T", m)
+		logf(c.srv.LogFunc, "unknown message in ProcessMsg: %T", m)
 	}
 }
 

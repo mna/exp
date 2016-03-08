@@ -112,12 +112,12 @@ func (srv *Server) ServeConn(conn *websocket.Conn) {
 	// receive, results loop, pub/sub loop
 	resConn, err := srv.CallerBroker.Results(c.UUID)
 	if err != nil {
-		logf(srv, "failed to create results connection: %v; closing connection", err)
+		logf(srv.LogFunc, "failed to create results connection: %v; closing connection", err)
 		return
 	}
 	pubSubConn, err := srv.PubSubBroker.PubSub()
 	if err != nil {
-		logf(srv, "failed to create pubsub connection: %v; closing connection", err)
+		logf(srv.LogFunc, "failed to create pubsub connection: %v; closing connection", err)
 		return
 	}
 	c.psc = pubSubConn
@@ -149,7 +149,7 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 
 		// the agreed-upon subprotocol must be one of the supported ones.
 		if wsConn.Subprotocol() == "" || !isIn(Subprotocols, wsConn.Subprotocol()) {
-			logf(srv, "juggler: no supported subprotocol, closing connection")
+			logf(srv.LogFunc, "juggler: no supported subprotocol, closing connection")
 			return
 		}
 
@@ -158,9 +158,9 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 	})
 }
 
-func logf(s *Server, f string, args ...interface{}) {
-	if s.LogFunc != nil {
-		s.LogFunc(f, args...)
+func logf(fn func(string, ...interface{}), f string, args ...interface{}) {
+	if fn != nil {
+		fn(f, args...)
 	} else {
 		log.Printf(f, args...)
 	}
