@@ -58,7 +58,12 @@ func main() {
 		args := strings.Fields(l)
 		if len(args) != 0 {
 			if cmd := commands[args[0]]; cmd != nil {
-				cmd.Run(cmd, args[1:]...)
+				args = args[1:]
+				if len(args) < cmd.MinArgs {
+					printErr(cmd.Usage)
+					continue
+				}
+				cmd.Run(cmd, args...)
 			} else {
 				printErr("unknown command %q", args[0])
 			}

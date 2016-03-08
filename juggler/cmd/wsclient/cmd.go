@@ -100,10 +100,6 @@ var disconnectCmd = &cmd{
 	Help:    "disconnect the connection identified by CONN_ID",
 
 	Run: func(cmd *cmd, args ...string) {
-		if len(args) < cmd.MinArgs {
-			printErr(cmd.Usage)
-			return
-		}
 		if c, ix := getConn(args[0]); c != nil {
 			c.Close()
 			connections[ix] = nil
@@ -119,10 +115,6 @@ var closeCmd = &cmd{
 	Help:    "cleanly close the connection identified by CONN_ID, sending a websocket Close message",
 
 	Run: func(cmd *cmd, args ...string) {
-		if len(args) < cmd.MinArgs {
-			printErr(cmd.Usage)
-			return
-		}
 		if c, ix := getConn(args[0]); c != nil {
 			wsc := c.UnderlyingConn()
 			st := "bye"
@@ -147,10 +139,6 @@ var sendCmd = &cmd{
 	Help:    "send raw MSG (sent as-is) to the connection identified by CONN_ID",
 
 	Run: func(cmd *cmd, args ...string) {
-		if len(args) < cmd.MinArgs {
-			printErr(cmd.Usage)
-			return
-		}
 		if c, _ := getConn(args[0]); c != nil {
 			wsc := c.UnderlyingConn()
 			if err := wsc.WriteMessage(websocket.TextMessage, []byte(strings.Join(args[1:], " "))); err != nil {
@@ -169,10 +157,6 @@ var callCmd = &cmd{
 	Help:    "send a CALL message to the connection identified by CONN_ID\n\tto URI with optional ARGS as JSON",
 
 	Run: func(cmd *cmd, args ...string) {
-		if len(args) < cmd.MinArgs {
-			printErr(cmd.Usage)
-			return
-		}
 		if c, ix := getConn(args[0]); c != nil {
 			var to time.Duration
 			if len(args) > 2 {
@@ -207,10 +191,6 @@ var pubCmd = &cmd{
 	Help:    "send a PUB message to the connection identified by CONN_ID\n\tto CHANNEL with optional ARGS as JSON",
 
 	Run: func(cmd *cmd, args ...string) {
-		if len(args) < cmd.MinArgs {
-			printErr(cmd.Usage)
-			return
-		}
 		if c, ix := getConn(args[0]); c != nil {
 			var v json.RawMessage
 			if len(args) > 2 {
@@ -247,10 +227,6 @@ var psubCmd = &cmd{
 
 func getSubFunc(pattern bool) func(*cmd, ...string) {
 	return func(cmd *cmd, args ...string) {
-		if len(args) < cmd.MinArgs {
-			printErr(cmd.Usage)
-			return
-		}
 		if c, ix := getConn(args[0]); c != nil {
 			uuid, err := c.Sub(args[1], pattern)
 			if err != nil {
@@ -282,10 +258,6 @@ var punsbCmd = &cmd{
 
 func getUnsbFunc(pattern bool) func(*cmd, ...string) {
 	return func(cmd *cmd, args ...string) {
-		if len(args) < cmd.MinArgs {
-			printErr(cmd.Usage)
-			return
-		}
 		if c, ix := getConn(args[0]); c != nil {
 			uuid, err := c.Unsb(args[1], pattern)
 			if err != nil {
