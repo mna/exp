@@ -65,6 +65,11 @@ func Dial(d *websocket.Dialer, urlStr string, reqHeader http.Header, h MsgHandle
 	return NewClient(conn, res.Header, h), nil
 }
 
+// Close closes the connection.
+func (c *Client) Close() error {
+	return c.conn.Close()
+}
+
 // UnderlyingConn returns the underlying websocket connection used by the
 // client. Great care should be taken when using the websocket connection
 // directly, as it can cause issues such as data races with the normal
@@ -85,6 +90,45 @@ func (c *Client) Call(uri string, v interface{}, timeout time.Duration) (uuid.UU
 		timeout = c.CallTimeout
 	}
 	m, err := msg.NewCall(uri, v, timeout)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.conn.WriteJSON(m); err != nil {
+		return nil, err
+	}
+	return m.UUID(), nil
+}
+
+// Sub makes a subscription request to the server for the specified
+// channel, which is treated as a pattern if patter is true. It
+// returns the UUID of the sub message on success, or an error if
+// the request could not be sent to the server.
+func (c *Client) Sub(channel string, pattern bool) (uuid.UUID, error) {
+	m := msg.NewSub(channel, pattern)
+	if err := c.conn.WriteJSON(m); err != nil {
+		return nil, err
+	}
+	return m.UUID(), nil
+}
+
+// Unsb makes an unsubscription request to the server for the specified
+// channel, which is treated as a pattern if patter is true. It
+// returns the UUID of the unsb message on success, or an error if
+// the request could not be sent to the server.
+func (c *Client) Unsb(channel string, pattern bool) (uuid.UUID, error) {
+	m := msg.NewUnsb(channel, pattern)
+	if err := c.conn.WriteJSON(m); err != nil {
+		return nil, err
+	}
+	return m.UUID(), nil
+}
+
+// Pub makes a publish request to the server on the specified channel.
+// The v value is marshaled as JSON and sent as event payload. It returns
+// the UUID of the pub message on success, or an error if the request could
+// not be sent to the server.
+func (c *Client) Pub(channel string, v interface{}) (uuid.UUID, error) {
+	m, err := msg.NewPub(channel, v)
 	if err != nil {
 		return nil, err
 	}
