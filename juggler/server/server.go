@@ -126,10 +126,22 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 			srv.ConnState(c, Connected)
 		}
 
-		kill := c.CloseNotify()
 		// receive, results loop, pub/sub loop
+		resConn, err := srv.CallerBroker.Results(c.UUID)
+		if err != nil {
+			logf(srv, "failed to create results connection: %v; closing connection", err)
+			return
+		}
+		pubSubConn, err := srv.PubSubBroker.PubSub()
+		if err != nil {
+			logf(srv, "failed to create pubsub connection: %v; closing connection", err)
+			return
+		}
 		go c.receive()
-		// TODO : result, pub/sub loop
+		go c.results(resConn)
+		go c.pubSub(pubSubConn)
+
+		kill := c.CloseNotify()
 		<-kill
 	})
 }
