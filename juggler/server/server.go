@@ -120,9 +120,12 @@ func (srv *Server) ServeConn(conn *websocket.Conn) {
 		logf(srv, "failed to create pubsub connection: %v; closing connection", err)
 		return
 	}
+	c.psc = pubSubConn
+	c.resc = resConn
+
 	go c.receive()
-	go c.results(resConn)
-	go c.pubSub(pubSubConn)
+	go c.results()
+	go c.pubSub()
 
 	kill := c.CloseNotify()
 	<-kill

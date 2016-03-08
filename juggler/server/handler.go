@@ -98,9 +98,6 @@ func LogMsg(ctx context.Context, c *Conn, m msg.Msg) {
 // happens.
 func ProcessMsg(ctx context.Context, c *Conn, m msg.Msg) {
 	switch m := m.(type) {
-	case *msg.Auth:
-		// TODO : think about it some more...
-
 	case *msg.Call:
 		cp := &msg.CallPayload{
 			ConnUUID: c.UUID,
@@ -126,7 +123,16 @@ func ProcessMsg(ctx context.Context, c *Conn, m msg.Msg) {
 		c.Send(msg.NewOK(m))
 
 	case *msg.Sub:
+		if err := c.psc.Subscribe(m.Payload.Channel, m.Payload.Pattern); err != nil {
+			c.Send(msg.NewErr(m, 500, err))
+			return
+		}
+
 	case *msg.Unsb:
+		if err := c.psc.Unsubscribe(m.Payload.Channel, m.Payload.Pattern); err != nil {
+			c.Send(msg.NewErr(m, 500, err))
+			return
+		}
 
 	case *msg.OK, *msg.Err, *msg.Evnt, *msg.Res:
 		if err := writeMsg(c, m); err != nil {

@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/PuerkitoBio/exp/juggler/broker"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
 	"github.com/pborman/uuid"
@@ -42,15 +43,20 @@ type Conn struct {
 	WSConn *websocket.Conn // TODO : hide/show only as needed
 
 	// CloseErr is the error, if any, that caused the connection
-	// to close. Should only be accessed after the close notification
+	// to close. Must only be accessed after the close notification
 	// has been received (i.e. after a <-conn.CloseNotify()).
 	CloseErr error
 
 	// TODO : some connection state (authenticated, etc.)?
-	wmu       chan struct{} // write lock
-	srv       *Server
-	kill      chan struct{} // signal channel, closed when Close is called
+
+	wmu  chan struct{} // write lock
+	srv  *Server
+	psc  broker.PubSubConn  // single pub-sub-dedicated broker connection
+	resc broker.ResultsConn // single results-dedicated broker connection
+
+	// ensure the kill channel can only be closed once
 	closeOnce sync.Once
+	kill      chan struct{}
 }
 
 func newConn(c *websocket.Conn, srv *Server) *Conn {
@@ -225,13 +231,6 @@ func unmarshalMessage(r io.Reader) (msg.Msg, error) {
 
 	var m msg.Msg
 	switch pm.Meta.T {
-	case msg.AuthMsg:
-		var auth msg.Auth
-		if err := genericUnmarshal(&auth, &auth.Meta); err != nil {
-			return nil, err
-		}
-		m = &auth
-
 	case msg.CallMsg:
 		var call msg.Call
 		if err := genericUnmarshal(&call, &call.Meta); err != nil {

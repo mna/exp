@@ -3,9 +3,6 @@
 //
 // The juggler.0 subprotocol defines the following messages for the client:
 //
-//     - AUTH : for authentication (like a CALL, but with additional
-//              structure, so the result knows if it succeeded and
-//              for how long the auth is valid?).
 //     - CALL : to call an RPC function
 //     - SUB  : to subscribe to a pub/sub channel
 //     - UNSB : to unsubscrube from a pub/sub channel
@@ -13,9 +10,9 @@
 //
 // And the following messages for the server:
 //
-//     - ERR  : failed AUTH, CALL, SUB, UNSB or PUB
-//     - OK   : successful AUTH, CALL, SUB, UNSB or PUB - but no result yet
-//     - RES  : the result of an AUTH or CALL message
+//     - ERR  : failed CALL, SUB, UNSB or PUB
+//     - OK   : successful CALL, SUB, UNSB or PUB - but no result yet
+//     - RES  : the result of a CALL message
 //     - EVNT : an event triggered on a channel that the client is subscribed to
 //
 // Closing the communication is done via the standard websocket close
@@ -42,7 +39,6 @@ type MessageType int
 // The list of supported message types.
 const (
 	startRead MessageType = iota
-	AuthMsg
 	CallMsg
 	PubMsg
 	SubMsg
@@ -58,7 +54,6 @@ const (
 )
 
 var lookupMessageType = []string{
-	AuthMsg: "AUTH",
 	CallMsg: "CALL",
 	PubMsg:  "PUB",
 	SubMsg:  "SUB",
@@ -130,18 +125,6 @@ func (m Meta) UUID() uuid.UUID {
 	return m.U
 }
 
-// Auth is an authentication message.
-type Auth struct {
-	Meta    `json:"meta"`
-	Payload struct {
-		AuthType string        `json:"auth_type"`
-		Token    string        `json:"token,omitempty"`
-		ID       string        `json:"id,omitempty"`
-		Secret   string        `json:"secret,omitempty"`
-		Timeout  time.Duration `json:"timeout"`
-	} `json:"payload"`
-}
-
 // Call is a message that triggers an RPC call to a callee
 // listening on the specified URI. The Args opaque field
 // is transferred as-is to the callee. If the result is not
@@ -207,14 +190,13 @@ type Pub struct {
 type Err struct {
 	Meta    `json:"meta"`
 	Payload struct {
-		For      uuid.UUID   `json:"for"`
-		ForType  MessageType `json:"for_type"`
-		AuthType string      `json:"auth_type,omitempty"` // when in response to an AUTH
-		URI      string      `json:"uri,omitempty"`       // when in response to a CALL
-		Channel  string      `json:"channel,omitempty"`   // when in response to a PUB, SUB or UNSB
-		Code     int         `json:"code"`
-		Message  string      `json:"message"` // defaults to Err.Error()
-		Err      error       `json:"-"`       // useful in the handler to have access to the source error
+		For     uuid.UUID   `json:"for"`
+		ForType MessageType `json:"for_type"`
+		URI     string      `json:"uri,omitempty"`     // when in response to a CALL
+		Channel string      `json:"channel,omitempty"` // when in response to a PUB, SUB or UNSB
+		Code    int         `json:"code"`
+		Message string      `json:"message"` // defaults to Err.Error()
+		Err     error       `json:"-"`       // useful in the handler to have access to the source error
 	} `json:"payload"`
 }
 
@@ -231,8 +213,6 @@ func NewErr(from Msg, code int, e error) *Err {
 	err.Payload.Message = e.Error()
 
 	switch from := from.(type) {
-	case *Auth:
-		err.Payload.AuthType = from.Payload.AuthType
 	case *Call:
 		err.Payload.URI = from.Payload.URI
 	case *Pub:
@@ -249,13 +229,11 @@ func NewErr(from Msg, code int, e error) *Err {
 	case *OK:
 		err.Payload.For = from.Payload.For
 		err.Payload.ForType = from.Payload.ForType
-		err.Payload.AuthType = from.Payload.AuthType
 		err.Payload.URI = from.Payload.URI
 		err.Payload.Channel = from.Payload.Channel
 	case *Err:
 		err.Payload.For = from.Payload.For
 		err.Payload.ForType = from.Payload.ForType
-		err.Payload.AuthType = from.Payload.AuthType
 		err.Payload.URI = from.Payload.URI
 		err.Payload.Channel = from.Payload.Channel
 	case *Evnt:
@@ -276,11 +254,10 @@ func NewErr(from Msg, code int, e error) *Err {
 type OK struct {
 	Meta    `json:"meta"`
 	Payload struct {
-		For      uuid.UUID   `json:"for"`
-		ForType  MessageType `json:"for_type"`
-		AuthType string      `json:"auth_type,omitempty"` // when in response to an AUTH
-		URI      string      `json:"uri,omitempty"`       // when in response to a CALL
-		Channel  string      `json:"channel,omitempty"`   // when in response to a PUB, SUB or UNSB
+		For     uuid.UUID   `json:"for"`
+		ForType MessageType `json:"for_type"`
+		URI     string      `json:"uri,omitempty"`     // when in response to a CALL
+		Channel string      `json:"channel,omitempty"` // when in response to a PUB, SUB or UNSB
 	} `json:"payload"`
 }
 
@@ -294,8 +271,6 @@ func NewOK(from Msg) *OK {
 	ok.Payload.ForType = from.Type()
 
 	switch from := from.(type) {
-	case *Auth:
-		ok.Payload.AuthType = from.Payload.AuthType
 	case *Call:
 		ok.Payload.URI = from.Payload.URI
 	case *Pub:
@@ -313,7 +288,7 @@ func NewOK(from Msg) *OK {
 type Res struct {
 	Meta    `json:"meta"`
 	Payload struct {
-		For  uuid.UUID       `json:"for"`           // TODO : no ForType, because always CALL, or AUTH too?
+		For  uuid.UUID       `json:"for"`           // no ForType, because always CALL
 		URI  string          `json:"uri,omitempty"` // URI of the CALL
 		Args json.RawMessage `json:"args"`
 	} `json:"payload"`
