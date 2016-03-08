@@ -14,30 +14,56 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var (
+	commands    map[string]*cmd
+	connections []*juggler.Client
+)
+
+func init() {
+	commands = map[string]*cmd{
+		"?":          helpCmd,
+		"help":       helpCmd,
+		"connect":    connectCmd,
+		"disconnect": disconnectCmd,
+		"send":       sendCmd,
+		"close":      closeCmd,
+		"call":       callCmd,
+		"pub":        pubCmd,
+		"sub":        subCmd,
+		"unsb":       unsbCmd,
+	}
+}
+
 type cmd struct {
-	Help string
-	Run  func(...string)
+	Usage   string
+	MinArgs int
+	Help    string
+	Run     func(*cmd, ...string)
 }
 
 var helpCmd = &cmd{
-	Help: "usage: ? or help\n\tprint this message",
+	Usage:   "usage: ? or help",
+	MinArgs: 0,
+	Help:    "print this message",
 
-	Run: func(_ ...string) {
+	Run: func(_ *cmd, _ ...string) {
 		keys := make([]string, 0, len(commands))
 		for k := range commands {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
-			printf("- %s :\n\t%s\n", k, commands[k].Help)
+			printf("- %s :\n\t%s\n\t%s\n", k, commands[k].Usage, commands[k].Help)
 		}
 	},
 }
 
 var connectCmd = &cmd{
-	Help: fmt.Sprintf("usage: connect [URL [PROTO]]\n\tconnect to URL using subprotocol PROTO (defaults to %s)", *defaultSubprotoFlag),
+	Usage:   "usage: connect [URL [PROTO]]",
+	MinArgs: 0,
+	Help:    fmt.Sprintf("connect to URL using subprotocol PROTO (defaults to %s)", *defaultSubprotoFlag),
 
-	Run: func(args ...string) {
+	Run: func(_ *cmd, args ...string) {
 		var d websocket.Dialer
 
 		addr := *defaultConnFlag
@@ -67,11 +93,13 @@ func (l connMsgLogger) Handle(m msg.Msg) {
 }
 
 var disconnectCmd = &cmd{
-	Help: "usage: disconnect CONN_ID\n\tdisconnect the connection identified by CONN_ID",
+	Usage:   "usage: disconnect CONN_ID",
+	MinArgs: 1,
+	Help:    "disconnect the connection identified by CONN_ID",
 
-	Run: func(args ...string) {
-		if len(args) != 1 {
-			printErr("usage: disconnect CONN_ID")
+	Run: func(cmd *cmd, args ...string) {
+		if len(args) < cmd.MinArgs {
+			printErr(cmd.Usage)
 			return
 		}
 		if c, ix := getConn(args[0]); c != nil {
@@ -84,11 +112,13 @@ var disconnectCmd = &cmd{
 }
 
 var closeCmd = &cmd{
-	Help: "usage: close CONN_ID [STATUS_TEXT]\n\tcleanly close the connection identified by CONN_ID, sending a websocket Close message",
+	Usage:   "usage: close CONN_ID [STATUS_TEXT]",
+	MinArgs: 1,
+	Help:    "cleanly close the connection identified by CONN_ID, sending a websocket Close message",
 
-	Run: func(args ...string) {
-		if len(args) < 1 {
-			printErr("usage: close CONN_ID [STATUS_TEXT]")
+	Run: func(cmd *cmd, args ...string) {
+		if len(args) < cmd.MinArgs {
+			printErr(cmd.Usage)
 			return
 		}
 		if c, ix := getConn(args[0]); c != nil {
@@ -110,11 +140,13 @@ var closeCmd = &cmd{
 }
 
 var sendCmd = &cmd{
-	Help: "usage: send CONN_ID MSG\n\tsend free-form MSG to the connection identified by CONN_ID",
+	Usage:   "usage: send CONN_ID MSG",
+	MinArgs: 2,
+	Help:    "send free-form MSG to the connection identified by CONN_ID",
 
-	Run: func(args ...string) {
-		if len(args) < 2 {
-			printErr("usage: send CONN_ID MSG")
+	Run: func(cmd *cmd, args ...string) {
+		if len(args) < cmd.MinArgs {
+			printErr(cmd.Usage)
 			return
 		}
 		if c, _ := getConn(args[0]); c != nil {
@@ -130,11 +162,13 @@ var sendCmd = &cmd{
 }
 
 var callCmd = &cmd{
-	Help: "usage: call CONN_ID URI [TIMEOUT_SEC [ARGS]]\n\tsend a CALL message to the connection identified by CONN_ID\n\tto URI with optional ARGS as JSON",
+	Usage:   "usage: call CONN_ID URI [TIMEOUT_SEC [ARGS]]",
+	MinArgs: 2,
+	Help:    "send a CALL message to the connection identified by CONN_ID\n\tto URI with optional ARGS as JSON",
 
-	Run: func(args ...string) {
-		if len(args) < 2 {
-			printErr("usage: call CONN_ID URI [ARGS]")
+	Run: func(cmd *cmd, args ...string) {
+		if len(args) < cmd.MinArgs {
+			printErr(cmd.Usage)
 			return
 		}
 		if c, ix := getConn(args[0]); c != nil {
@@ -150,7 +184,7 @@ var callCmd = &cmd{
 
 			var v json.RawMessage
 			if len(args) > 3 {
-				v = json.RawMessage(args[3])
+				v = json.RawMessage(strings.Join(args[3:], " "))
 			}
 
 			uuid, err := c.Call(args[1], v, to)
@@ -159,6 +193,34 @@ var callCmd = &cmd{
 				return
 			}
 			printf("[%d] sent CALL message %v", ix, uuid)
+		} else {
+			printErr("invalid connection ID")
+		}
+	},
+}
+
+var pubCmd = &cmd{
+	Usage:   "usage: pub CONN_ID CHANNEL [ARGS]",
+	MinArgs: 2,
+	Help:    "send a PUB message to the connection identified by CONN_ID\n\tto CHANNEL with optional ARGS as JSON",
+
+	Run: func(cmd *cmd, args ...string) {
+		if len(args) < cmd.MinArgs {
+			printErr(cmd.Usage)
+			return
+		}
+		if c, ix := getConn(args[0]); c != nil {
+			var v json.RawMessage
+			if len(args) > 2 {
+				v = json.RawMessage(strings.Join(args[2:], " "))
+			}
+
+			uuid, err := c.Pub(args[1], v)
+			if err != nil {
+				printErr("failed to send PUB message: %v", err)
+				return
+			}
+			printf("[%d] sent PUB message %v", ix, uuid)
 		} else {
 			printErr("invalid connection ID")
 		}

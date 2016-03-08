@@ -8,8 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/PuerkitoBio/exp/juggler"
-
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -19,25 +17,8 @@ commands. Press ^D (ctrl-D) to exit.
 `
 
 var (
-	commands    map[string]*cmd
-	connections []*juggler.Client
-	term        *terminal.Terminal
+	term *terminal.Terminal
 )
-
-func init() {
-	commands = map[string]*cmd{
-		"?":          helpCmd,
-		"help":       helpCmd,
-		"connect":    connectCmd,
-		"disconnect": disconnectCmd,
-		"send":       sendCmd,
-		"close":      closeCmd,
-		"call":       callCmd,
-		"pub":        pubCmd,
-		"sub":        subCmd,
-		"unsb":       unsbCmd,
-	}
-}
 
 var (
 	defaultConnFlag     = flag.String("addr", "ws://localhost:9000/ws", "default dial address to use in connect commands")
@@ -77,7 +58,7 @@ func main() {
 		args := strings.Fields(l)
 		if len(args) != 0 {
 			if cmd := commands[args[0]]; cmd != nil {
-				cmd.Run(args[1:]...)
+				cmd.Run(cmd, args[1:]...)
 			} else {
 				printErr("unknown command %q", args[0])
 			}
