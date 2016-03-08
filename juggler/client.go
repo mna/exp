@@ -43,7 +43,7 @@ type Client struct {
 
 	// LogFunc is used to log errors that occur outside the handler calls,
 	// such as when a message fails to be unmarshaled. If nil, it logs
-	// using log.Prinf. It can be set to juggler.DiscardLog to disable
+	// using log.Printf. It can be set to juggler.DiscardLog to disable
 	// logging.
 	LogFunc func(string, ...interface{})
 

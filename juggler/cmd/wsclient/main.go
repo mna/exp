@@ -8,9 +8,9 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/crypto/ssh/terminal"
+	"github.com/PuerkitoBio/exp/juggler"
 
-	"github.com/gorilla/websocket"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 const welcomeMessage = `
@@ -20,7 +20,7 @@ commands. Press ^D (ctrl-D) to exit.
 
 var (
 	commands    map[string]*cmd
-	connections []*websocket.Conn
+	connections []*juggler.Client
 	term        *terminal.Terminal
 )
 
@@ -33,11 +33,15 @@ func init() {
 		"send":       sendCmd,
 		"close":      closeCmd,
 		"call":       callCmd,
+		"pub":        pubCmd,
+		"sub":        subCmd,
+		"unsb":       unsbCmd,
 	}
 }
 
 var (
-	defaultConnFlag = flag.String("addr", "ws://localhost:9000/ws", "default dial address to use in connect commands")
+	defaultConnFlag     = flag.String("addr", "ws://localhost:9000/ws", "default dial address to use in connect commands")
+	defaultSubprotoFlag = flag.String("subprotocol", "juggler.0", "default subprotocol to request in the websocket handshake")
 )
 
 func main() {
