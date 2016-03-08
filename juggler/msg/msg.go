@@ -294,6 +294,17 @@ type Res struct {
 	} `json:"payload"`
 }
 
+// NewRes creates a new Res message corresponding to a call result.
+func NewRes(pld *ResPayload) *Res {
+	res := &Res{
+		Meta: newMeta(ResMsg),
+	}
+	res.Payload.For = pld.MsgUUID
+	res.Payload.URI = pld.URI
+	res.Payload.Args = pld.Args
+	return res
+}
+
 // Evnt is a published event. It is sent to all subscribers of the
 // Channel.
 type Evnt struct {

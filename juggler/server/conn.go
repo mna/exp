@@ -183,6 +183,18 @@ func (c *Conn) Send(m msg.Msg) {
 	}
 }
 
+// results is the loop that looks for call results.
+func (c *Conn) results() {
+	ch := c.resc.Results()
+	for res := range ch {
+		c.Send(msg.NewRes(res))
+	}
+
+	// results loop was stopped, the connection should be closed if it
+	// isn't already.
+	c.Close(c.resc.ResultsErr())
+}
+
 // pubSub is the loop that receives events that the connection is subscribed
 // to.
 func (c *Conn) pubSub() {
@@ -191,8 +203,8 @@ func (c *Conn) pubSub() {
 		c.Send(msg.NewEvnt(ev))
 	}
 
-	// pubsub loop was stopped, the connection should be stopped if it
-	// isn't already
+	// pubsub loop was stopped, the connection should be closed if it
+	// isn't already.
 	c.Close(c.psc.EventsErr())
 }
 
