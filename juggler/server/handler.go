@@ -7,31 +7,33 @@ import (
 	"io"
 	"runtime"
 
+	"golang.org/x/net/context"
+
 	"github.com/PuerkitoBio/exp/juggler/msg"
 )
 
 // Handler defines the method required to handle a send or receive
 // of a Msg over a connection.
 type Handler interface {
-	Handle(*Conn, msg.Msg)
+	Handle(context.Context, *Conn, msg.Msg)
 }
 
 // HandlerFunc is a function signature that implements the Handler
 // interface.
-type HandlerFunc func(*Conn, msg.Msg)
+type HandlerFunc func(context.Context, *Conn, msg.Msg)
 
 // Handle implements Handler for the HandlerFunc by calling the
 // function itself.
-func (h HandlerFunc) Handle(c *Conn, m msg.Msg) {
-	h(c, m)
+func (h HandlerFunc) Handle(ctx context.Context, c *Conn, m msg.Msg) {
+	h(ctx, c, m)
 }
 
 // Chain returns a Handler that calls the provided handlers
 // in order, one after the other.
 func Chain(hs ...Handler) Handler {
-	return HandlerFunc(func(c *Conn, m msg.Msg) {
+	return HandlerFunc(func(ctx context.Context, c *Conn, m msg.Msg) {
 		for _, h := range hs {
-			h.Handle(c, m)
+			h.Handle(ctx, c, m)
 		}
 	})
 }
@@ -40,7 +42,7 @@ func Chain(hs ...Handler) Handler {
 // may happen in h and logs the panic to LogFunc. If close is true,
 // the connection is closed on a panic.
 func PanicRecover(h Handler, closeConn bool, printStack bool) Handler {
-	return HandlerFunc(func(c *Conn, m msg.Msg) {
+	return HandlerFunc(func(ctx context.Context, c *Conn, m msg.Msg) {
 		defer func() {
 			if e := recover(); e != nil {
 				if closeConn {
@@ -62,7 +64,7 @@ func PanicRecover(h Handler, closeConn bool, printStack bool) Handler {
 				}
 			}
 		}()
-		h.Handle(c, m)
+		h.Handle(ctx, c, m)
 	})
 }
 
@@ -79,7 +81,7 @@ func LogConn(c *Conn, state ConnState) {
 
 // LogMsg is a HandlerFunc that logs messages received or sent on
 // c to LogFunc.
-func LogMsg(c *Conn, m msg.Msg) {
+func LogMsg(ctx context.Context, c *Conn, m msg.Msg) {
 	if m.Type().IsRead() {
 		logf(c.srv, "%v: received message %v %s", c.UUID, m.UUID(), m.Type())
 	} else if m.Type().IsWrite() {
@@ -94,7 +96,7 @@ func LogMsg(c *Conn, m msg.Msg) {
 // When a custom ReadHandler and/or WriterHandler is set on the Server,
 // it should at some point call ProcessMsg so the expected behaviour
 // happens.
-func ProcessMsg(c *Conn, m msg.Msg) {
+func ProcessMsg(ctx context.Context, c *Conn, m msg.Msg) {
 	switch m := m.(type) {
 	case *msg.Auth:
 		// TODO : think about it some more...

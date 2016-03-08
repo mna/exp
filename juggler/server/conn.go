@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/websocket"
@@ -171,9 +173,9 @@ func (c *Conn) Writer(timeout time.Duration) io.WriteCloser {
 // WriteHandler if any, or ProcessMsg if nil.
 func (c *Conn) Send(m msg.Msg) {
 	if c.srv.WriteHandler != nil {
-		c.srv.WriteHandler.Handle(c, m)
+		c.srv.WriteHandler.Handle(context.Background(), c, m)
 	} else {
-		ProcessMsg(c, m)
+		ProcessMsg(context.Background(), c, m)
 	}
 }
 
@@ -204,9 +206,9 @@ func (c *Conn) receive() {
 		}
 
 		if c.srv.ReadHandler != nil {
-			c.srv.ReadHandler.Handle(c, msg)
+			c.srv.ReadHandler.Handle(context.Background(), c, msg)
 		} else {
-			ProcessMsg(c, msg)
+			ProcessMsg(context.Background(), c, msg)
 		}
 	}
 }

@@ -9,8 +9,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// DiscardLog is a helper no-op function that can be assigned to LogFunc
-// to disable logging.
+// DiscardLog is a helper no-op function that can be assigned to
+// Server.LogFunc to disable logging.
 func DiscardLog(f string, args ...interface{}) {}
 
 // Subprotocols is the list of juggler protocol versions supported by this
