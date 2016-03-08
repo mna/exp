@@ -264,6 +264,41 @@ func getSubFunc(pattern bool) func(*cmd, ...string) {
 	}
 }
 
+var unsbCmd = &cmd{
+	Usage:   "usage: unsb CONN_ID CHANNEL",
+	MinArgs: 2,
+	Help:    "send an UNSB message to the connection identified by CONN_ID\n\tto unsubscribe the connection from the CHANNEL",
+
+	Run: getUnsbFunc(false),
+}
+
+var punsbCmd = &cmd{
+	Usage:   "usage: punsb CONN_ID CHANNEL_PATTERN",
+	MinArgs: 2,
+	Help:    "send a UNSB message to the connection identified by CONN_ID\n\tto unsubscribe the connection from the pattern CHANNEL_PATTERN",
+
+	Run: getUnsbFunc(true),
+}
+
+func getUnsbFunc(pattern bool) func(*cmd, ...string) {
+	return func(cmd *cmd, args ...string) {
+		if len(args) < cmd.MinArgs {
+			printErr(cmd.Usage)
+			return
+		}
+		if c, ix := getConn(args[0]); c != nil {
+			uuid, err := c.Unsb(args[1], pattern)
+			if err != nil {
+				printErr("failed to send UNSB message: %v", err)
+				return
+			}
+			printf("[%d] sent UNSB message %v", ix, uuid)
+		} else {
+			printErr("invalid connection ID")
+		}
+	}
+}
+
 func getConn(arg string) (*juggler.Client, int) {
 	ix, err := strconv.Atoi(arg)
 	if err != nil {
