@@ -183,6 +183,19 @@ func (c *Conn) Send(m msg.Msg) {
 	}
 }
 
+// pubSub is the loop that receives events that the connection is subscribed
+// to.
+func (c *Conn) pubSub() {
+	ch := c.psc.Events()
+	for ev := range ch {
+		c.Send(msg.NewEvnt(ev))
+	}
+
+	// pubsub loop was stopped, the connection should be stopped if it
+	// isn't already
+	c.Close(c.psc.EventsErr())
+}
+
 // receive is the read loop, started in its own goroutine.
 func (c *Conn) receive() {
 	for {

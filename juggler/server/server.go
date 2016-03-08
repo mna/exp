@@ -123,9 +123,9 @@ func (srv *Server) ServeConn(conn *websocket.Conn) {
 	c.psc = pubSubConn
 	c.resc = resConn
 
-	go c.receive()
-	go c.results()
 	go c.pubSub()
+	go c.results()
+	go c.receive()
 
 	kill := c.CloseNotify()
 	<-kill

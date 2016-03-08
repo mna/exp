@@ -305,3 +305,16 @@ type Evnt struct {
 		Args    json.RawMessage `json:"args"`
 	} `json:"payload"`
 }
+
+// NewEvnt creates a new Evnt message corresponding to an event that
+// occurred on a subscribed channel.
+func NewEvnt(pld *EvntPayload) *Evnt {
+	ev := &Evnt{
+		Meta: newMeta(EvntMsg),
+	}
+	ev.Payload.Channel = pld.Channel
+	ev.Payload.Pattern = pld.Pattern
+	ev.Payload.For = pld.MsgUUID
+	ev.Payload.Args = pld.Args
+	return ev
+}
