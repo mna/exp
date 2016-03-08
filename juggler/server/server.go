@@ -98,15 +98,15 @@ type Server struct {
 func (srv *Server) ServeConn(conn *websocket.Conn) {
 	conn.SetReadLimit(srv.ReadLimit)
 	c := newConn(conn, srv)
-	if srv.ConnState != nil {
+	if cs := srv.ConnState; cs != nil {
 		defer func() {
-			srv.ConnState(c, Closing)
+			cs(c, Closing)
 		}()
 	}
 
 	// start lifecycle of the connection
-	if srv.ConnState != nil {
-		srv.ConnState(c, Connected)
+	if cs := srv.ConnState; cs != nil {
+		cs(c, Connected)
 	}
 
 	// receive, results loop, pub/sub loop

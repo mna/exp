@@ -128,8 +128,8 @@ func (w *exclusiveWriter) Write(p []byte) (int, error) {
 				return 0, err
 			}
 			w.w = wc
-			if w.c.srv.WriteTimeout > 0 {
-				w.c.wsConn.SetWriteDeadline(time.Now().Add(w.c.srv.WriteTimeout))
+			if to := w.c.srv.WriteTimeout; to > 0 {
+				w.c.wsConn.SetWriteDeadline(time.Now().Add(to))
 			}
 		}
 	}
@@ -183,8 +183,8 @@ func (c *Conn) Writer(timeout time.Duration) io.WriteCloser {
 // Send sends the msg to the client. It calls the Server's
 // WriteHandler if any, or ProcessMsg if nil.
 func (c *Conn) Send(m msg.Msg) {
-	if c.srv.WriteHandler != nil {
-		c.srv.WriteHandler.Handle(context.Background(), c, m)
+	if wh := c.srv.WriteHandler; wh != nil {
+		wh.Handle(context.Background(), c, m)
 	} else {
 		ProcessMsg(context.Background(), c, m)
 	}
@@ -231,8 +231,8 @@ func (c *Conn) receive() {
 			c.Close(fmt.Errorf("invalid websocket message type: %d", mt))
 			return
 		}
-		if c.srv.ReadTimeout > 0 {
-			c.wsConn.SetReadDeadline(time.Now().Add(c.srv.ReadTimeout))
+		if to := c.srv.ReadTimeout; to > 0 {
+			c.wsConn.SetReadDeadline(time.Now().Add(to))
 		}
 
 		msg, err := unmarshalMessage(r)
@@ -241,8 +241,8 @@ func (c *Conn) receive() {
 			return
 		}
 
-		if c.srv.ReadHandler != nil {
-			c.srv.ReadHandler.Handle(context.Background(), c, msg)
+		if rh := c.srv.ReadHandler; rh != nil {
+			rh.Handle(context.Background(), c, msg)
 		} else {
 			ProcessMsg(context.Background(), c, msg)
 		}

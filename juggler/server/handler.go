@@ -142,8 +142,8 @@ func ProcessMsg(ctx context.Context, c *Conn, m msg.Msg) {
 
 			case errWriteLimitExceeded:
 				logf(c.srv, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
-				// TODO : no good http code for this case
-				if err := writeMsg(c, msg.NewErr(m, 550, err)); err != nil {
+				// no good http code for this case
+				if err := writeMsg(c, msg.NewErr(m, 599, err)); err != nil {
 					if err == ErrLockWriterTimeout {
 						c.Close(fmt.Errorf("writeMsg failed: %v; closing connection", err))
 					} else {
@@ -190,8 +190,8 @@ func writeMsg(c *Conn, m msg.Msg) error {
 	defer w.Close()
 
 	lw := io.Writer(w)
-	if c.srv.WriteLimit > 0 {
-		lw = limitWriter(w, c.srv.WriteLimit)
+	if l := c.srv.WriteLimit; l > 0 {
+		lw = limitWriter(w, l)
 	}
 	if err := json.NewEncoder(lw).Encode(m); err != nil {
 		return err
