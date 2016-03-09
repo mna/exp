@@ -130,6 +130,9 @@ func (c *Client) Call(uri string, v interface{}, timeout time.Duration) (uuid.UU
 	if err := c.conn.WriteJSON(m); err != nil {
 		return nil, err
 	}
+
+	// TODO : start a goro that waits for timeout and sends a TimedOut message?
+
 	return m.UUID(), nil
 }
 

@@ -113,7 +113,7 @@ func (l connMsgLogger) Handle(m msg.Msg) {
 	case *msg.Evnt:
 		s = fmt.Sprintf("for %s %v", msg.PubMsg, m.Payload.For)
 	}
-	printf("[%d] <<< %s message: %v %s", l, m.Type(), m.UUID(), s)
+	printf("[%d] <<< %-4s message: %v %s", l, m.Type(), m.UUID(), s)
 }
 
 var disconnectCmd = &cmd{
