@@ -2,7 +2,6 @@ package callee
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
@@ -91,7 +90,6 @@ func (c *Callee) storeResult(cp *msg.CallPayload, v interface{}, e error, timeou
 	if err != nil {
 		return err
 	}
-	fmt.Println(">>>>> callee.storeResult: ", string(b))
 
 	rp := &msg.ResPayload{
 		ConnUUID: cp.ConnUUID,

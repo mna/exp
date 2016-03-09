@@ -26,7 +26,7 @@ func main() {
 	if err := c.Listen(map[string]callee.Thunk{
 		"test.echo":    logWrapThunk(echoThunk),
 		"test.reverse": logWrapThunk(reverseThunk),
-		"test.sleep":   logWrapThunk(delayThunk),
+		"test.delay":   logWrapThunk(delayThunk),
 	}); err != nil {
 		log.Fatalf("Listen failed: %v", err)
 	}
