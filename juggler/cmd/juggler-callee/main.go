@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/PuerkitoBio/exp/juggler/broker/redisbroker"
@@ -41,8 +42,12 @@ func logWrapThunk(t callee.Thunk) callee.Thunk {
 }
 
 func delayThunk(cp *msg.CallPayload) (interface{}, error) {
-	var i int
-	if err := json.Unmarshal(cp.Args, &i); err != nil {
+	var s string
+	if err := json.Unmarshal(cp.Args, &s); err != nil {
+		return nil, err
+	}
+	i, err := strconv.Atoi(s)
+	if err != nil {
 		return nil, err
 	}
 	return delay(i), nil

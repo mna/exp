@@ -45,7 +45,7 @@ func main() {
 	defer fn()
 	term = t
 
-	printf(welcomeMessage)
+	printfTs(welcomeMessage, "")
 	for {
 		l, err := t.ReadLine()
 		if err != nil {
@@ -92,12 +92,16 @@ func setupTerminal() (*terminal.Terminal, func()) {
 	return t, cleanUp
 }
 
-func printf(msg string, args ...interface{}) {
-	if *timestampFmtFlag != "" {
-		t := time.Now().Format(*timestampFmtFlag)
+func printfTs(msg, ts string, args ...interface{}) {
+	if ts != "" {
+		t := time.Now().Format(ts)
 		msg = t + " | " + msg
 	}
 	fmt.Fprintf(term, msg+"\n", args...)
+}
+
+func printf(msg string, args ...interface{}) {
+	printfTs(msg, *timestampFmtFlag, args...)
 }
 
 func printErr(msg string, args ...interface{}) {

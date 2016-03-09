@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -194,7 +193,7 @@ var sendCmd = &cmd{
 var callCmd = &cmd{
 	Usage:   "usage: call CONN_ID URI [TIMEOUT_SEC [ARGS]]",
 	MinArgs: 2,
-	Help:    "send a CALL message to the connection identified by CONN_ID\n\tto URI with optional ARGS as JSON",
+	Help:    "send a CALL message to the connection identified by CONN_ID\n\tto URI with optional ARGS that will be marshaled as JSON string",
 
 	Run: func(cmd *cmd, args ...string) {
 		if c, ix := getConn(args[0]); c != nil {
@@ -208,9 +207,9 @@ var callCmd = &cmd{
 				to = d
 			}
 
-			var v json.RawMessage
+			var v string
 			if len(args) > 3 {
-				v = json.RawMessage(strings.Join(args[3:], " "))
+				v = strings.Join(args[3:], " ")
 			}
 
 			uuid, err := c.Call(args[1], v, to)
@@ -228,13 +227,13 @@ var callCmd = &cmd{
 var pubCmd = &cmd{
 	Usage:   "usage: pub CONN_ID CHANNEL [ARGS]",
 	MinArgs: 2,
-	Help:    "send a PUB message to the connection identified by CONN_ID\n\tto CHANNEL with optional ARGS as JSON",
+	Help:    "send a PUB message to the connection identified by CONN_ID\n\tto CHANNEL with optional ARGS that will be marshaled as JSON string",
 
 	Run: func(cmd *cmd, args ...string) {
 		if c, ix := getConn(args[0]); c != nil {
-			var v json.RawMessage
+			var v string
 			if len(args) > 2 {
-				v = json.RawMessage(strings.Join(args[2:], " "))
+				v = strings.Join(args[2:], " ")
 			}
 
 			uuid, err := c.Pub(args[1], v)
