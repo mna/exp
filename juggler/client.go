@@ -73,9 +73,9 @@ func (c *Client) handleMessages() {
 			logf(c.LogFunc, "client: NextReader failed: %v; stopping read loop", err)
 			return
 		}
-		m, err := msg.Unmarshal(r)
+		m, err := msg.UnmarshalResponse(r)
 		if err != nil {
-			logf(c.LogFunc, "client: Unmarshal failed: %v; skipping message", err)
+			logf(c.LogFunc, "client: UnmarshalResponse failed: %v; skipping message", err)
 			continue
 		}
 		go c.Handler.Handle(m)

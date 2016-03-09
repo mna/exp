@@ -374,12 +374,43 @@ func NewEvnt(pld *EvntPayload) *Evnt {
 	return ev
 }
 
+// UnmarshalRequest unmarshals a JSON-encoded message from r into the
+// correct concrete message type. It returns an error if the message
+// type is invalid for a request (client -> server).
+func UnmarshalRequest(r io.Reader) (Msg, error) {
+	return unmarshalIf(r, CallMsg, SubMsg, UnsbMsg, PubMsg)
+}
+
+// UnmarshalResponse unmarshals a JSON-encoded message from r into the
+// correct concrete message type. It returns an error if the message
+// type is invalid for a response (client <- server).
+func UnmarshalResponse(r io.Reader) (Msg, error) {
+	return unmarshalIf(r, ErrMsg, OKMsg, EvntMsg, ResMsg)
+}
+
 // Unmarshal unmarshals a JSON-encoded message from r into the correct
 // concrete message type.
 func Unmarshal(r io.Reader) (Msg, error) {
+	return unmarshalIf(r)
+}
+
+func isIn(list []MessageType, v MessageType) bool {
+	for _, vv := range list {
+		if v == vv {
+			return true
+		}
+	}
+	return false
+}
+
+func unmarshalIf(r io.Reader, allowed ...MessageType) (Msg, error) {
 	var pm partialMsg
 	if err := json.NewDecoder(r).Decode(&pm); err != nil {
 		return nil, fmt.Errorf("invalid JSON message: %v", err)
+	}
+
+	if len(allowed) > 0 && !isIn(allowed, pm.Meta.T) {
+		return nil, fmt.Errorf("invalid message %s for this peer", pm.Meta.T)
 	}
 
 	genericUnmarshal := func(v interface{}, metaDst *Meta) error {
@@ -420,8 +451,34 @@ func Unmarshal(r io.Reader) (Msg, error) {
 		}
 		m = &pub
 
-	case ErrMsg, OKMsg, ResMsg, EvntMsg:
-		return nil, fmt.Errorf("invalid message %s for client peer", pm.Meta.T)
+	case ErrMsg:
+		var e Err
+		if err := genericUnmarshal(&e, &e.Meta); err != nil {
+			return nil, err
+		}
+		m = &e
+
+	case OKMsg:
+		var ok OK
+		if err := genericUnmarshal(&ok, &ok.Meta); err != nil {
+			return nil, err
+		}
+		m = &ok
+
+	case ResMsg:
+		var res Res
+		if err := genericUnmarshal(&res, &res.Meta); err != nil {
+			return nil, err
+		}
+		m = &res
+
+	case EvntMsg:
+		var ev Evnt
+		if err := genericUnmarshal(&ev, &ev.Meta); err != nil {
+			return nil, err
+		}
+		m = &ev
+
 	default:
 		return nil, fmt.Errorf("unknown message %s", pm.Meta.T)
 	}

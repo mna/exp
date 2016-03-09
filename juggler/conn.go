@@ -238,7 +238,7 @@ func (c *Conn) receive() {
 			c.wsConn.SetReadDeadline(time.Now().Add(to))
 		}
 
-		m, err := msg.Unmarshal(r)
+		m, err := msg.UnmarshalRequest(r)
 		if err != nil {
 			c.Close(err)
 			return
