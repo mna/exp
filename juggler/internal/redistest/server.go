@@ -29,7 +29,7 @@ func StartServer(t *testing.T, w io.Writer) (*exec.Cmd, string) {
 	require.NoError(t, c.Start(), "start redis-server")
 
 	// wait a bit for the server to start listening... better way?
-	time.Sleep(time.Second)
+	time.Sleep(500 * time.Millisecond)
 	t.Logf("redis-server started on port %s", port)
 	return c, port
 }
