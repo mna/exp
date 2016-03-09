@@ -84,11 +84,19 @@ func (c *Client) handleMessages() {
 			continue
 		}
 
-		if res, ok := m.(*msg.Res); ok {
+		switch m := m.(type) {
+		case *msg.Res:
 			// got the result, do not trigger an expired message
 			c.mu.Lock()
-			delete(c.results, res.Payload.For.String())
+			delete(c.results, m.Payload.For.String())
 			c.mu.Unlock()
+		case *msg.Err:
+			if m.Payload.ForType == msg.CallMsg {
+				// won't get any result for this call
+				c.mu.Lock()
+				delete(c.results, m.Payload.For.String())
+				c.mu.Unlock()
+			}
 		}
 
 		go c.Handler.Handle(m)
