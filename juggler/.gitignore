@@ -1,4 +1,6 @@
 juggler-server
 juggler-client
+juggler-callee
 !cmd/juggler-server/
 !cmd/juggler-client/
+!cmd/juggler-callee/

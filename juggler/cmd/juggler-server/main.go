@@ -54,9 +54,9 @@ func main() {
 	}
 	http.Handle("/ws", juggler.Upgrade(upg, srv))
 
-	log.Printf("juggler: listening on port %d", *portFlag)
+	log.Printf("listening on port %d", *portFlag)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", *portFlag), nil); err != nil {
-		log.Fatalf("juggler: ListenAndServe failed: %v", err)
+		log.Fatalf("ListenAndServe failed: %v", err)
 	}
 }
 

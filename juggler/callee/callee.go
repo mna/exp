@@ -26,6 +26,9 @@ type Callee struct {
 	LogFunc func(string, ...interface{})
 }
 
+// TODO : helper to spin as many Listen as required for the URIs in
+// a redis cluster setting.
+
 // Listen listens for call requests for the requested URIs and calls the
 // corresponding Thunk to execute the request. The m parameter has
 // URIs as keys, and the associated Thunk function as value.
