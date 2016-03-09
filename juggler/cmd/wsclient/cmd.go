@@ -224,7 +224,7 @@ var pubCmd = &cmd{
 				printErr("[%d] Pub failed: %v", ix+1, err)
 				return
 			}
-			printf("[%d] >>> PUB message: %v", ix+1, uuid)
+			printf("[%d] >>> PUB  message: %v", ix+1, uuid)
 		} else {
 			printErr("invalid connection ID: %s", args[0])
 		}
@@ -255,7 +255,7 @@ func getSubFunc(pattern bool) func(*cmd, ...string) {
 				printErr("[%d] Sub failed: %v", ix+1, err)
 				return
 			}
-			printf("[%d] >>> SUB message: %v", ix+1, uuid)
+			printf("[%d] >>> SUB  message: %v", ix+1, uuid)
 		} else {
 			printErr("invalid connection ID: %s", args[0])
 		}

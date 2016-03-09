@@ -414,7 +414,11 @@ func unmarshalIf(r io.Reader, allowed ...MessageType) (Msg, error) {
 	}
 
 	genericUnmarshal := func(v interface{}, metaDst *Meta) error {
-		if err := json.Unmarshal(pm.Payload, v); err != nil {
+		var b []byte
+		b = append(b, `{"payload":`...)
+		b = append(b, pm.Payload...)
+		b = append(b, '}')
+		if err := json.Unmarshal(b, v); err != nil {
 			return fmt.Errorf("invalid %s message: %v", pm.Meta.T, err)
 		}
 		*metaDst = pm.Meta
