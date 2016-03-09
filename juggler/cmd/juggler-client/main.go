@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -91,7 +92,8 @@ func setupTerminal() (*terminal.Terminal, func()) {
 }
 
 func printf(msg string, args ...interface{}) {
-	fmt.Fprintf(term, msg+"\n", args...)
+	t := time.Now().Format(time.RFC3339)
+	fmt.Fprintf(term, t+" | "+msg+"\n", args...)
 }
 
 func printErr(msg string, args ...interface{}) {
