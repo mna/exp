@@ -47,12 +47,14 @@ type Broker struct {
 	// is used. It can be set to juggler.DiscardLog to disable logging.
 	LogFunc func(string, ...interface{})
 
-	// CallCap is the capacity of the CALL queue. If it is exceeded,
-	// Broker.Call calls fail with an error.
+	// CallCap is the capacity of the CALL queue per URI. If it is
+	// exceeded for a given URI, subsequent Broker.Call calls for that
+	// URI will fail with an error.
 	CallCap int
 
-	// ResultCap is the capacity of the RES queue. If it is exceeded,
-	// Broker.Result calls fail with an error.
+	// ResultCap is the capacity of the RES queue per connection UUID.
+	// If it is exceeded for a given connection, Broker.Result calls
+	// for that connection will fail with an error.
 	ResultCap int
 }
 
@@ -69,9 +71,11 @@ const (
 	`
 	defaultCallOrResTimeout = time.Minute
 
+	// redis cluster-compliant keys, so that both keys are in the same slot
 	callKey        = "juggler:calls:{%s}"            // 1: URI
 	callTimeoutKey = "juggler:calls:timeout:{%s}:%s" // 1: URI, 2: mUUID
 
+	// redis cluster-compliant keys, so that both keys are in the same slot
 	resKey        = "juggler:results:{%s}"            // 1: cUUID
 	resTimeoutKey = "juggler:results:timeout:{%s}:%s" // 1: cUUID, 2: mUUID
 )
