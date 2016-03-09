@@ -15,6 +15,11 @@
 //     - RES  : the result of a CALL message
 //     - EVNT : an event triggered on a channel that the client is subscribed to
 //
+// There's another message that is not sent by either end, but can be
+// triggered by the client for itself:
+//
+//     - EXP  : expired CALL, meaning that no RES will be received for this call.
+//
 // Closing the communication is done via the standard websocket close
 // process.
 //
@@ -52,6 +57,10 @@ const (
 	ResMsg
 	EvntMsg
 	endWrite
+
+	startMeta
+	ExpMsg
+	endMeta
 )
 
 var lookupMessageType = []string{
@@ -63,6 +72,7 @@ var lookupMessageType = []string{
 	OKMsg:   "OK",
 	ResMsg:  "RES",
 	EvntMsg: "EVNT",
+	ExpMsg:  "EXP",
 }
 
 // String returns the human-readable representation of message types.
@@ -372,6 +382,30 @@ func NewEvnt(pld *EvntPayload) *Evnt {
 	ev.Payload.For = pld.MsgUUID
 	ev.Payload.Args = pld.Args
 	return ev
+}
+
+// Exp is an expired call message. It is never sent over the network, but
+// it can be raised by a client, for itself, when the timeout for a call
+// result has expired. As such, the ExpMsg message type returns false for
+// both IsRead and IsWrite.
+type Exp struct {
+	Meta    `json:"meta"`
+	Payload struct {
+		For  uuid.UUID       `json:"for"`           // no ForType, because always CALL
+		URI  string          `json:"uri,omitempty"` // URI of the CALL
+		Args json.RawMessage `json:"args"`
+	} `json:"payload"`
+}
+
+// NewExp creates a new expired message for the provided call message.
+func NewExp(m *Call) *Exp {
+	exp := &Exp{
+		Meta: newMeta(ExpMsg),
+	}
+	exp.Payload.For = m.UUID()
+	exp.Payload.URI = m.Payload.URI
+	exp.Payload.Args = m.Payload.Args
+	return exp
 }
 
 // UnmarshalRequest unmarshals a JSON-encoded message from r into the

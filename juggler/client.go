@@ -26,6 +26,7 @@ func (fn MsgHandlerFunc) Handle(m msg.Msg) {
 
 // Client is a juggler client based on a websocket connection. It can
 // be used to send and receive messages to and from a juggler server.
+// It is not safe to call Client methods concurrently.
 type Client struct {
 	// ResponseHeader is the map of HTTP response headers returned
 	// from the initial websocket handshake.
@@ -47,8 +48,10 @@ type Client struct {
 	// logging.
 	LogFunc func(string, ...interface{})
 
-	wg   sync.WaitGroup
-	conn *websocket.Conn
+	wg      sync.WaitGroup
+	conn    *websocket.Conn
+	mu      sync.Mutex
+	results map[string]struct{}
 }
 
 // NewClient creates a juggler client using the provided websocket
@@ -59,6 +62,7 @@ func NewClient(conn *websocket.Conn, resHeader http.Header, h MsgHandler) *Clien
 		ResponseHeader: resHeader,
 		Handler:        h,
 		conn:           conn,
+		results:        make(map[string]struct{}),
 	}
 	c.wg.Add(1)
 	go c.handleMessages()
@@ -79,6 +83,14 @@ func (c *Client) handleMessages() {
 			logf(c.LogFunc, "client: UnmarshalResponse failed: %v; skipping message", err)
 			continue
 		}
+
+		if res, ok := m.(*msg.Res); ok {
+			// got the result, do not trigger an expired message
+			c.mu.Lock()
+			delete(c.results, res.Payload.For.String())
+			c.mu.Unlock()
+		}
+
 		go c.Handler.Handle(m)
 	}
 }
@@ -131,9 +143,34 @@ func (c *Client) Call(uri string, v interface{}, timeout time.Duration) (uuid.UU
 		return nil, err
 	}
 
-	// TODO : start a goro that waits for timeout and sends a TimedOut message?
+	// add the expected result
+	c.mu.Lock()
+	c.results[m.UUID().String()] = struct{}{}
+	c.mu.Unlock()
+
+	go c.handleExpiredCall(m, timeout)
 
 	return m.UUID(), nil
+}
+
+func (c *Client) handleExpiredCall(m *msg.Call, timeout time.Duration) {
+	// wait for the timeout
+	if timeout <= 0 {
+		timeout = time.Minute // TODO : make that available as const somewhere?
+	}
+	<-time.After(timeout)
+
+	// check if still waiting for a result
+	c.mu.Lock()
+	_, ok := c.results[m.UUID().String()]
+	delete(c.results, m.UUID().String())
+	c.mu.Unlock()
+
+	if ok {
+		// if so, send an Exp message
+		exp := msg.NewExp(m)
+		go c.Handler.Handle(exp)
+	}
 }
 
 // Sub makes a subscription request to the server for the specified

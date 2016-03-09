@@ -1,7 +1,6 @@
 package juggler
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -130,7 +129,6 @@ func (srv *Server) ServeConn(conn *websocket.Conn) {
 
 	kill := c.CloseNotify()
 	<-kill
-	fmt.Println(">>>>> <-kill ", c.UUID)
 }
 
 // Upgrade returns an http.Handler that upgrades connections to
