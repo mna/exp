@@ -86,7 +86,7 @@ func setupTerminal() (*terminal.Terminal, func()) {
 		io.Reader
 		io.Writer
 	}{os.Stdin, os.Stdout}
-	t := terminal.NewTerminal(screen, "ws> ")
+	t := terminal.NewTerminal(screen, "juggler> ")
 	return t, cleanUp
 }
 
