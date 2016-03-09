@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/PuerkitoBio/exp/juggler/broker"
 	"github.com/PuerkitoBio/exp/juggler/internal/redistest"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/garyburd/redigo/redis"
@@ -91,6 +93,63 @@ func TestBrokerResult(t *testing.T) {
 		err := b.Result(rp, time.Second)
 		return rp.MsgUUID, err
 	})
+}
+
+func TestPublish(t *testing.T) {
+	cmd, port := redistest.StartServer(t, nil)
+	defer cmd.Process.Kill()
+
+	pool := redistest.NewPool(t, ":"+port)
+	brk := broker.PubSubBroker(&Broker{
+		Pool:    pool,
+		Dial:    pool.Dial,
+		LogFunc: logIfVerbose,
+	})
+
+	psc, err := brk.PubSub()
+	require.NoError(t, err, "get PubSubConn")
+
+	// subscribe to channel "a"
+	require.NoError(t, psc.Subscribe("a", false), "Subscribe")
+
+	// listen to events on "a"
+	var cnt int
+	expPlds := []string{`"abc"`, `{"v":3}`}
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for ev := range psc.Events() {
+			var want string
+
+			if cnt < len(expPlds) {
+				want = expPlds[cnt]
+			}
+			assert.Equal(t, "a", ev.Channel, "event is from the subscribed channel")
+			assert.Equal(t, want, string(ev.Args), "event payload")
+			cnt++
+		}
+	}()
+
+	cases := []struct {
+		v  interface{}
+		ch string
+	}{
+		{"abc", "a"},
+		{"def", "b"},
+		{map[string]interface{}{"v": 3}, "a"},
+		{5, "c"},
+	}
+	for i, c := range cases {
+		b, err := json.Marshal(c.v)
+		require.NoError(t, err, "marshal case %d", i)
+		pp := &msg.PubPayload{MsgUUID: uuid.NewRandom(), Args: b}
+		require.NoError(t, brk.Publish(c.ch, pp), "Publish event %d", i)
+	}
+
+	require.NoError(t, psc.Close(), "close subscribed connection")
+	wg.Wait()
+	assert.Equal(t, 2, cnt, "number of events received")
 }
 
 func expectUUIDs(t *testing.T, rc redis.Conn, key string, uuids ...uuid.UUID) {
