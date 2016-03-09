@@ -55,7 +55,7 @@ var helpCmd = &cmd{
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
-			printf("- %s :\n\t%s\n\t%s\n", k, commands[k].Usage, commands[k].Help)
+			printfTs("- %s :\n\t%s\n\t%s\n", "", k, commands[k].Usage, commands[k].Help)
 		}
 	},
 }
