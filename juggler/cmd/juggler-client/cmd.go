@@ -111,8 +111,8 @@ func (l connMsgLogger) Handle(m msg.Msg) {
 		s = fmt.Sprintf("for %s %v", m.Payload.ForType, m.Payload.For)
 	case *msg.Res:
 		n := len(m.Payload.Args)
-		if n > 20 {
-			n = 20
+		if n > 40 {
+			n = 40
 		}
 		val := string(m.Payload.Args[:n])
 		s = fmt.Sprintf("for %s %v (%s)", msg.CallMsg, m.Payload.For, val)
@@ -120,8 +120,8 @@ func (l connMsgLogger) Handle(m msg.Msg) {
 		s = fmt.Sprintf("for %s %v", msg.CallMsg, m.Payload.For)
 	case *msg.Evnt:
 		n := len(m.Payload.Args)
-		if n > 20 {
-			n = 20
+		if n > 40 {
+			n = 40
 		}
 		val := string(m.Payload.Args[:n])
 		s = fmt.Sprintf("for %s %v (%s)", msg.PubMsg, m.Payload.For, val)

@@ -65,7 +65,7 @@ func (c *Callee) Listen(m map[string]Thunk) error {
 				continue
 			}
 		} else {
-			logf(c.LogFunc, "TTL expired for message %v", cp.MsgUUID)
+			logf(c.LogFunc, "dropping expired message %v", cp.MsgUUID)
 			continue
 		}
 	}
