@@ -12,7 +12,7 @@ import (
 var _ broker.PubSubConn = (*pubSubConn)(nil)
 
 type pubSubConn struct {
-	c     redis.Conn
+	psc   redis.PubSubConn
 	logFn func(string, ...interface{})
 
 	// wmu controls writes (sub/unsub calls) to the connection.
@@ -28,12 +28,12 @@ type pubSubConn struct {
 }
 
 func newPubSubConn(rc redis.Conn, logFn func(string, ...interface{})) *pubSubConn {
-	return &pubSubConn{c: rc, logFn: logFn}
+	return &pubSubConn{psc: redis.PubSubConn{Conn: rc}, logFn: logFn}
 }
 
 // Close closes the connection.
 func (c *pubSubConn) Close() error {
-	return c.c.Close()
+	return c.psc.Close()
 }
 
 // Subscribe subscribes the redis connection to the channel, which may
@@ -48,18 +48,21 @@ func (c *pubSubConn) Unsubscribe(channel string, pattern bool) error {
 	return c.subUnsub(channel, pattern, false)
 }
 
-var subUnsubCmds = map[struct{ pat, sub bool }]string{
-	{true, true}:   "PSUBSCRIBE",
-	{true, false}:  "PUNSUBSCRIBE",
-	{false, true}:  "SUBSCRIBE",
-	{false, false}: "UNSUBSCRIBE",
-}
-
 func (c *pubSubConn) subUnsub(ch string, pat bool, sub bool) error {
-	cmd := subUnsubCmds[struct{ pat, sub bool }{pat, sub}]
+	var fn func(...interface{}) error
+	switch {
+	case pat && sub:
+		fn = c.psc.PSubscribe
+	case pat && !sub:
+		fn = c.psc.PUnsubscribe
+	case !pat && sub:
+		fn = c.psc.Subscribe
+	case !pat && !sub:
+		fn = c.psc.Unsubscribe
+	}
 
 	c.wmu.Lock()
-	_, err := c.c.Do(cmd, ch)
+	err := fn(ch)
 	c.wmu.Unlock()
 	return err
 }
@@ -73,9 +76,8 @@ func (c *pubSubConn) Events() <-chan *msg.EvntPayload {
 		go func() {
 			defer close(c.evch)
 
-			psc := redis.PubSubConn{Conn: c.c}
 			for {
-				switch v := psc.Receive().(type) {
+				switch v := c.psc.Receive().(type) {
 				case redis.Message:
 					ep, err := newEvntPayload(v.Channel, "", v.Data)
 					if err != nil {
