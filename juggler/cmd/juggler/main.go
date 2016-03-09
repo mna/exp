@@ -34,6 +34,7 @@ func main() {
 	pool := newRedisPool(":6379")
 	broker := &redisbroker.Broker{
 		Pool:      pool,
+		Dial:      pool.Dial,
 		CallCap:   100,
 		ResultCap: 100,
 	}

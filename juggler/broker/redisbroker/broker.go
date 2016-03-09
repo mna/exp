@@ -32,8 +32,12 @@ type Pool interface {
 // Broker is a broker that provides the methods to
 // interact with Redis using the juggler protocol.
 type Broker struct {
-	// Pool is the redis pool to use to get connections.
+	// Pool is the redis pool to use to get short-lived connections.
 	Pool Pool
+
+	// Dial is the function to call to get a non-pooled, long-lived
+	// redis connection. Typically, it can be set to redis.Pool.Dial.
+	Dial func() (redis.Conn, error)
 
 	// BlockingTimeout is the time to wait for a value on calls to
 	// BRPOP before trying again. The default of 0 means no timeout.
@@ -129,21 +133,30 @@ func (b *Broker) Publish(channel string, pp *msg.PubPayload) error {
 // PubSub returns a pub-sub connection that can be used to subscribe and
 // unsubscribe to channels, and to process incoming events.
 func (b *Broker) PubSub() (broker.PubSubConn, error) {
-	rc := b.Pool.Get()
+	rc, err := b.Dial()
+	if err != nil {
+		return nil, err
+	}
 	return newPubSubConn(rc, b.LogFunc), nil
 }
 
 // Calls returns a calls connection that can be used to process the call
 // requests for the specified URIs.
 func (b *Broker) Calls(uris ...string) (broker.CallsConn, error) {
-	rc := b.Pool.Get()
+	rc, err := b.Dial()
+	if err != nil {
+		return nil, err
+	}
 	return newCallsConn(rc, uris, b.BlockingTimeout, b.LogFunc), nil
 }
 
 // Results returns a results connection that can be used to process the call
 // results for the specified connection UUID.
 func (b *Broker) Results(connUUID uuid.UUID) (broker.ResultsConn, error) {
-	rc := b.Pool.Get()
+	rc, err := b.Dial()
+	if err != nil {
+		return nil, err
+	}
 	return newResultsConn(rc, connUUID, b.BlockingTimeout, b.LogFunc), nil
 }
 
