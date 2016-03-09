@@ -171,10 +171,11 @@ type limitedWriter struct {
 	n int64
 }
 
+const minWriteLimit = 4096
+
 func limitWriter(w io.Writer, limit int64) io.Writer {
-	const minLimit = 4096
-	if limit < minLimit {
-		limit = minLimit
+	if limit < minWriteLimit {
+		limit = minWriteLimit
 	}
 	return &limitedWriter{w: w, n: limit}
 }

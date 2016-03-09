@@ -48,7 +48,8 @@ type Server struct {
 
 	// WriteLimit defines the maximum size, in bytes, of outgoing
 	// messages. If a message exceeds this limit, it is dropped and
-	// an ERR message is sent to the client instead.
+	// an ERR message is sent to the client instead. The default of 0
+	// means no limit.
 	WriteLimit int64
 
 	// WriteTimeout is the timeout to write an outgoing message. It is
@@ -62,8 +63,8 @@ type Server struct {
 	AcquireWriteLockTimeout time.Duration
 
 	// ConnState specifies an optional callback function that is called
-	// when a connection changes state. It is called for Connected and
-	// Closing states.
+	// when a connection changes state. If non-nil, it is called for
+	// Connected and Closing states.
 	ConnState func(*Conn, ConnState)
 
 	// ReadHandler is the handler that is called when an incoming
@@ -85,10 +86,12 @@ type Server struct {
 	// LogFunc to DiscardLog.
 	LogFunc func(string, ...interface{}) // TODO : normalize calls so that order of args is somewhat predictable
 
-	// PubSubBroker is the broker to use for pub-sub messages.
+	// PubSubBroker is the broker to use for pub-sub messages. It should be
+	// set before the Server can be used.
 	PubSubBroker broker.PubSubBroker
 
-	// CallerBroker is the broker to use for caller messages.
+	// CallerBroker is the broker to use for caller messages. It should be
+	// set before the server can be used.
 	CallerBroker broker.CallerBroker
 }
 
