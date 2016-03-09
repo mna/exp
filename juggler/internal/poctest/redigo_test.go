@@ -16,7 +16,7 @@ import (
 func TestClosedConnErr(t *testing.T) {
 	const stopAfter = 100 * time.Millisecond
 
-	cmd, port := redistest.StartRedisServer(t, nil)
+	cmd, port := redistest.StartServer(t, nil)
 	defer cmd.Process.Kill()
 
 	ch := make(chan struct{})
@@ -70,7 +70,7 @@ func runRedisCmdExpectClose(t *testing.T, wg *sync.WaitGroup, start <-chan struc
 }
 
 func TestCloseConnWhileBlocked(t *testing.T) {
-	cmd, port := redistest.StartRedisServer(t, nil)
+	cmd, port := redistest.StartServer(t, nil)
 	defer cmd.Process.Kill()
 
 	conn, err := redis.Dial("tcp", ":"+port)

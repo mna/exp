@@ -7,14 +7,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/garyburd/redigo/redis"
 	"github.com/stretchr/testify/require"
 )
 
-// StartRedisServer starts a redis-server instance on a free port.
+// StartServer starts a redis-server instance on a free port.
 // It returns the started *exec.Cmd and the port used. The caller
 // should make sure to stop the command. If the redis-server
 // command is not found in the PATH, the test is skipped.
-func StartRedisServer(t *testing.T, w io.Writer) (*exec.Cmd, string) {
+func StartServer(t *testing.T, w io.Writer) (*exec.Cmd, string) {
 	if _, err := exec.LookPath("redis-server"); err != nil {
 		t.Skip("redis-server not found in $PATH")
 	}
@@ -40,4 +41,21 @@ func getFreePort(t *testing.T) string {
 	_, p, err := net.SplitHostPort(l.Addr().String())
 	require.NoError(t, err, "parse host and port")
 	return p
+}
+
+// NewPool creates a redis pool to return connections on the specified
+// addr.
+func NewPool(t *testing.T, addr string) *redis.Pool {
+	return &redis.Pool{
+		MaxIdle:     2,
+		MaxActive:   10,
+		IdleTimeout: time.Minute,
+		Dial: func() (redis.Conn, error) {
+			return redis.Dial("tcp", addr)
+		},
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			_, err := c.Do("PING")
+			return err
+		},
+	}
 }
