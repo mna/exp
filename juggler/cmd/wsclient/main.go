@@ -63,6 +63,9 @@ func main() {
 					printErr(cmd.Usage)
 					continue
 				}
+				if cmd == exitCmd {
+					return
+				}
 				cmd.Run(cmd, args...)
 			} else {
 				printErr("unknown command: %q", args[0])

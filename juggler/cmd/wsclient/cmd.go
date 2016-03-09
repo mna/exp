@@ -23,6 +23,7 @@ func init() {
 	commands = map[string]*cmd{
 		"?":          helpCmd,
 		"help":       helpCmd,
+		"exit":       exitCmd,
 		"connect":    connectCmd,
 		"disconnect": disconnectCmd,
 		"send":       sendCmd,
@@ -57,6 +58,16 @@ var helpCmd = &cmd{
 		for _, k := range keys {
 			printf("- %s :\n\t%s\n\t%s\n", k, commands[k].Usage, commands[k].Help)
 		}
+	},
+}
+
+var exitCmd = &cmd{
+	Usage:   "usage: exit or ctrl-D",
+	MinArgs: 0,
+	Help:    "quit the program",
+
+	Run: func(_ *cmd, _ ...string) {
+		// special-cased in the readline loop
 	},
 }
 
@@ -123,7 +134,7 @@ var disconnectCmd = &cmd{
 var closeCmd = &cmd{
 	Usage:   "usage: close CONN_ID [STATUS_TEXT]",
 	MinArgs: 1,
-	Help:    "cleanly close the connection identified by CONN_ID, sending a websocket Close message",
+	Help:    "cleanly close the connection identified by CONN_ID, sending a\n\twebsocket Close message",
 
 	Run: func(cmd *cmd, args ...string) {
 		if c, ix := getConn(args[0]); c != nil {
