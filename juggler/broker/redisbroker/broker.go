@@ -54,10 +54,11 @@ type Broker struct {
 
 const (
 	callOrResScript = `
-		redis.call("SET", KEYS[1], ARGV[1], "PX", ARGV[1])
+		redis.call("SET", KEYS[1], ARGV[1], "PX", tonumber(ARGV[1]))
 		local res = redis.call("LPUSH", KEYS[2], ARGV[2])
-		if res > ARGV[3] and ARGV[3] > 0 then
-			redis.call("LTRIM", KEYS[2], 1, ARGV[3] + 1)
+		local limit = tonumber(ARGV[3])
+		if res > limit and limit > 0 then
+			redis.call("LTRIM", KEYS[2], 1, limit + 1)
 			return redis.error_reply("list capacity exceeded")
 		end
 		return res
