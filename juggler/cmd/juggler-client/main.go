@@ -24,6 +24,7 @@ var (
 var (
 	defaultConnFlag     = flag.String("addr", "ws://localhost:9000/ws", "default dial address to use in connect commands")
 	defaultSubprotoFlag = flag.String("subprotocol", "juggler.0", "default subprotocol to request in the websocket handshake")
+	timestampFmtFlag    = flag.String("timestamp", time.StampMilli, "format of the timestamp in the output, empty for none")
 )
 
 func main() {
@@ -92,8 +93,11 @@ func setupTerminal() (*terminal.Terminal, func()) {
 }
 
 func printf(msg string, args ...interface{}) {
-	t := time.Now().Format(time.RFC3339)
-	fmt.Fprintf(term, t+" | "+msg+"\n", args...)
+	if *timestampFmtFlag != "" {
+		t := time.Now().Format(*timestampFmtFlag)
+		msg = t + " | " + msg
+	}
+	fmt.Fprintf(term, msg+"\n", args...)
 }
 
 func printErr(msg string, args ...interface{}) {
