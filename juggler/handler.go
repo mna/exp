@@ -127,12 +127,14 @@ func ProcessMsg(ctx context.Context, c *Conn, m msg.Msg) {
 			c.Send(msg.NewErr(m, 500, err))
 			return
 		}
+		c.Send(msg.NewOK(m))
 
 	case *msg.Unsb:
 		if err := c.psc.Unsubscribe(m.Payload.Channel, m.Payload.Pattern); err != nil {
 			c.Send(msg.NewErr(m, 500, err))
 			return
 		}
+		c.Send(msg.NewOK(m))
 
 	case *msg.OK, *msg.Err, *msg.Evnt, *msg.Res:
 		if err := writeMsg(c, m); err != nil {
