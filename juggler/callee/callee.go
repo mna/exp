@@ -58,7 +58,7 @@ func (c *Callee) Listen(m map[string]Thunk) error {
 		fn := m[cp.URI]
 		v, err := fn(cp.Args)
 
-		if remain := time.Now().Sub(start); remain > ttl {
+		if remain := ttl - time.Now().Sub(start); remain > 0 {
 			// register the result
 			if err := c.storeResult(cp, v, err, remain); err != nil {
 				logf(c.LogFunc, "storeResult failed for message %v: %v", cp.MsgUUID, err)

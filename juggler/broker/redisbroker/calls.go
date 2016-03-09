@@ -118,7 +118,7 @@ func (c *callsConn) Calls() <-chan *msg.CallPayload {
 
 func unmarshalBRPOPValue(dst interface{}, src []interface{}) error {
 	var p []byte
-	if _, err := redis.Scan(src, nil, p); err != nil {
+	if _, err := redis.Scan(src, nil, &p); err != nil {
 		return err
 	}
 	if err := json.Unmarshal(p, dst); err != nil {
