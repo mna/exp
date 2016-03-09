@@ -80,18 +80,29 @@ var connectCmd = &cmd{
 
 		conn, err := juggler.Dial(&d, addr, head, connMsgLogger(len(connections)+1))
 		if err != nil {
-			printErr("error: %v", err)
+			printErr("Dial failed: %v", err)
 			return
 		}
 		connections = append(connections, conn)
-		printf("connected to %s [%d]", addr, len(connections))
+		printf("[%d] connected to %s", len(connections), addr)
 	},
 }
 
 type connMsgLogger int
 
 func (l connMsgLogger) Handle(m msg.Msg) {
-	printf("[%d] %s %v", l, m.Type(), m.UUID())
+	var s string
+	switch m := m.(type) {
+	case *msg.Err:
+		s = fmt.Sprintf("for %s %v (%s)", m.Payload.ForType, m.Payload.For, m.Payload.Message)
+	case *msg.OK:
+		s = fmt.Sprintf("for %s %v", m.Payload.ForType, m.Payload.For)
+	case *msg.Res:
+		s = fmt.Sprintf("for %s %v", msg.CallMsg, m.Payload.For)
+	case *msg.Evnt:
+		s = fmt.Sprintf("for %s %v", msg.PubMsg, m.Payload.For)
+	}
+	printf("[%d] <<< %s message: %v %s", l, m.Type(), m.UUID(), s)
 }
 
 var disconnectCmd = &cmd{
@@ -104,7 +115,7 @@ var disconnectCmd = &cmd{
 			c.Close()
 			connections[ix] = nil
 		} else {
-			printErr("invalid connection ID")
+			printErr("invalid connection ID: %s", args[0])
 		}
 	},
 }
@@ -122,13 +133,13 @@ var closeCmd = &cmd{
 				st = args[1]
 			}
 			if err := wsc.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseGoingAway, st), time.Time{}); err != nil {
-				printErr("failed to send close message: %v", err)
+				printErr("[%d] WriteControl failed: %v", ix+1, err)
 				return
 			}
 			c.Close()
 			connections[ix] = nil
 		} else {
-			printErr("invalid connection ID")
+			printErr("invalid connection ID: %s", args[0])
 		}
 	},
 }
@@ -139,14 +150,14 @@ var sendCmd = &cmd{
 	Help:    "send raw MSG (sent as-is) to the connection identified by CONN_ID",
 
 	Run: func(cmd *cmd, args ...string) {
-		if c, _ := getConn(args[0]); c != nil {
+		if c, ix := getConn(args[0]); c != nil {
 			wsc := c.UnderlyingConn()
 			if err := wsc.WriteMessage(websocket.TextMessage, []byte(strings.Join(args[1:], " "))); err != nil {
-				printErr("WriteMessage failed: %v", err)
+				printErr("[%d] WriteMessage failed: %v", ix+1, err)
 				return
 			}
 		} else {
-			printErr("invalid connection ID")
+			printErr("invalid connection ID: %s", args[0])
 		}
 	},
 }
@@ -162,7 +173,7 @@ var callCmd = &cmd{
 			if len(args) > 2 {
 				d, err := time.ParseDuration(args[2])
 				if err != nil {
-					printErr("invalid timeout: %v", err)
+					printErr("[%d] invalid timeout: %v", ix+1, err)
 					return
 				}
 				to = d
@@ -175,12 +186,12 @@ var callCmd = &cmd{
 
 			uuid, err := c.Call(args[1], v, to)
 			if err != nil {
-				printErr("failed to send CALL message: %v", err)
+				printErr("[%d] Call failed: %v", ix+1, err)
 				return
 			}
-			printf("[%d] sent CALL message %v", ix, uuid)
+			printf("[%d] >>> CALL message: %v", ix+1, uuid)
 		} else {
-			printErr("invalid connection ID")
+			printErr("invalid connection ID: %s", args[0])
 		}
 	},
 }
@@ -199,12 +210,12 @@ var pubCmd = &cmd{
 
 			uuid, err := c.Pub(args[1], v)
 			if err != nil {
-				printErr("failed to send PUB message: %v", err)
+				printErr("[%d] Pub failed: %v", ix+1, err)
 				return
 			}
-			printf("[%d] sent PUB message %v", ix, uuid)
+			printf("[%d] >>> PUB message: %v", ix+1, uuid)
 		} else {
-			printErr("invalid connection ID")
+			printErr("invalid connection ID: %s", args[0])
 		}
 	},
 }
@@ -230,12 +241,12 @@ func getSubFunc(pattern bool) func(*cmd, ...string) {
 		if c, ix := getConn(args[0]); c != nil {
 			uuid, err := c.Sub(args[1], pattern)
 			if err != nil {
-				printErr("failed to send SUB message: %v", err)
+				printErr("[%d] Sub failed: %v", ix+1, err)
 				return
 			}
-			printf("[%d] sent SUB message %v", ix, uuid)
+			printf("[%d] >>> SUB message: %v", ix+1, uuid)
 		} else {
-			printErr("invalid connection ID")
+			printErr("invalid connection ID: %s", args[0])
 		}
 	}
 }
@@ -261,12 +272,12 @@ func getUnsbFunc(pattern bool) func(*cmd, ...string) {
 		if c, ix := getConn(args[0]); c != nil {
 			uuid, err := c.Unsb(args[1], pattern)
 			if err != nil {
-				printErr("failed to send UNSB message: %v", err)
+				printErr("[%d] Unsb failed: %v", ix+1, err)
 				return
 			}
-			printf("[%d] sent UNSB message %v", ix, uuid)
+			printf("[%d] >>> UNSB message: %v", ix+1, uuid)
 		} else {
-			printErr("invalid connection ID")
+			printErr("invalid connection ID: %s", args[0])
 		}
 	}
 }

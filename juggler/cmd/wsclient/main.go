@@ -50,7 +50,7 @@ func main() {
 			if err == io.EOF {
 				return
 			}
-			printErr("wsclient: failed to read line: %v", err)
+			printErr("failed to read line: %v", err)
 			exitCode = 1
 			return
 		}
@@ -65,7 +65,7 @@ func main() {
 				}
 				cmd.Run(cmd, args...)
 			} else {
-				printErr("unknown command %q", args[0])
+				printErr("unknown command: %q", args[0])
 			}
 		}
 	}
@@ -75,7 +75,7 @@ func setupTerminal() (*terminal.Terminal, func()) {
 	// setup terminal
 	oldState, err := terminal.MakeRaw(0)
 	if err != nil {
-		log.Fatalf("wsclient: failed to initialize the terminal: %v", err)
+		log.Fatalf("failed to initialize the terminal: %v", err)
 	}
 	cleanUp := func() { terminal.Restore(0, oldState) }
 
