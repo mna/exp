@@ -24,9 +24,23 @@ func main() {
 	if err := c.Listen(map[string]callee.Thunk{
 		"test.echo":    echoThunk,
 		"test.reverse": reverseThunk,
+		"test.sleep":   delayThunk,
 	}); err != nil {
 		log.Fatalf("Listen failed: %v", err)
 	}
+}
+
+func delayThunk(raw json.RawMessage) (interface{}, error) {
+	var i int
+	if err := json.Unmarshal(raw, &i); err != nil {
+		return nil, err
+	}
+	return delay(i), nil
+}
+
+func delay(i int) int {
+	time.Sleep(time.Duration(i) * time.Millisecond)
+	return i
 }
 
 func reverseThunk(raw json.RawMessage) (interface{}, error) {

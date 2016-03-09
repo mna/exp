@@ -111,11 +111,21 @@ func (l connMsgLogger) Handle(m msg.Msg) {
 	case *msg.OK:
 		s = fmt.Sprintf("for %s %v", m.Payload.ForType, m.Payload.For)
 	case *msg.Res:
-		s = fmt.Sprintf("for %s %v", msg.CallMsg, m.Payload.For)
+		n := len(m.Payload.Args)
+		if n > 20 {
+			n = 20
+		}
+		val := string(m.Payload.Args[:n])
+		s = fmt.Sprintf("for %s %v (%s)", msg.CallMsg, m.Payload.For, val)
 	case *msg.Exp:
 		s = fmt.Sprintf("for %s %v", msg.CallMsg, m.Payload.For)
 	case *msg.Evnt:
-		s = fmt.Sprintf("for %s %v", msg.PubMsg, m.Payload.For)
+		n := len(m.Payload.Args)
+		if n > 20 {
+			n = 20
+		}
+		val := string(m.Payload.Args[:n])
+		s = fmt.Sprintf("for %s %v (%s)", msg.PubMsg, m.Payload.For, val)
 	}
 	printf("[%d] <<< %-4s message: %v %s", l, m.Type(), m.UUID(), s)
 }
