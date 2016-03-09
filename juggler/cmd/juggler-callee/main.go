@@ -22,15 +22,22 @@ func main() {
 
 	log.Printf("listening for call requests")
 	if err := c.Listen(map[string]callee.Thunk{
-		"test.echo":    echoThunk,
-		"test.reverse": reverseThunk,
-		"test.sleep":   delayThunk,
+		"test.echo":    logWrapThunk(echoThunk),
+		"test.reverse": logWrapThunk(reverseThunk),
+		"test.sleep":   logWrapThunk(delayThunk),
 	}); err != nil {
 		log.Fatalf("Listen failed: %v", err)
 	}
 }
 
-func delayThunk(raw json.RawMessage) (interface{}, error) {
+func logWrapThunk(t callee.Thunk) callee.Thunk {
+	return func(uri string, raw json.RawMessage) (interface{}, error) {
+		log.Printf("invoking URI %s", uri)
+		return t(uri, raw)
+	}
+}
+
+func delayThunk(uri string, raw json.RawMessage) (interface{}, error) {
 	var i int
 	if err := json.Unmarshal(raw, &i); err != nil {
 		return nil, err
@@ -43,7 +50,7 @@ func delay(i int) int {
 	return i
 }
 
-func reverseThunk(raw json.RawMessage) (interface{}, error) {
+func reverseThunk(uri string, raw json.RawMessage) (interface{}, error) {
 	var s string
 	if err := json.Unmarshal(raw, &s); err != nil {
 		return nil, err
@@ -59,7 +66,7 @@ func reverse(s string) string {
 	return string(chars)
 }
 
-func echoThunk(raw json.RawMessage) (interface{}, error) {
+func echoThunk(uri string, raw json.RawMessage) (interface{}, error) {
 	var s string
 	if err := json.Unmarshal(raw, &s); err != nil {
 		return nil, err

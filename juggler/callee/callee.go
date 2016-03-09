@@ -13,7 +13,7 @@ import (
 // to a URI. Generally, they should be used to decode the arguments
 // to the type expected by the actual underlying function, and to
 // transfer the results back in the generic empty interface.
-type Thunk func(json.RawMessage) (interface{}, error)
+type Thunk func(string, json.RawMessage) (interface{}, error)
 
 // Callee is a peer that handles call requests for some URIs.
 type Callee struct {
@@ -56,7 +56,7 @@ func (c *Callee) Listen(m map[string]Thunk) error {
 		start := time.Now()
 
 		fn := m[cp.URI]
-		v, err := fn(cp.Args)
+		v, err := fn(cp.URI, cp.Args)
 
 		if remain := ttl - time.Now().Sub(start); remain > 0 {
 			// register the result
