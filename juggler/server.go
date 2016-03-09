@@ -101,6 +101,19 @@ type Server struct {
 func (srv *Server) ServeConn(conn *websocket.Conn) {
 	conn.SetReadLimit(srv.ReadLimit)
 	c := newConn(conn, srv)
+	resConn, err := srv.CallerBroker.Results(c.UUID)
+	if err != nil {
+		logf(srv.LogFunc, "failed to create results connection: %v; dropping connection", err)
+		return
+	}
+	pubSubConn, err := srv.PubSubBroker.PubSub()
+	if err != nil {
+		logf(srv.LogFunc, "failed to create pubsub connection: %v; dropping connection", err)
+		return
+	}
+	c.psc = pubSubConn
+	c.resc = resConn
+
 	if cs := srv.ConnState; cs != nil {
 		defer func() {
 			cs(c, Closing)
@@ -113,19 +126,6 @@ func (srv *Server) ServeConn(conn *websocket.Conn) {
 	}
 
 	// receive, results loop, pub/sub loop
-	resConn, err := srv.CallerBroker.Results(c.UUID)
-	if err != nil {
-		logf(srv.LogFunc, "failed to create results connection: %v; closing connection", err)
-		return
-	}
-	pubSubConn, err := srv.PubSubBroker.PubSub()
-	if err != nil {
-		logf(srv.LogFunc, "failed to create pubsub connection: %v; closing connection", err)
-		return
-	}
-	c.psc = pubSubConn
-	c.resc = resConn
-
 	go c.pubSub()
 	go c.results()
 	go c.receive()

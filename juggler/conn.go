@@ -87,7 +87,8 @@ func (c *Conn) CloseNotify() <-chan struct{} {
 }
 
 // Close closes the connection, setting err as CloseErr to identify
-// the reason of the close. It does not send a websocket close message.
+// the reason of the close. It does not send a websocket close message,
+// nor does it close the underlying websocket connection.
 // As with all Conn methods, it is safe to call concurrently, but
 // only the first call will set the CloseErr field to err.
 func (c *Conn) Close(err error) {
