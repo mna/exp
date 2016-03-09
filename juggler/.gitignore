@@ -1,3 +1,4 @@
 juggler-server
 juggler-client
-
+!cmd/juggler-server/
+!cmd/juggler-client/
