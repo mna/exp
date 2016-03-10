@@ -31,6 +31,11 @@ type Callee struct {
 // TODO : helper to spin as many Listen as required for the URIs in
 // a redis cluster setting.
 
+// TODO : listen provides one way to serve call requests - it limits
+// the caller to a single working goroutine for the redis connection
+// returned by c.Broker.Calls. The channel could instead be shared
+// among multiple goroutines.
+
 // Listen listens for call requests for the requested URIs and calls the
 // corresponding Thunk to execute the request. The m parameter has
 // URIs as keys, and the associated Thunk function as value.
