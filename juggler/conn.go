@@ -92,7 +92,7 @@ func (c *Conn) LocalAddr() net.Addr {
 	return c.wsConn.LocalAddr()
 }
 
-// RemoteAddre returns the remote network address.
+// RemoteAddr returns the remote network address.
 func (c *Conn) RemoteAddr() net.Addr {
 	return c.wsConn.RemoteAddr()
 }
