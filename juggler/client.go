@@ -186,9 +186,10 @@ func (c *Client) handleExpiredCall(m *msg.Call, timeout time.Duration) {
 	<-time.After(timeout)
 
 	// check if still waiting for a result
+	k := m.UUID().String()
 	c.mu.Lock()
-	_, ok := c.results[m.UUID().String()]
-	delete(c.results, m.UUID().String())
+	_, ok := c.results[k]
+	delete(c.results, k)
 	c.mu.Unlock()
 
 	if ok {
