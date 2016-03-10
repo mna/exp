@@ -32,6 +32,7 @@ func StartServer(t *testing.T, done chan<- bool, fn func(*websocket.Conn)) *http
 
 		fn(wsConn)
 	}))
+	srv.URL = strings.Replace(srv.URL, "http:", "ws:", 1)
 	return srv
 }
 

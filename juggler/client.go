@@ -33,7 +33,8 @@ type Client struct {
 	ResponseHeader http.Header
 
 	// CallTimeout is the time to wait for the result of a call request.
-	// The zero value uses the default timeout of the server.
+	// The zero value uses the default timeout of the server. Per-call
+	// timeouts can also be specified, see Client.Call.
 	CallTimeout time.Duration
 
 	// Handler is the message handler that is called with each message
