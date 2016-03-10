@@ -1,3 +1,4 @@
+// Package redistest provides test helpers to manage a redis server.
 package redistest
 
 import (

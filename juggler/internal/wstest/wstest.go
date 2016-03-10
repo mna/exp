@@ -1,3 +1,5 @@
+// Package wstest provides test helpers for dealing with websocket
+// servers and connections.
 package wstest
 
 import (

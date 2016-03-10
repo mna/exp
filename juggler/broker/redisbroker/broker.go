@@ -1,3 +1,4 @@
+// TODO : document package.
 package redisbroker
 
 import (

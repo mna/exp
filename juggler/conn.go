@@ -44,8 +44,6 @@ type Conn struct {
 	// has been received (i.e. after a <-conn.CloseNotify()).
 	CloseErr error
 
-	// TODO : some connection state (authenticated, etc.)?
-
 	// the underlying websocket connection.
 	wsConn *websocket.Conn
 
