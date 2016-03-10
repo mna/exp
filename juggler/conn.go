@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"sync"
 	"time"
 
@@ -84,6 +85,21 @@ func (c *Conn) UnderlyingConn() *websocket.Conn {
 // Conn is closed.
 func (c *Conn) CloseNotify() <-chan struct{} {
 	return c.kill
+}
+
+// LocalAddr returns the local network address.
+func (c *Conn) LocalAddr() net.Addr {
+	return c.wsConn.LocalAddr()
+}
+
+// RemoteAddre returns the remote network address.
+func (c *Conn) RemoteAddr() net.Addr {
+	return c.wsConn.RemoteAddr()
+}
+
+// Subprotocol returns the negotiated protocol for the connection.
+func (c *Conn) Subprotocol() string {
+	return c.wsConn.Subprotocol()
 }
 
 // Close closes the connection, setting err as CloseErr to identify
