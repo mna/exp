@@ -10,6 +10,8 @@ import (
 	"github.com/pborman/uuid"
 )
 
+var dbgClientClosed func(*Client)
+
 // MsgHandler defines the method required to handle a message received
 // from the server.
 type MsgHandler interface {
@@ -71,7 +73,13 @@ func NewClient(conn *websocket.Conn, resHeader http.Header, h MsgHandler) *Clien
 }
 
 func (c *Client) handleMessages() {
-	defer c.wg.Done()
+	defer func() {
+		c.wg.Done()
+		if dbgClientClosed != nil {
+			dbgClientClosed(c)
+		}
+	}()
+
 	for {
 		_, r, err := c.conn.NextReader()
 		if err != nil {

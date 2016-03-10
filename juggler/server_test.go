@@ -87,20 +87,28 @@ func TestUpgrade(t *testing.T) {
 	defer srv.Close()
 
 	h := MsgHandlerFunc(func(m msg.Msg) {})
+	closed := make(chan bool)
+	dbgClientClosed = func(c *Client) { closed <- true }
+	defer func() { dbgClientClosed = nil }()
 
 	// valid subprotocol - no protocol will be set to juggler automatically
 	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, h)
 	require.NoError(t, err, "Dial 1")
-
-	_, err = cli.Sub("a", false)
-	assert.NoError(t, err, "Write to the connection works")
 	cli.Close()
+	select {
+	case <-closed:
+	case <-time.After(100 * time.Millisecond):
+		assert.Fail(t, "no close signal received for Dial 1")
+	}
 
 	// invalid subprotocol, websocket connection will be closed
 	cli, err = Dial(&websocket.Dialer{}, srv.URL, http.Header{"Sec-WebSocket-Protocol": {"test"}}, h)
 	require.NoError(t, err, "Dial 2")
-
-	_, err = cli.Sub("a", false)
-	assert.Error(t, err, "Write to the closed connection fails")
+	// no need to call Close, Upgrade will refuse the connection
+	select {
+	case <-closed:
+	case <-time.After(100 * time.Millisecond):
+		assert.Fail(t, "no close signal received for Dial 2")
+	}
 	cli.Close()
 }
