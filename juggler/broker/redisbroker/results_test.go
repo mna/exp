@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCalls(t *testing.T) {
+func TestResults(t *testing.T) {
 	cmd, port := redistest.StartServer(t, nil)
 	defer cmd.Process.Kill()
 
@@ -24,18 +24,19 @@ func TestCalls(t *testing.T) {
 		LogFunc:         logIfVerbose,
 	}
 
-	// list calls on URI "a"
-	cc, err := brk.Calls("a")
-	require.NoError(t, err, "get Calls connection")
+	// list results on this conn UUID
+	connUUID := uuid.NewRandom()
+	rc, err := brk.Results(connUUID)
+	require.NoError(t, err, "get Results connection")
 
-	// keep track of received calls
+	// keep track of received results
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	var uuids []uuid.UUID
 	go func() {
 		defer wg.Done()
-		for cp := range cc.Calls() {
-			uuids = append(uuids, cp.MsgUUID)
+		for rp := range rc.Results() {
+			uuids = append(uuids, rp.MsgUUID)
 		}
 	}()
 
@@ -43,27 +44,27 @@ func TestCalls(t *testing.T) {
 	time.Sleep(1100 * time.Millisecond)
 
 	cases := []struct {
-		cp      *msg.CallPayload
+		rp      *msg.ResPayload
 		timeout time.Duration
 		exp     bool
 	}{
-		{&msg.CallPayload{ConnUUID: uuid.NewRandom(), MsgUUID: uuid.NewRandom(), URI: "a"}, time.Second, true},
-		{&msg.CallPayload{ConnUUID: uuid.NewRandom(), MsgUUID: uuid.NewRandom(), URI: "b"}, time.Second, false},
-		{&msg.CallPayload{ConnUUID: uuid.NewRandom(), MsgUUID: uuid.NewRandom(), URI: "a"}, time.Minute, true},
+		{&msg.ResPayload{ConnUUID: connUUID, MsgUUID: uuid.NewRandom(), URI: "a"}, time.Second, true},
+		{&msg.ResPayload{ConnUUID: uuid.NewRandom(), MsgUUID: uuid.NewRandom(), URI: "b"}, time.Second, false},
+		{&msg.ResPayload{ConnUUID: connUUID, MsgUUID: uuid.NewRandom(), URI: "c"}, 0, true},
 	}
 	var expected []uuid.UUID
 	for i, c := range cases {
 		if c.exp {
-			expected = append(expected, c.cp.MsgUUID)
+			expected = append(expected, c.rp.MsgUUID)
 		}
-		require.NoError(t, brk.Call(c.cp, c.timeout), "Call %d", i)
+		require.NoError(t, brk.Result(c.rp, c.timeout), "Result %d", i)
 	}
 
 	time.Sleep(10 * time.Millisecond) // ensure time to pop the last message :(
-	require.NoError(t, cc.Close(), "close calls connection")
+	require.NoError(t, rc.Close(), "close results connection")
 	wg.Wait()
-	if assert.Error(t, cc.CallsErr(), "CallsErr returns the error") {
-		assert.Contains(t, cc.CallsErr().Error(), "use of closed network connection", "CallsErr is the expected error")
+	if assert.Error(t, rc.ResultsErr(), "ResultsErr returns the error") {
+		assert.Contains(t, rc.ResultsErr().Error(), "use of closed network connection", "ResultsErr is the expected error")
 	}
 	assert.Equal(t, expected, uuids, "got expected UUIDs")
 }
