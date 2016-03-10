@@ -2,13 +2,19 @@ package juggler
 
 import (
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/PuerkitoBio/exp/juggler/broker/redisbroker"
 	"github.com/PuerkitoBio/exp/juggler/internal/redistest"
 	"github.com/PuerkitoBio/exp/juggler/internal/wstest"
+	"github.com/PuerkitoBio/exp/juggler/msg"
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestServerServe(t *testing.T) {
@@ -60,4 +66,41 @@ func TestServerServe(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 		assert.Fail(t, "no closing state received")
 	}
+}
+
+func TestUpgrade(t *testing.T) {
+	cmd, port := redistest.StartServer(t, nil)
+	defer cmd.Process.Kill()
+
+	dbgl := &debugLog{t: t}
+	pool := redistest.NewPool(t, ":"+port)
+	broker := &redisbroker.Broker{
+		Pool:    pool,
+		Dial:    pool.Dial,
+		LogFunc: dbgl.Printf,
+	}
+
+	server := &Server{CallerBroker: broker, PubSubBroker: broker, LogFunc: dbgl.Printf}
+	upg := &websocket.Upgrader{Subprotocols: Subprotocols}
+	srv := httptest.NewServer(Upgrade(upg, server))
+	srv.URL = strings.Replace(srv.URL, "http:", "ws:", 1)
+	defer srv.Close()
+
+	h := MsgHandlerFunc(func(m msg.Msg) {})
+
+	// valid subprotocol - no protocol will be set to juggler automatically
+	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, h)
+	require.NoError(t, err, "Dial 1")
+
+	_, err = cli.Sub("a", false)
+	assert.NoError(t, err, "Write to the connection works")
+	cli.Close()
+
+	// invalid subprotocol, websocket connection will be closed
+	cli, err = Dial(&websocket.Dialer{}, srv.URL, http.Header{"Sec-WebSocket-Protocol": {"test"}}, h)
+	require.NoError(t, err, "Dial 2")
+
+	_, err = cli.Sub("a", false)
+	assert.Error(t, err, "Write to the closed connection fails")
+	cli.Close()
 }

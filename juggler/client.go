@@ -127,7 +127,16 @@ func (c *Client) handleMessages() {
 // error. It does not allow handling redirections and such, for a better
 // control over the connection, directly use the *websocket.Dialer and
 // create the client once the connection is established, using NewClient.
+//
+// If the request header doesn't have a Sec-WebSocket-Protocol header,
+// it is set to the last entry of juggler.Subprotocols.
 func Dial(d *websocket.Dialer, urlStr string, reqHeader http.Header, h MsgHandler) (*Client, error) {
+	if reqHeader == nil {
+		reqHeader = http.Header{}
+	}
+	if v := reqHeader["Sec-WebSocket-Protocol"]; (len(v) == 0 || v[0] == "") && len(Subprotocols) > 0 {
+		reqHeader["Sec-WebSocket-Protocol"] = []string{Subprotocols[len(Subprotocols)-1]}
+	}
 	conn, res, err := d.Dial(urlStr, reqHeader)
 	if err != nil {
 		return nil, err
