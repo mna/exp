@@ -40,6 +40,10 @@ func TestClient(t *testing.T) {
 		mu.Unlock()
 	})
 
+	closed := make(chan bool)
+	dbgClientClosed = func(c *Client) { closed <- true }
+	defer func() { dbgClientClosed = nil }()
+
 	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, h)
 	require.NoError(t, err, "Dial")
 	cli.CallTimeout = time.Millisecond
@@ -73,6 +77,7 @@ func TestClient(t *testing.T) {
 
 	cli.Close()
 	<-done
+	<-closed
 
 	mu.Lock()
 	defer mu.Unlock()
