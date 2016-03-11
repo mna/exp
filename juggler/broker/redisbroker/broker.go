@@ -70,6 +70,8 @@ const (
 		end
 		return res
 	`
+
+	// TODO : make that public const or var on broker package?
 	defaultCallOrResTimeout = time.Minute
 
 	// redis cluster-compliant keys, so that both keys are in the same slot

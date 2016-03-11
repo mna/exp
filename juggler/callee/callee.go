@@ -43,7 +43,7 @@ type Callee struct {
 // See the redis cluster documentation for details:
 // http://redis.io/topics/cluster-tutorial
 func SplitByHashSlot(uris []string) [][]string {
-	// TODO : implement
+	// TODO : implement when redis-cluster package is ready
 	return nil
 }
 
