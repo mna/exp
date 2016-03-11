@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -71,15 +70,15 @@ func TestMarshalUnmarshal(t *testing.T) {
 	assert.Contains(t, err.Error(), "unknown message EXP", "Unmarshal for EXP returns expected error")
 }
 
-func TestUnmarshalOK(t *testing.T) {
-	raw := `{"meta":{"type":8,"uuid":"845ca2a4-7d1e-44eb-b1b1-304bb222a2bf"},"payload":{"for":"9dc9b548-3a7b-40d0-82b0-ccf7e9828e78","for_type":1}}`
-	m, err := Unmarshal(strings.NewReader(raw))
-	assert.NoError(t, err, "Unmarshal")
-	if assert.IsType(t, &OK{}, m, "Is *OK") {
-		ok := m.(*OK)
-		assert.Equal(t, OKMsg, ok.Type(), "Type")
-		assert.Equal(t, "845ca2a4-7d1e-44eb-b1b1-304bb222a2bf", ok.UUID().String(), "UUID")
-		assert.Equal(t, "9dc9b548-3a7b-40d0-82b0-ccf7e9828e78", ok.Payload.For.String(), "For")
-		assert.Equal(t, CallMsg, ok.Payload.ForType, "ForType")
-	}
+func TestNewErrFromOK(t *testing.T) {
+	pub, err := NewPub("d", map[string]interface{}{"y": "ok"})
+	require.NoError(t, err, "NewPub")
+	ok := NewOK(pub)
+	e := NewErr(ok, 500, io.EOF)
+
+	// should keep the "from" information of OK
+	assert.Equal(t, e.Payload.For, ok.Payload.For, "For")
+	assert.Equal(t, e.Payload.ForType, ok.Payload.ForType, "ForType")
+	assert.Equal(t, e.Payload.URI, ok.Payload.URI, "URI")
+	assert.Equal(t, e.Payload.Channel, ok.Payload.Channel, "Channel")
 }
