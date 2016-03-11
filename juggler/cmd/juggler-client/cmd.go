@@ -163,9 +163,6 @@ var closeCmd = &cmd{
 				printErr("[%d] WriteControl failed: %v", ix+1, err)
 				return
 			}
-
-			c.Close()
-			connections[ix] = nil
 		} else {
 			printErr("invalid connection ID: %s", args[0])
 		}
