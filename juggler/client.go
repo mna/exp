@@ -18,6 +18,8 @@ type MsgHandler interface {
 	Handle(msg.Msg)
 }
 
+// TODO : harmonize MsgHandler with (server) Handler? Or rename ClientHandler?
+
 // MsgHandlerFunc is a function that implements the MsgHandler interface.
 type MsgHandlerFunc func(msg.Msg)
 
