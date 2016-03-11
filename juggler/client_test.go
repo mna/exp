@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/PuerkitoBio/exp/juggler/internal/wstest"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
@@ -22,9 +24,8 @@ func TestClientClose(t *testing.T) {
 	srv := wstest.StartRecordingServer(t, done, ioutil.Discard)
 	defer srv.Close()
 
-	h := MsgHandlerFunc(func(m msg.Msg) {})
-	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, h)
-	cli.LogFunc = (&debugLog{t: t}).Printf
+	h := ClientHandlerFunc(func(ctx context.Context, cli *Client, m msg.Msg) {})
+	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetHandler(h), SetLogFunc((&debugLog{t: t}).Printf))
 	require.NoError(t, err, "Dial")
 
 	_, err = cli.Call("a", "b", 0)
@@ -52,7 +53,7 @@ func TestClient(t *testing.T) {
 		expForUUID uuid.UUID
 		wg         sync.WaitGroup
 	)
-	h := MsgHandlerFunc(func(m msg.Msg) {
+	h := ClientHandlerFunc(func(ctx context.Context, cli *Client, m msg.Msg) {
 		defer wg.Done()
 
 		mu.Lock()
@@ -63,10 +64,8 @@ func TestClient(t *testing.T) {
 		mu.Unlock()
 	})
 
-	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, h)
+	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetHandler(h), SetCallTimeout(time.Millisecond), SetLogFunc((&debugLog{t: t}).Printf))
 	require.NoError(t, err, "Dial")
-	cli.CallTimeout = time.Millisecond
-	cli.LogFunc = (&debugLog{t: t}).Printf
 
 	// call
 	wg.Add(1)

@@ -5,51 +5,72 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
 	"github.com/pborman/uuid"
 )
 
-// MsgHandler defines the method required to handle a message received
+// ClientHandler defines the method required to handle a message received
 // from the server.
-type MsgHandler interface {
-	Handle(msg.Msg)
+type ClientHandler interface {
+	Handle(context.Context, *Client, msg.Msg)
 }
 
-// TODO : harmonize MsgHandler with (server) Handler? Or rename ClientHandler?
+// ClientHandlerFunc is a function that implements the ClientHandler interface.
+type ClientHandlerFunc func(context.Context, *Client, msg.Msg)
 
-// MsgHandlerFunc is a function that implements the MsgHandler interface.
-type MsgHandlerFunc func(msg.Msg)
+// Handle implements ClientHandler for a ClientHandlerFunc. It calls fn
+// with the parameters.
+func (fn ClientHandlerFunc) Handle(ctx context.Context, cli *Client, m msg.Msg) {
+	fn(ctx, cli, m)
+}
 
-// Handle implements MsgHandler for a MsgHandlerFunc. It calls fn with m.
-func (fn MsgHandlerFunc) Handle(m msg.Msg) {
-	fn(m)
+// ClientOption sets an option on the Client.
+type ClientOption func(*Client)
+
+// SetCallTimeout sets the time to wait for the result of a call request.
+// The zero value uses the default timeout of the server. Per-call
+// timeouts can also be specified, see Client.Call.
+func SetCallTimeout(timeout time.Duration) ClientOption {
+	return func(c *Client) {
+		c.callTimeout = timeout
+	}
+}
+
+// SetHandler sets the client handler that is called with each message
+// received from the server. Each invocation runs in its own
+// goroutine, so proper synchronization must be used when accessing
+// shared data.
+func SetHandler(h ClientHandler) ClientOption {
+	return func(c *Client) {
+		c.handler = h
+	}
+}
+
+// SetLogFunc sets the function used to log errors that occur outside
+// the handler calls, such as when a message fails to be unmarshaled.
+// If nil, it logs using log.Printf. It can be set to juggler.DiscardLog
+// to disable logging.
+func SetLogFunc(fn func(string, ...interface{})) ClientOption {
+	return func(c *Client) {
+		c.logFunc = fn
+	}
 }
 
 // Client is a juggler client based on a websocket connection. It can
 // be used to send and receive messages to and from a juggler server.
-// It is not safe to call Client methods concurrently.
+// It is not safe to call Client methods concurrently. Exported fields
+// should be treated as read-only.
 type Client struct {
 	// ResponseHeader is the map of HTTP response headers returned
 	// from the initial websocket handshake.
 	ResponseHeader http.Header
 
-	// CallTimeout is the time to wait for the result of a call request.
-	// The zero value uses the default timeout of the server. Per-call
-	// timeouts can also be specified, see Client.Call.
-	CallTimeout time.Duration
-
-	// Handler is the message handler that is called with each message
-	// received from the server. Each invocation runs in its own
-	// goroutine, so proper synchronization must be used when accessing
-	// shared data.
-	Handler MsgHandler
-
-	// LogFunc is used to log errors that occur outside the handler calls,
-	// such as when a message fails to be unmarshaled. If nil, it logs
-	// using log.Printf. It can be set to juggler.DiscardLog to disable
-	// logging.
-	LogFunc func(string, ...interface{})
+	callTimeout time.Duration
+	handler     ClientHandler
+	logFunc     func(string, ...interface{})
 
 	wg      sync.WaitGroup // wait for handleMessages goroutine
 	stop    chan struct{}  // stop signal for expiration goroutines
@@ -60,22 +81,21 @@ type Client struct {
 
 // NewClient creates a juggler client using the provided websocket
 // connection and response header. Received messages are sent to
-// the MsgHandler h.
-func NewClient(conn *websocket.Conn, resHeader http.Header, h MsgHandler) *Client {
+// the handler set by the Handler option.
+func NewClient(conn *websocket.Conn, resHeader http.Header, opts ...ClientOption) *Client {
 	c := &Client{
 		ResponseHeader: resHeader,
-		Handler:        h,
 		conn:           conn,
 		stop:           make(chan struct{}),
 		results:        make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(c)
 	}
 	c.wg.Add(1)
 	go c.handleMessages()
 	return c
 }
-
-// TODO : use Client.Start to start handleMessages goro, otherwise any
-// setting of field on Client will be racy.
 
 func (c *Client) handleMessages() {
 	defer func() {
@@ -86,13 +106,13 @@ func (c *Client) handleMessages() {
 	for {
 		_, r, err := c.conn.NextReader()
 		if err != nil {
-			logf(c.LogFunc, "client: NextReader failed: %v; stopping read loop", err)
+			logf(c.logFunc, "client: NextReader failed: %v; stopping read loop", err)
 			return
 		}
 
 		m, err := msg.UnmarshalResponse(r)
 		if err != nil {
-			logf(c.LogFunc, "client: UnmarshalResponse failed: %v; skipping message", err)
+			logf(c.logFunc, "client: UnmarshalResponse failed: %v; skipping message", err)
 			continue
 		}
 
@@ -128,7 +148,7 @@ func (c *Client) handleMessages() {
 			}
 		}
 
-		go c.Handler.Handle(m)
+		go c.handler.Handle(context.Background(), c, m)
 	}
 }
 
@@ -141,7 +161,7 @@ func (c *Client) handleMessages() {
 //
 // If the request header doesn't have a Sec-WebSocket-Protocol header,
 // it is set to the last entry of juggler.Subprotocols.
-func Dial(d *websocket.Dialer, urlStr string, reqHeader http.Header, h MsgHandler) (*Client, error) {
+func Dial(d *websocket.Dialer, urlStr string, reqHeader http.Header, opts ...ClientOption) (*Client, error) {
 	if reqHeader == nil {
 		reqHeader = http.Header{}
 	}
@@ -152,7 +172,7 @@ func Dial(d *websocket.Dialer, urlStr string, reqHeader http.Header, h MsgHandle
 	if err != nil {
 		return nil, err
 	}
-	return NewClient(conn, res.Header, h), nil
+	return NewClient(conn, res.Header, opts...), nil
 }
 
 // Close closes the connection. No more messages will be received.
@@ -179,7 +199,7 @@ func (c *Client) UnderlyingConn() *websocket.Conn {
 // the call request could not be sent to the server.
 func (c *Client) Call(uri string, v interface{}, timeout time.Duration) (uuid.UUID, error) {
 	if timeout == 0 {
-		timeout = c.CallTimeout
+		timeout = c.callTimeout
 	}
 	m, err := msg.NewCall(uri, v, timeout)
 	if err != nil {
@@ -220,7 +240,7 @@ func (c *Client) handleExpiredCall(m *msg.Call, timeout time.Duration) {
 	if ok {
 		// if so, send an Exp message
 		exp := msg.NewExp(m)
-		go c.Handler.Handle(exp)
+		go c.handler.Handle(context.Background(), c, exp)
 	}
 }
 

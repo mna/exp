@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/PuerkitoBio/exp/juggler/broker/redisbroker"
 	"github.com/PuerkitoBio/exp/juggler/internal/redistest"
 	"github.com/PuerkitoBio/exp/juggler/internal/wstest"
@@ -86,12 +88,11 @@ func TestUpgrade(t *testing.T) {
 	srv.URL = strings.Replace(srv.URL, "http:", "ws:", 1)
 	defer srv.Close()
 
-	h := MsgHandlerFunc(func(m msg.Msg) {})
+	h := ClientHandlerFunc(func(ctx context.Context, cli *Client, m msg.Msg) {})
 
 	// valid subprotocol - no protocol will be set to juggler automatically
-	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, h)
+	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetHandler(h), SetLogFunc(dbgl.Printf))
 	require.NoError(t, err, "Dial 1")
-	cli.LogFunc = dbgl.Printf
 	cli.Close()
 	select {
 	case <-cli.stop:
@@ -100,9 +101,8 @@ func TestUpgrade(t *testing.T) {
 	}
 
 	// invalid subprotocol, websocket connection will be closed
-	cli, err = Dial(&websocket.Dialer{}, srv.URL, http.Header{"Sec-WebSocket-Protocol": {"test"}}, h)
+	cli, err = Dial(&websocket.Dialer{}, srv.URL, http.Header{"Sec-WebSocket-Protocol": {"test"}}, SetHandler(h), SetLogFunc(dbgl.Printf))
 	require.NoError(t, err, "Dial 2")
-	cli.LogFunc = dbgl.Printf
 	// no need to call Close, Upgrade will refuse the connection
 	select {
 	case <-cli.stop:
