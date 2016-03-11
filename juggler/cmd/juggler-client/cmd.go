@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/PuerkitoBio/exp/juggler"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
@@ -88,12 +90,13 @@ var connectCmd = &cmd{
 			head.Set("Sec-WebSocket-Protocol", args[1])
 		}
 
-		conn, err := juggler.Dial(&d, addr, head, connMsgLogger(len(connections)+1))
+		conn, err := juggler.Dial(&d, addr, head,
+			juggler.SetHandler(connMsgLogger(len(connections)+1)),
+			juggler.SetLogFunc(printErr))
 		if err != nil {
 			printErr("Dial failed: %v", err)
 			return
 		}
-		conn.LogFunc = printErr
 
 		connections = append(connections, conn)
 		printf("[%d] connected to %s", len(connections), addr)
@@ -102,7 +105,7 @@ var connectCmd = &cmd{
 
 type connMsgLogger int
 
-func (l connMsgLogger) Handle(m msg.Msg) {
+func (l connMsgLogger) Handle(ctx context.Context, cli *juggler.Client, m msg.Msg) {
 	var s string
 	switch m := m.(type) {
 	case *msg.Err:
