@@ -10,6 +10,13 @@ import (
 	"github.com/pborman/uuid"
 )
 
+// DefaultCallTimeout is the default timeout to use for a call
+// request to expire. If no result is available before this delay,
+// no result will ever be sent. Callers can set a message-specific
+// timeout, this value is only used if no timeout was specified
+// on the message.
+var DefaultCallTimeout = time.Minute
+
 // CallerBroker defines the methods for a broker in the caller role.
 type CallerBroker interface {
 	// Results returns a ResultsConn that can be used to process results

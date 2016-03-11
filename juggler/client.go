@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/PuerkitoBio/exp/juggler/broker"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
 	"github.com/pborman/uuid"
@@ -222,7 +223,7 @@ func (c *Client) Call(uri string, v interface{}, timeout time.Duration) (uuid.UU
 func (c *Client) handleExpiredCall(m *msg.Call, timeout time.Duration) {
 	// wait for the timeout
 	if timeout <= 0 {
-		timeout = time.Minute // TODO : make that available as const somewhere?
+		timeout = broker.DefaultCallTimeout
 	}
 	select {
 	case <-c.stop:

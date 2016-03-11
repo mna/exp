@@ -71,9 +71,6 @@ const (
 		return res
 	`
 
-	// TODO : make that public const or var on broker package?
-	defaultCallOrResTimeout = time.Minute
-
 	// redis cluster-compliant keys, so that both keys are in the same slot
 	callKey        = "juggler:calls:{%s}"            // 1: URI
 	callTimeoutKey = "juggler:calls:timeout:{%s}:%s" // 1: URI, 2: mUUID
@@ -108,7 +105,7 @@ func registerCallOrRes(pool Pool, pld interface{}, timeout time.Duration, cap in
 
 	to := int(timeout / time.Millisecond)
 	if to == 0 {
-		to = int(defaultCallOrResTimeout / time.Millisecond)
+		to = int(broker.DefaultCallTimeout / time.Millisecond)
 	}
 
 	_, err = rc.Do("EVAL",
