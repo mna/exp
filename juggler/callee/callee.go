@@ -4,12 +4,19 @@ package callee
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"time"
 
 	"github.com/PuerkitoBio/exp/juggler/broker"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 )
+
+// ErrCallExpired is returned when a call is processed but the
+// call timeout is exceeded, meaning that the client is no longer
+// expecting the result. The result is dropped and this error is
+// returned from InvokeAndStoreResult.
+var ErrCallExpired = errors.New("call expired")
 
 // Thunk is the function signature for functions that handle calls
 // to a URI. Generally, they should be used to decode the arguments
@@ -28,17 +35,49 @@ type Callee struct {
 	LogFunc func(string, ...interface{})
 }
 
-// TODO : helper to spin as many Listen as required for the URIs in
-// a redis cluster setting.
+// SplitByHashSlot takes a list of URIs and splits them into groups
+// of URIs belonging to the same redis cluster hash slot. URIs in
+// the same hash slot can be listened to using the same broker.CallsConn,
+// optimizing the number of redis connections.
+//
+// See the redis cluster documentation for details:
+// http://redis.io/topics/cluster-tutorial
+func SplitByHashSlot(uris []string) [][]string {
+	// TODO : implement
+	return nil
+}
 
-// TODO : listen provides one way to serve call requests - it limits
-// the caller to a single working goroutine for the redis connection
-// returned by c.Broker.Calls. The channel could instead be shared
-// among multiple goroutines.
+// InvokeAndStoreResult processes the provided call payload by calling
+// fn with the payload's arguments, and storing the result so that
+// it can be sent back to the caller. If the call timeout is exceeded,
+// the result is dropped and ErrCallExpired is returned.
+func (c *Callee) InvokeAndStoreResult(cp *msg.CallPayload, fn Thunk) error {
+	ttl := cp.TTLAfterRead
+	start := time.Now()
 
-// Listen listens for call requests for the requested URIs and calls the
-// corresponding Thunk to execute the request. The m parameter has
-// URIs as keys, and the associated Thunk function as value.
+	v, err := fn(cp)
+	if remain := ttl - time.Now().Sub(start); remain > 0 {
+		// register the result
+		if err := c.storeResult(cp, v, err, remain); err != nil {
+			return err
+		}
+	}
+	return ErrCallExpired
+}
+
+// Listen is a helper method that listens for call requests for the
+// requested URIs and calls the corresponding Thunk to execute the
+// request. The m map has URIs as keys, and the associated Thunk
+// function as value. If a redis cluster is used, all URIs in m
+// must belong to the same hash slot (see SplitByHashSlot).
+//
+// The method implements a single-producer, single-consumer helper,
+// where a single redis connection is used to listen for call requests
+// on the URIs, and for each request, a single goroutine executes
+// the calls and stores the results. More powerful concurrency
+// patterns can be implemented using Callee.Broker.Calls directly,
+// and starting multiple consumer goroutines reading from the same calls
+// channel and calling InvokeAndStoreResult to process each call request.
 //
 // The function blocks until the call request loop exits. It returns
 // the error that caused the loop to stop, or the error to initiate
@@ -59,20 +98,12 @@ func (c *Callee) Listen(m map[string]Thunk) error {
 	defer conn.Close()
 
 	for cp := range conn.Calls() {
-		ttl := cp.TTLAfterRead
-		start := time.Now()
-
-		fn := m[cp.URI]
-		v, err := fn(cp)
-
-		if remain := ttl - time.Now().Sub(start); remain > 0 {
-			// register the result
-			if err := c.storeResult(cp, v, err, remain); err != nil {
-				logf(c.LogFunc, "storeResult failed for message %v: %v", cp.MsgUUID, err)
+		if err := c.InvokeAndStoreResult(cp, m[cp.URI]); err != nil {
+			if err == ErrCallExpired {
+				logf(c.LogFunc, "dropping expired message %v", cp.MsgUUID)
 				continue
 			}
-		} else {
-			logf(c.LogFunc, "dropping expired message %v", cp.MsgUUID)
+			logf(c.LogFunc, "storeResult failed for message %v: %v", cp.MsgUUID, err)
 			continue
 		}
 	}
