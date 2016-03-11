@@ -10,8 +10,6 @@ import (
 	"github.com/pborman/uuid"
 )
 
-var dbgClientClosed func(*Client)
-
 // MsgHandler defines the method required to handle a message received
 // from the server.
 type MsgHandler interface {
@@ -53,9 +51,10 @@ type Client struct {
 	// logging.
 	LogFunc func(string, ...interface{})
 
-	wg      sync.WaitGroup
+	wg      sync.WaitGroup // wait for handleMessages goroutine
+	stop    chan struct{}  // stop signal for expiration goroutines
 	conn    *websocket.Conn
-	mu      sync.Mutex
+	mu      sync.Mutex // lock access to results map
 	results map[string]struct{}
 }
 
@@ -67,6 +66,7 @@ func NewClient(conn *websocket.Conn, resHeader http.Header, h MsgHandler) *Clien
 		ResponseHeader: resHeader,
 		Handler:        h,
 		conn:           conn,
+		stop:           make(chan struct{}),
 		results:        make(map[string]struct{}),
 	}
 	c.wg.Add(1)
@@ -74,12 +74,13 @@ func NewClient(conn *websocket.Conn, resHeader http.Header, h MsgHandler) *Clien
 	return c
 }
 
+// TODO : use Client.Start to start handleMessages goro, otherwise any
+// setting of field on Client will be racy.
+
 func (c *Client) handleMessages() {
 	defer func() {
+		close(c.stop)
 		c.wg.Done()
-		if dbgClientClosed != nil {
-			dbgClientClosed(c)
-		}
 	}()
 
 	for {
@@ -154,7 +155,7 @@ func Dial(d *websocket.Dialer, urlStr string, reqHeader http.Header, h MsgHandle
 	return NewClient(conn, res.Header, h), nil
 }
 
-// Close closes the connection.
+// Close closes the connection. No more messages will be received.
 func (c *Client) Close() error {
 	err := c.conn.Close()
 	c.wg.Wait()
@@ -203,7 +204,11 @@ func (c *Client) handleExpiredCall(m *msg.Call, timeout time.Duration) {
 	if timeout <= 0 {
 		timeout = time.Minute // TODO : make that available as const somewhere?
 	}
-	<-time.After(timeout)
+	select {
+	case <-c.stop:
+		return
+	case <-time.After(timeout):
+	}
 
 	// check if still waiting for a result
 	k := m.UUID().String()

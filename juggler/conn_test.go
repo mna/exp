@@ -82,7 +82,7 @@ func TestExclusiveWriter(t *testing.T) {
 }
 
 func TestConnClose(t *testing.T) {
-	srv := &Server{}
+	srv := &Server{LogFunc: (&debugLog{t: t}).Printf}
 	conn := newConn(&websocket.Conn{}, srv)
 	conn.psc, conn.resc = fakePubSubConn{}, fakeResultsConn{}
 

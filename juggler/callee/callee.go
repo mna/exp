@@ -1,5 +1,4 @@
 // TODO : document package.
-// TODO : test package.
 package callee
 
 import (

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"sync"
 	"testing"
 	"time"
@@ -15,6 +16,28 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestClientClose(t *testing.T) {
+	done := make(chan bool, 1)
+	srv := wstest.StartRecordingServer(t, done, ioutil.Discard)
+	defer srv.Close()
+
+	h := MsgHandlerFunc(func(m msg.Msg) {})
+	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, h)
+	cli.LogFunc = (&debugLog{t: t}).Printf
+	require.NoError(t, err, "Dial")
+
+	_, err = cli.Call("a", "b", 0)
+	require.NoError(t, err, "Call")
+	require.NoError(t, cli.Close(), "Close")
+	if err := cli.Close(); assert.Error(t, err, "Close") {
+		assert.Contains(t, err.Error(), "use of closed network connection", "2nd Close")
+
+		if _, err := cli.Call("c", "d", 0); assert.Error(t, err, "Call after Close") {
+			assert.Contains(t, err.Error(), "use of closed network connection", "2nd Close")
+		}
+	}
+}
 
 func TestClient(t *testing.T) {
 	var buf bytes.Buffer
@@ -39,10 +62,6 @@ func TestClient(t *testing.T) {
 		}
 		mu.Unlock()
 	})
-
-	closed := make(chan bool)
-	dbgClientClosed = func(c *Client) { closed <- true }
-	defer func() { dbgClientClosed = nil }()
 
 	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, h)
 	require.NoError(t, err, "Dial")
@@ -77,7 +96,7 @@ func TestClient(t *testing.T) {
 
 	cli.Close()
 	<-done
-	<-closed
+	<-cli.stop
 
 	mu.Lock()
 	defer mu.Unlock()
