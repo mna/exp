@@ -11,6 +11,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/PuerkitoBio/exp/juggler/internal/jugglertest"
 	"github.com/PuerkitoBio/exp/juggler/internal/wstest"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
@@ -25,7 +26,7 @@ func TestClientClose(t *testing.T) {
 	defer srv.Close()
 
 	h := ClientHandlerFunc(func(ctx context.Context, cli *Client, m msg.Msg) {})
-	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetHandler(h), SetLogFunc((&debugLog{t: t}).Printf))
+	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetHandler(h), SetLogFunc((&jugglertest.DebugLog{T: t}).Printf))
 	require.NoError(t, err, "Dial")
 
 	_, err = cli.Call("a", "b", 0)
@@ -64,7 +65,9 @@ func TestClient(t *testing.T) {
 		mu.Unlock()
 	})
 
-	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetHandler(h), SetCallTimeout(time.Millisecond), SetLogFunc((&debugLog{t: t}).Printf))
+	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetHandler(h),
+		SetCallTimeout(time.Millisecond),
+		SetLogFunc((&jugglertest.DebugLog{T: t}).Printf))
 	require.NoError(t, err, "Dial")
 
 	// call

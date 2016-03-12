@@ -3,11 +3,10 @@ package juggler
 import (
 	"errors"
 	"io/ioutil"
-	"log"
-	"sync/atomic"
 	"testing"
 	"testing/quick"
 
+	"github.com/PuerkitoBio/exp/juggler/internal/jugglertest"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -46,22 +45,6 @@ func (f fakeResultsConn) Results() <-chan *msg.ResPayload { return nil }
 func (f fakeResultsConn) ResultsErr() error               { return nil }
 func (f fakeResultsConn) Close() error                    { return nil }
 
-type debugLog struct {
-	t *testing.T
-	n int64
-}
-
-func (d *debugLog) Printf(s string, args ...interface{}) {
-	atomic.AddInt64(&d.n, 1)
-	if testing.Verbose() {
-		log.Printf(s, args...)
-	}
-}
-
-func (d *debugLog) Calls() int {
-	return int(atomic.LoadInt64(&d.n))
-}
-
 func TestPanicRecover(t *testing.T) {
 	t.Parallel()
 
@@ -74,7 +57,7 @@ func TestPanicRecover(t *testing.T) {
 	})
 	ph := PanicRecover(panicer, true, true)
 
-	dbgl := &debugLog{t: t}
+	dbgl := &jugglertest.DebugLog{T: t}
 	srv := &Server{LogFunc: dbgl.Printf}
 	conn := newConn(&websocket.Conn{}, srv)
 	conn.psc, conn.resc = fakePubSubConn{}, fakeResultsConn{}

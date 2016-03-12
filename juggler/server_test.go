@@ -11,6 +11,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/PuerkitoBio/exp/juggler/broker/redisbroker"
+	"github.com/PuerkitoBio/exp/juggler/internal/jugglertest"
 	"github.com/PuerkitoBio/exp/juggler/internal/redistest"
 	"github.com/PuerkitoBio/exp/juggler/internal/wstest"
 	"github.com/PuerkitoBio/exp/juggler/msg"
@@ -27,7 +28,7 @@ func TestServerServe(t *testing.T) {
 	srv := wstest.StartRecordingServer(t, done, ioutil.Discard)
 	defer srv.Close()
 
-	dbgl := &debugLog{t: t}
+	dbgl := &jugglertest.DebugLog{T: t}
 	pool := redistest.NewPool(t, ":"+port)
 	broker := &redisbroker.Broker{
 		Pool:    pool,
@@ -74,7 +75,7 @@ func TestUpgrade(t *testing.T) {
 	cmd, port := redistest.StartServer(t, nil)
 	defer cmd.Process.Kill()
 
-	dbgl := &debugLog{t: t}
+	dbgl := &jugglertest.DebugLog{T: t}
 	pool := redistest.NewPool(t, ":"+port)
 	broker := &redisbroker.Broker{
 		Pool:    pool,

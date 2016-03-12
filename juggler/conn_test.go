@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/PuerkitoBio/exp/juggler/internal/jugglertest"
 	"github.com/PuerkitoBio/exp/juggler/internal/wstest"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -82,7 +83,7 @@ func TestExclusiveWriter(t *testing.T) {
 }
 
 func TestConnClose(t *testing.T) {
-	srv := &Server{LogFunc: (&debugLog{t: t}).Printf}
+	srv := &Server{LogFunc: (&jugglertest.DebugLog{T: t}).Printf}
 	conn := newConn(&websocket.Conn{}, srv)
 	conn.psc, conn.resc = fakePubSubConn{}, fakeResultsConn{}
 

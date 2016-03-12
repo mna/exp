@@ -59,7 +59,8 @@ type Server struct {
 
 	// AcquireWriteLockTimeout is the time to wait for the exclusive
 	// write lock for a connection. If the lock cannot be acquired
-	// before the timeout, the connection is dropped.
+	// before the timeout, the connection is dropped. The default of
+	// 0 means no timeout.
 	AcquireWriteLockTimeout time.Duration
 
 	// ConnState specifies an optional callback function that is called
