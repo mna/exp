@@ -87,11 +87,11 @@ type Server struct {
 	// LogFunc to DiscardLog.
 	LogFunc func(string, ...interface{}) // TODO : normalize calls so that order of args is somewhat predictable
 
-	// PubSubBroker is the broker to use for pub-sub messages. It should be
+	// PubSubBroker is the broker to use for pub-sub messages. It must be
 	// set before the Server can be used.
 	PubSubBroker broker.PubSubBroker
 
-	// CallerBroker is the broker to use for caller messages. It should be
+	// CallerBroker is the broker to use for caller messages. It must be
 	// set before the server can be used.
 	CallerBroker broker.CallerBroker
 }

@@ -1,7 +1,9 @@
 package juggler_test
 
 import (
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/PuerkitoBio/exp/juggler"
 	"github.com/PuerkitoBio/exp/juggler/broker/redisbroker"
@@ -9,11 +11,29 @@ import (
 	"github.com/PuerkitoBio/exp/juggler/internal/redistest"
 )
 
+type IntgConfig struct {
+	BrokerBlockingTimeout time.Duration
+	BrokerCallCap         int
+	BrokerResultCap       int
+
+	ServerReadLimit               int
+	ServerReadTimeout             time.Duration
+	ServerWriteLimit              int
+	ServerWriteTimeout            time.Duration
+	ServerAcquireWriteLockTimeout time.Duration
+
+	NCallees int
+	NClients int
+}
+
 func TestIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration tests don't run with the -short flag")
 	}
+	runIntegrationTests(t, &IntgConfig{}) // TODO : parse flags into IntgConfig
+}
 
+func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 	dbgl := &jugglertest.DebugLog{T: t}
 
 	// start/create:
@@ -34,10 +54,9 @@ func TestIntegration(t *testing.T) {
 		Dial:    pool.Dial,
 		LogFunc: dbgl.Printf,
 
-		// TODO : flags for those?
-		BlockingTimeout: 0,
-		CallCap:         0,
-		ResultCap:       0,
+		BlockingTimeout: conf.BrokerBlockingTimeout,
+		CallCap:         conf.BrokerCallCap,
+		ResultCap:       conf.BrokerResultCap,
 	}
 
 	// 3. create the juggler server
@@ -45,6 +64,20 @@ func TestIntegration(t *testing.T) {
 		CallerBroker: brk,
 		PubSubBroker: brk,
 		LogFunc:      dbgl.Printf,
+
+		// TODO : set those to something that can keep track of metrics/correctness
+		ReadHandler:  nil,
+		WriteHandler: nil,
+
+		ReadLimit:               conf.ServerReadLimit,
+		ReadTimeout:             conf.ServerReadTimeout,
+		WriteLimit:              conf.ServerWriteLimit,
+		WriteTimeout:            conf.ServerWriteTimeout,
+		AcquireWriteLockTimeout: conf.ServerAcquireWriteLockTimeout,
 	}
 	_ = srv
+
+	// 4. start m callees
+	stopCallees := make(chan struct{})
+	wg := sync.WaitGroup{}
 }
