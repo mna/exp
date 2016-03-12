@@ -24,8 +24,8 @@ func TestIntegration(t *testing.T) {
 	// 5. n clients
 
 	// 1. redis-server
-	cmd, port := redistest.StartServer(t)
-	defer cmd.Process().Kill()
+	cmd, port := redistest.StartServer(t, nil)
+	defer cmd.Process.Kill()
 
 	// 2. create the redis pool and broker
 	pool := redistest.NewPool(t, ":"+port)
@@ -46,4 +46,5 @@ func TestIntegration(t *testing.T) {
 		PubSubBroker: brk,
 		LogFunc:      dbgl.Printf,
 	}
+	_ = srv
 }
