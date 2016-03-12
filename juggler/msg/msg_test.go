@@ -14,6 +14,8 @@ import (
 )
 
 func TestMarshalUnmarshal(t *testing.T) {
+	t.Parallel()
+
 	call, err := NewCall("a", map[string]interface{}{"x": 3}, time.Second)
 	require.NoError(t, err, "NewCall")
 	pub, err := NewPub("d", map[string]interface{}{"y": "ok"})
@@ -71,6 +73,8 @@ func TestMarshalUnmarshal(t *testing.T) {
 }
 
 func TestNewErrFromOK(t *testing.T) {
+	t.Parallel()
+
 	pub, err := NewPub("d", map[string]interface{}{"y": "ok"})
 	require.NoError(t, err, "NewPub")
 	ok := NewOK(pub)

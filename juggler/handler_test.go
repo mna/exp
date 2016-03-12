@@ -17,6 +17,8 @@ import (
 )
 
 func TestChain(t *testing.T) {
+	t.Parallel()
+
 	var b []byte
 
 	genHandler := func(char byte) HandlerFunc {
@@ -61,6 +63,8 @@ func (d *debugLog) Calls() int {
 }
 
 func TestPanicRecover(t *testing.T) {
+	t.Parallel()
+
 	defer func() {
 		require.Nil(t, recover(), "panic escaped the PanicRecover handler")
 	}()
@@ -85,6 +89,8 @@ func TestPanicRecover(t *testing.T) {
 }
 
 func TestLimitedWriter(t *testing.T) {
+	t.Parallel()
+
 	// use int8/uint8 to keep size reasonable
 	checker := func(limit int16, n uint8) bool {
 		// create a limited writer with the specified limit
