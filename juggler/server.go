@@ -151,7 +151,7 @@ func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 		defer wsConn.Close()
 
 		// the agreed-upon subprotocol must be one of the supported ones.
-		if wsConn.Subprotocol() == "" || !isIn(Subprotocols, wsConn.Subprotocol()) {
+		if !isIn(Subprotocols, wsConn.Subprotocol()) {
 			logf(srv.LogFunc, "juggler: no supported subprotocol, closing connection")
 			return
 		}

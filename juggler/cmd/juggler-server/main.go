@@ -15,10 +15,11 @@ import (
 
 var (
 	// TODO : work out a config file for all server and broker options
-	portFlag      = flag.Int("port", 9000, "port to listen on")
-	readLimitFlag = flag.Int("read-limit", 4096, "read message size limit")
-	readTOFlag    = flag.Duration("read-timeout", 10*time.Second, "read deadline duration")
-	writeTOFlag   = flag.Duration("write-timeout", 10*time.Second, "write deadline duration")
+	allowEmptyProtoFlag = flag.Bool("allow-empty-subprotocol", false, "if set, allow empty subprotocol handshake")
+	portFlag            = flag.Int("port", 9000, "port to listen on")
+	readLimitFlag       = flag.Int("read-limit", 4096, "read message size limit")
+	readTOFlag          = flag.Duration("read-timeout", 10*time.Second, "read deadline duration")
+	writeTOFlag         = flag.Duration("write-timeout", 10*time.Second, "write deadline duration")
 )
 
 func main() {
@@ -39,6 +40,9 @@ func main() {
 		ResultCap: 100,
 	}
 
+	if *allowEmptyProtoFlag {
+		juggler.Subprotocols = append(juggler.Subprotocols, "")
+	}
 	upg := &websocket.Upgrader{Subprotocols: juggler.Subprotocols}
 	srv := &juggler.Server{
 		ReadLimit:               int64(*readLimitFlag),
