@@ -1,6 +1,7 @@
 package juggler_test
 
 import (
+	"flag"
 	"math/rand"
 	"net/http/httptest"
 	"strconv"
@@ -20,6 +21,36 @@ import (
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	// redis pool
+	redisPoolMaxActiveFlag   = flag.Int("intg.redis-pool-max-active", 250, "redis: maximum active connections in the pool")
+	redisPoolMaxIdleFlag     = flag.Int("intg.redis-pool-max-idle", 10, "redis: maximum idle connections in the pool")
+	redisPoolIdleTimeoutFlag = flag.Duration("intg.redis-pool-idle-timeout", "1m", "redis: idle connection timeout")
+
+	// broker configuration
+	brokerBlockingTimeoutFlag = flag.Duration("intg.broker-blocking-timeout", "0", "broker: blocking timeout")
+	brokerCallCapFlag         = flag.Int("intg.broker-call-cap", 0, "broker: call requests queue capacity")
+	brokerResultCapFlag       = flag.Int("intg.broker-result-cap", 0, "broker: results queue capacity")
+
+	// server configuration
+	serverReadLimitFlag               = flag.Int("intg.server-read-limit", 0, "server: read limit in bytes")
+	serverReadTimeoutFlag             = flag.Duration("intg.server-read-timeout", "0", "server: read timeout")
+	serverWriteLimitFlag              = flag.Duration("intg.server-write-limit", 0, "server: write limit in bytes")
+	serverWriteTimeoutFlag            = flag.Duration("intg.server-write-timeout", "0", "server: write timeout")
+	serverAcquireWriteLockTimeoutFlag = flag.Duration("intg.server-acquire-write-lock-timeout", "0", "server: acquire write lock timeout")
+
+	nCalleesFlag          = flag.Int("intg.ncallees", 10, "number of registered callees")
+	nWorkersPerCalleeFlag = flag.Int("intg.nworkers-per-callee", 10, "number of workers per callee")
+	nClientsFlag          = flag.Int("intg.nclients", 100, "number of clients")
+
+	nURIsFlag         = flag.Int("intg.nuris", 10, "number of URIs")
+	nChannelsFlag     = flag.Int("intg.nchannels", 10, "number of pub-sub channels")
+	durationFlag      = flag.Duration("intg.duration", "10s", "duration of the integration test")
+	clientMsgRateFlag = flag.Duration("intg.client-msg-rate", "1s", "rate to send client message")
+	serverPubRateFlag = flag.Duration("intg.server-pub-rate", "1s", "rate to send server publish message")
+	thunkDelayFlag    = flag.Duration("intg.thunk-delay", "100ms", "delay of a call")
 )
 
 // IntgConfig holds the configuration of an integration test execution.
