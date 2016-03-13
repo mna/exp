@@ -2,6 +2,7 @@ package juggler_test
 
 import (
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -17,6 +18,7 @@ import (
 	"github.com/PuerkitoBio/exp/juggler/internal/redistest"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
+	"github.com/stretchr/testify/require"
 )
 
 // IntgConfig holds the configuration of an integration test execution.
@@ -45,6 +47,14 @@ type IntgConfig struct {
 	ClientMsgRate time.Duration // send a message at this rate
 	ServerPubRate time.Duration // publish a server-side event at this rate
 	ThunkDelay    time.Duration // artificial delay of the call
+}
+
+func (conf *IntgConfig) URIs() []string {
+	uris := make([]string, conf.NURIs)
+	for i := 0; i < conf.NURIs; i++ {
+		uris[i] = strconv.Itoa(i)
+	}
+	return uris
 }
 
 type runStats struct {
@@ -92,17 +102,28 @@ func incStats(stats *runStats, m msg.Msg) {
 	}
 }
 
-func serverStatsHandler(stats *runStats) juggler.Handler {
+func serverHandler(stats *runStats) juggler.Handler {
 	return juggler.HandlerFunc(func(ctx context.Context, c *juggler.Conn, m msg.Msg) {
 		incStats(stats, m)
 		juggler.ProcessMsg(ctx, c, m)
 	})
 }
 
-func clientStatsHandler(stats *runStats) juggler.ClientHandler {
+func clientHandler(stats *runStats) juggler.ClientHandler {
 	return juggler.ClientHandlerFunc(func(ctx context.Context, c *juggler.Client, m msg.Msg) {
 		incStats(stats, m)
 	})
+}
+
+type runConfig struct {
+	conf *IntgConfig
+
+	msgsPerClient [][]msg.Msg
+	serverPubs    []msg.Msg
+}
+
+func prepareExec(conf *IntgConfig) *runConfig {
+	return &runConfig{conf: conf}
 }
 
 func runIntegrationTest(t *testing.T, conf *IntgConfig) {
@@ -141,8 +162,8 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 		PubSubBroker: brk,
 		LogFunc:      dbgl.Printf,
 
-		ReadHandler:  serverStatsHandler(&srvStats),
-		WriteHandler: serverStatsHandler(&srvStats),
+		ReadHandler:  serverHandler(&srvStats),
+		WriteHandler: serverHandler(&srvStats),
 
 		ReadLimit:               conf.ServerReadLimit,
 		ReadTimeout:             conf.ServerReadTimeout,
@@ -154,8 +175,8 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 	httpsrv := httptest.NewServer(juggler.Upgrade(upg, srv))
 	defer httpsrv.Close()
 
-	// TODO : get URIs
-	uris := []string{}
+	uris := conf.URIs()
+	rc := prepareExec(conf)
 	thunk := func(cp *msg.CallPayload) (interface{}, error) {
 		time.Sleep(conf.ThunkDelay)
 		return "ok", nil
@@ -197,19 +218,20 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 	wg.Add(conf.NClients)
 
 	for i := 0; i < conf.NClients; i++ {
-		go func() {
+		go func(i int) {
 			defer wg.Done()
 
 			cli, err := juggler.Dial(&websocket.Dialer{}, strings.Replace(httpsrv.URL, "http:", "ws:", 1), nil,
-				juggler.SetHandler(clientStatsHandler(&clientStats)))
+				juggler.SetHandler(clientHandler(&clientStats)))
 			if err != nil {
 				t.Fatalf("Dial failed: %v", err)
 			}
-			_ = cli
 
-			// TODO : run predetermined requests...
 			clientStarted <- struct{}{}
-		}()
+			for _, m := range rc.msgsPerClient[i] {
+			}
+			require.NoError(t, cli.Close(), "Close client %d", i)
+		}(i)
 	}
 
 	// wait for callees to come online
