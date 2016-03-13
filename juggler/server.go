@@ -68,19 +68,12 @@ type Server struct {
 	// Connected and Closing states.
 	ConnState func(*Conn, ConnState)
 
-	// ReadHandler is the handler that is called when an incoming
-	// message is processed. The ProcessMsg function is called
-	// if the default nil value is set. If a custom handler is set,
-	// it is assumed that it will call ProcessMsg at some point,
-	// or otherwise manually process the messages.
-	ReadHandler Handler
-
-	// WriteHandler is the handler that is called when an outgoing
-	// message is processed. The ProcessMsg function is called
-	// if the default nil value is set. If a custom handler is set,
-	// it is assumed that it will call ProcessMsg at some point,
-	// or otherwise manually process the messages.
-	WriteHandler Handler
+	// Handler is the handler that is called when a message is
+	// processed. The ProcessMsg function is called if the default
+	// nil value is set. If a custom handler is set, it is assumed
+	// that it will call ProcessMsg at some point, or otherwise
+	// manually process the messages.
+	Handler Handler
 
 	// LogFunc is the function called to log events. By default,
 	// it logs using log.Printf. Logging can be disabled by setting

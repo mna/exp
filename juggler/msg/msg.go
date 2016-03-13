@@ -46,7 +46,7 @@ type MessageType int
 const (
 	startRead MessageType = iota
 	CallMsg
-	PubMsg
+	PubMsg // TODO : can be both a read and a write...?
 	SubMsg
 	UnsbMsg
 	endRead

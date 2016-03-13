@@ -1,6 +1,7 @@
 package juggler_test
 
 import (
+	"math/rand"
 	"net/http/httptest"
 	"strconv"
 	"strings"
@@ -118,12 +119,47 @@ func clientHandler(stats *runStats) juggler.ClientHandler {
 type runConfig struct {
 	conf *IntgConfig
 
+	randSeed      int64
 	msgsPerClient [][]msg.Msg
 	serverPubs    []msg.Msg
+	expected      [2]*runStats // [0]: server, [1]: clients
 }
 
 func prepareExec(conf *IntgConfig) *runConfig {
-	return &runConfig{conf: conf}
+	seed := time.Now().UnixNano()
+	rnd := rand.New(rand.NewSource(seed))
+
+	//var srvStats, cliStats runStats
+
+	nCliMsgs := int(conf.Duration / conf.ClientMsgRate)
+	mpc := make([][]msg.Msg, conf.NClients)
+	for i := 0; i < conf.NClients; i++ {
+		mpc[i] = make([]msg.Msg, nCliMsgs)
+		for j := 0; j < nCliMsgs; j++ {
+			mpc[i][j] = newClientMsg(rnd)
+		}
+	}
+
+	nSrvMsgs := int(conf.Duration / conf.ServerPubRate)
+	sps := make([]msg.Msg, nSrvMsgs)
+	for i := 0; i < nSrvMsgs; i++ {
+		sps[i] = newServerMsg(rnd)
+	}
+
+	return &runConfig{
+		conf:          conf,
+		randSeed:      seed,
+		msgsPerClient: mpc,
+		serverPubs:    sps,
+	}
+}
+
+func newServerMsg(rnd *rand.Rand) msg.Msg {
+	return nil
+}
+
+func newClientMsg(rnd *rand.Rand) msg.Msg {
+	return nil
 }
 
 func runIntegrationTest(t *testing.T, conf *IntgConfig) {
@@ -161,9 +197,7 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 		CallerBroker: brk,
 		PubSubBroker: brk,
 		LogFunc:      dbgl.Printf,
-
-		ReadHandler:  serverHandler(&srvStats),
-		WriteHandler: serverHandler(&srvStats),
+		Handler:      serverHandler(&srvStats),
 
 		ReadLimit:               conf.ServerReadLimit,
 		ReadTimeout:             conf.ServerReadTimeout,
@@ -229,6 +263,7 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 
 			clientStarted <- struct{}{}
 			for _, m := range rc.msgsPerClient[i] {
+				_ = m
 			}
 			require.NoError(t, cli.Close(), "Close client %d", i)
 		}(i)

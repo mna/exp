@@ -201,8 +201,8 @@ func (c *Conn) Writer(timeout time.Duration) io.WriteCloser {
 // Send sends the msg to the client. It calls the Server's
 // WriteHandler if any, or ProcessMsg if nil.
 func (c *Conn) Send(m msg.Msg) {
-	if wh := c.srv.WriteHandler; wh != nil {
-		wh.Handle(context.Background(), c, m)
+	if h := c.srv.Handler; h != nil {
+		h.Handle(context.Background(), c, m)
 	} else {
 		ProcessMsg(context.Background(), c, m)
 	}
@@ -259,8 +259,8 @@ func (c *Conn) receive() {
 			return
 		}
 
-		if rh := c.srv.ReadHandler; rh != nil {
-			rh.Handle(context.Background(), c, m)
+		if h := c.srv.Handler; h != nil {
+			h.Handle(context.Background(), c, m)
 		} else {
 			ProcessMsg(context.Background(), c, m)
 		}

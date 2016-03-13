@@ -51,8 +51,7 @@ func main() {
 		WriteTimeout:            *writeTOFlag,
 		AcquireWriteLockTimeout: 200 * time.Millisecond,
 		ConnState:               juggler.LogConn,
-		ReadHandler:             h,
-		WriteHandler:            h,
+		Handler:                 h,
 		PubSubBroker:            broker,
 		CallerBroker:            broker,
 	}
