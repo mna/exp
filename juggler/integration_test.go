@@ -17,26 +17,36 @@ import (
 )
 
 type IntgConfig struct {
+	RedisPoolMaxActive   int
+	RedisPoolMaxIdle     int
+	RedisPoolIdleTimeout time.Duration
+
 	BrokerBlockingTimeout time.Duration
 	BrokerCallCap         int
 	BrokerResultCap       int
 
-	ServerReadLimit               int
+	ServerReadLimit               int64
 	ServerReadTimeout             time.Duration
-	ServerWriteLimit              int
+	ServerWriteLimit              int64
 	ServerWriteTimeout            time.Duration
 	ServerAcquireWriteLockTimeout time.Duration
 
-	NCallees          int
-	NWorkersPerCallee int
-	NClients          int
+	NCallees          int // number of callees listening on the URIs
+	NWorkersPerCallee int // number of workers per callee
+	NClients          int // number of clients generating calls
+
+	NURIs         int           // number of different URIs to pick from at random
+	NChannels     int           // number of different channels to pick from at random
+	Duration      time.Duration // duration of the test
+	ClientMsgRate time.Duration // send a message at this rate
+	ServerPubRate time.Duration // publish a server-side event at this rate
 }
 
 func TestIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration tests don't run with the -short flag")
 	}
-	runIntegrationTests(t, &IntgConfig{}) // TODO : parse flags into IntgConfig
+	runIntegrationTest(t, &IntgConfig{}) // TODO : parse flags into IntgConfig
 }
 
 func runIntegrationTest(t *testing.T, conf *IntgConfig) {
@@ -55,6 +65,9 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 
 	// 2. create the redis pool and broker
 	pool := redistest.NewPool(t, ":"+port)
+	pool.MaxActive = conf.RedisPoolMaxActive
+	pool.MaxIdle = conf.RedisPoolMaxIdle
+	pool.IdleTimeout = conf.RedisPoolIdleTimeout
 	brk := &redisbroker.Broker{
 		Pool:    pool,
 		Dial:    pool.Dial,
@@ -86,9 +99,9 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 	defer httpsrv.Close()
 
 	// TODO : get URIs
-	uris = []string{}
+	uris := []string{}
 	thunk := func(cp *msg.CallPayload) (interface{}, error) {
-
+		return nil, nil
 	}
 
 	// 4. start m callees
@@ -128,8 +141,12 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 		go func() {
 			defer wg.Done()
 
-			cli := juggler.Dial(&websocket.Dialer{}, strings.Replace(httpsrv.URL, "http:", "ws:", 1), nil,
-				juggler.SetHandler()) // TODO : set to something that keeps track of metrics/correctness
+			cli, err := juggler.Dial(&websocket.Dialer{}, strings.Replace(httpsrv.URL, "http:", "ws:", 1), nil)
+			if err != nil {
+				t.Fatalf("Dial failed: %v", err)
+			}
+			// juggler.SetHandler()) // TODO : set to something that keeps track of metrics/correctness
+			_ = cli
 
 			// TODO : run predetermined requests...
 			clientStarted <- struct{}{}
