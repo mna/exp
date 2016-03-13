@@ -67,58 +67,41 @@ func TestIntegration(t *testing.T) {
 	runIntegrationTest(t, &IntgConfig{}) // TODO : parse flags into IntgConfig
 }
 
+func incStats(stats *runStats, m msg.Msg) {
+	switch m.Type() {
+	case msg.CallMsg:
+		atomic.AddInt64(&stats.Call, 1)
+	case msg.PubMsg:
+		atomic.AddInt64(&stats.Pub, 1)
+	case msg.SubMsg:
+		atomic.AddInt64(&stats.Sub, 1)
+	case msg.UnsbMsg:
+		atomic.AddInt64(&stats.Unsb, 1)
+	case msg.ExpMsg:
+		atomic.AddInt64(&stats.Exp, 1)
+	case msg.OKMsg:
+		atomic.AddInt64(&stats.OK, 1)
+	case msg.ErrMsg:
+		atomic.AddInt64(&stats.Err, 1)
+	case msg.ResMsg:
+		atomic.AddInt64(&stats.Res, 1)
+	case msg.EvntMsg:
+		atomic.AddInt64(&stats.Evnt, 1)
+	default:
+		atomic.AddInt64(&stats.Unknown, 1)
+	}
+}
+
 func serverStatsHandler(stats *runStats) juggler.Handler {
 	return juggler.HandlerFunc(func(ctx context.Context, c *juggler.Conn, m msg.Msg) {
-		switch m.Type() {
-		case msg.CallMsg:
-			atomic.AddInt64(&stats.Call)
-		case msg.PubMsg:
-			atomic.AddInt64(&stats.Pub)
-		case msg.SubMsg:
-			atomic.AddInt64(&stats.Sub)
-		case msg.UnsbMsg:
-			atomic.AddInt64(&stats.Unsb)
-		case msg.ExpMsg:
-			atomic.AddInt64(&stats.Exp)
-		case msg.OKMsg:
-			atomic.AddInt64(&stats.OK)
-		case msg.ErrMsg:
-			atomic.AddInt64(&stats.Err)
-		case msg.ResMsg:
-			atomic.AddInt64(&stats.Res)
-		case msg.EvntMsg:
-			atomic.AddInt64(&stats.Evnt)
-		default:
-			atomic.AddInt64(&stats.Unknown)
-		}
+		incStats(stats, m)
 		juggler.ProcessMsg(ctx, c, m)
 	})
 }
 
-func clientStatsHandler(stats *runStats) ClientHandler {
+func clientStatsHandler(stats *runStats) juggler.ClientHandler {
 	return juggler.ClientHandlerFunc(func(ctx context.Context, c *juggler.Client, m msg.Msg) {
-		switch m.Type() {
-		case msg.CallMsg:
-			atomic.AddInt64(&stats.Call)
-		case msg.PubMsg:
-			atomic.AddInt64(&stats.Pub)
-		case msg.SubMsg:
-			atomic.AddInt64(&stats.Sub)
-		case msg.UnsbMsg:
-			atomic.AddInt64(&stats.Unsb)
-		case msg.ExpMsg:
-			atomic.AddInt64(&stats.Exp)
-		case msg.OKMsg:
-			atomic.AddInt64(&stats.OK)
-		case msg.ErrMsg:
-			atomic.AddInt64(&stats.Err)
-		case msg.ResMsg:
-			atomic.AddInt64(&stats.Res)
-		case msg.EvntMsg:
-			atomic.AddInt64(&stats.Evnt)
-		default:
-			atomic.AddInt64(&stats.Unknown)
-		}
+		incStats(stats, m)
 	})
 }
 
