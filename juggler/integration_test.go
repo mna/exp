@@ -4,8 +4,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"github.com/PuerkitoBio/exp/juggler"
 	"github.com/PuerkitoBio/exp/juggler/broker/redisbroker"
@@ -16,6 +19,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// IntgConfig holds the configuration of an integration test execution.
 type IntgConfig struct {
 	RedisPoolMaxActive   int
 	RedisPoolMaxIdle     int
@@ -40,6 +44,20 @@ type IntgConfig struct {
 	Duration      time.Duration // duration of the test
 	ClientMsgRate time.Duration // send a message at this rate
 	ServerPubRate time.Duration // publish a server-side event at this rate
+	ThunkDelay    time.Duration // artificial delay of the call
+}
+
+type runStats struct {
+	Call    int64
+	Pub     int64
+	Sub     int64
+	Unsb    int64
+	Exp     int64
+	OK      int64
+	Err     int64
+	Res     int64
+	Evnt    int64
+	Unknown int64
 }
 
 func TestIntegration(t *testing.T) {
@@ -47,6 +65,61 @@ func TestIntegration(t *testing.T) {
 		t.Skip("integration tests don't run with the -short flag")
 	}
 	runIntegrationTest(t, &IntgConfig{}) // TODO : parse flags into IntgConfig
+}
+
+func serverStatsHandler(stats *runStats) juggler.Handler {
+	return juggler.HandlerFunc(func(ctx context.Context, c *juggler.Conn, m msg.Msg) {
+		switch m.Type() {
+		case msg.CallMsg:
+			atomic.AddInt64(&stats.Call)
+		case msg.PubMsg:
+			atomic.AddInt64(&stats.Pub)
+		case msg.SubMsg:
+			atomic.AddInt64(&stats.Sub)
+		case msg.UnsbMsg:
+			atomic.AddInt64(&stats.Unsb)
+		case msg.ExpMsg:
+			atomic.AddInt64(&stats.Exp)
+		case msg.OKMsg:
+			atomic.AddInt64(&stats.OK)
+		case msg.ErrMsg:
+			atomic.AddInt64(&stats.Err)
+		case msg.ResMsg:
+			atomic.AddInt64(&stats.Res)
+		case msg.EvntMsg:
+			atomic.AddInt64(&stats.Evnt)
+		default:
+			atomic.AddInt64(&stats.Unknown)
+		}
+		juggler.ProcessMsg(ctx, c, m)
+	})
+}
+
+func clientStatsHandler(stats *runStats) ClientHandler {
+	return juggler.ClientHandlerFunc(func(ctx context.Context, c *juggler.Client, m msg.Msg) {
+		switch m.Type() {
+		case msg.CallMsg:
+			atomic.AddInt64(&stats.Call)
+		case msg.PubMsg:
+			atomic.AddInt64(&stats.Pub)
+		case msg.SubMsg:
+			atomic.AddInt64(&stats.Sub)
+		case msg.UnsbMsg:
+			atomic.AddInt64(&stats.Unsb)
+		case msg.ExpMsg:
+			atomic.AddInt64(&stats.Exp)
+		case msg.OKMsg:
+			atomic.AddInt64(&stats.OK)
+		case msg.ErrMsg:
+			atomic.AddInt64(&stats.Err)
+		case msg.ResMsg:
+			atomic.AddInt64(&stats.Res)
+		case msg.EvntMsg:
+			atomic.AddInt64(&stats.Evnt)
+		default:
+			atomic.AddInt64(&stats.Unknown)
+		}
+	})
 }
 
 func runIntegrationTest(t *testing.T, conf *IntgConfig) {
@@ -79,14 +152,14 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 	}
 
 	// 3. create the juggler server
+	var srvStats runStats
 	srv := &juggler.Server{
 		CallerBroker: brk,
 		PubSubBroker: brk,
 		LogFunc:      dbgl.Printf,
 
-		// TODO : set those to something that can keep track of metrics/correctness
-		ReadHandler:  nil,
-		WriteHandler: nil,
+		ReadHandler:  serverStatsHandler(&srvStats),
+		WriteHandler: serverStatsHandler(&srvStats),
 
 		ReadLimit:               conf.ServerReadLimit,
 		ReadTimeout:             conf.ServerReadTimeout,
@@ -101,7 +174,8 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 	// TODO : get URIs
 	uris := []string{}
 	thunk := func(cp *msg.CallPayload) (interface{}, error) {
-		return nil, nil
+		time.Sleep(conf.ThunkDelay)
+		return "ok", nil
 	}
 
 	// 4. start m callees
@@ -134,18 +208,20 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 	}
 
 	// 5. start n clients
+	var clientStats runStats
 	clientStarted := make(chan struct{})
 	wg := sync.WaitGroup{}
 	wg.Add(conf.NClients)
+
 	for i := 0; i < conf.NClients; i++ {
 		go func() {
 			defer wg.Done()
 
-			cli, err := juggler.Dial(&websocket.Dialer{}, strings.Replace(httpsrv.URL, "http:", "ws:", 1), nil)
+			cli, err := juggler.Dial(&websocket.Dialer{}, strings.Replace(httpsrv.URL, "http:", "ws:", 1), nil,
+				juggler.SetHandler(clientStatsHandler(&clientStats)))
 			if err != nil {
 				t.Fatalf("Dial failed: %v", err)
 			}
-			// juggler.SetHandler()) // TODO : set to something that keeps track of metrics/correctness
 			_ = cli
 
 			// TODO : run predetermined requests...
