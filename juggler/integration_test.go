@@ -17,12 +17,14 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/PuerkitoBio/exp/juggler"
+	"github.com/PuerkitoBio/exp/juggler/broker"
 	"github.com/PuerkitoBio/exp/juggler/broker/redisbroker"
 	"github.com/PuerkitoBio/exp/juggler/callee"
 	"github.com/PuerkitoBio/exp/juggler/internal/jugglertest"
 	"github.com/PuerkitoBio/exp/juggler/internal/redistest"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -184,10 +186,25 @@ func incStats(stats *runStats, m msg.Msg) {
 	}
 }
 
-func serverHandler(stats *runStats) juggler.Handler {
+func serverHandler(t *testing.T, brk broker.PubSubBroker, rc *runConfig, stats *runStats) juggler.Handler {
+	var once sync.Once
 	return juggler.HandlerFunc(func(ctx context.Context, c *juggler.Conn, m msg.Msg) {
 		incStats(stats, m)
 		juggler.ProcessMsg(ctx, c, m)
+
+		// start sending PUB messages at the first received message
+		once.Do(func() {
+			go func() {
+				for _, m := range rc.serverPubs {
+					err := brk.Publish(m.Payload.Channel, &msg.PubPayload{
+						MsgUUID: uuid.NewRandom(),
+						Args:    m.Payload.Args,
+					})
+					require.NoError(t, err, "Publish failed")
+					incStats(stats, m)
+				}
+			}()
+		})
 	})
 }
 
@@ -200,14 +217,17 @@ func clientHandler(stats *runStats) juggler.ClientHandler {
 type runConfig struct {
 	conf *IntgConfig
 
+	rnd           *rand.Rand
 	randSeed      int64
 	msgsPerClient [][]msg.Msg
-	serverPubs    []msg.Msg
+	serverPubs    []*msg.Pub
+	expectedExp   int
 
 	start, end time.Time
 }
 
 func prepareExec(t *testing.T, conf *IntgConfig) *runConfig {
+	var expectedExp int
 	seed := time.Now().UnixNano()
 	rnd := rand.New(rand.NewSource(seed))
 
@@ -216,34 +236,38 @@ func prepareExec(t *testing.T, conf *IntgConfig) *runConfig {
 	for i := 0; i < conf.NClients; i++ {
 		mpc[i] = make([]msg.Msg, nCliMsgs)
 		for j := 0; j < nCliMsgs; j++ {
-			mpc[i][j] = newClientMsg(t, conf, rnd)
+			m, expires := newClientMsg(t, conf, rnd)
+			mpc[i][j] = m
+			if expires {
+				expectedExp++
+			}
 		}
 	}
 
 	nSrvMsgs := int(conf.Duration / conf.ServerPubRate)
-	sps := make([]msg.Msg, nSrvMsgs)
+	sps := make([]*msg.Pub, nSrvMsgs)
 	for i := 0; i < nSrvMsgs; i++ {
 		sps[i] = newServerMsg(t, conf, rnd)
 	}
 
 	return &runConfig{
+		rnd:           rnd,
 		conf:          conf,
 		randSeed:      seed,
 		msgsPerClient: mpc,
 		serverPubs:    sps,
+		expectedExp:   expectedExp,
 	}
 }
 
-func newServerMsg(t *testing.T, conf *IntgConfig, rnd *rand.Rand) msg.Msg {
+func newServerMsg(t *testing.T, conf *IntgConfig, rnd *rand.Rand) *msg.Pub {
 	ch := strconv.Itoa(rnd.Intn(conf.NChannels))
 	pub, err := msg.NewPub(ch, "server event")
 	require.NoError(t, err, "NewPub failed")
 	return pub
 }
 
-func newClientMsg(t *testing.T, conf *IntgConfig, rnd *rand.Rand) msg.Msg {
-	var m msg.Msg
-
+func newClientMsg(t *testing.T, conf *IntgConfig, rnd *rand.Rand) (m msg.Msg, expires bool) {
 	mt := msg.MessageType(rnd.Intn(int(msg.UnsbMsg)) + 1)
 	switch mt {
 	case msg.CallMsg:
@@ -251,8 +275,8 @@ func newClientMsg(t *testing.T, conf *IntgConfig, rnd *rand.Rand) msg.Msg {
 		exp := rnd.Intn(conf.CallExpireOdds)
 		to := 10 * conf.ThunkDelay
 		if exp == 0 {
+			expires = true
 			to = time.Millisecond
-			fmt.Println(">>> will expire")
 		}
 		call, err := msg.NewCall(uri, "client call", to)
 		require.NoError(t, err, "NewCall failed")
@@ -272,7 +296,7 @@ func newClientMsg(t *testing.T, conf *IntgConfig, rnd *rand.Rand) msg.Msg {
 		require.NoError(t, err, "NewPub failed")
 		m = pub
 	}
-	return m
+	return m, expires
 }
 
 func runIntegrationTest(t *testing.T, conf *IntgConfig) {
@@ -305,12 +329,14 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 	}
 
 	// 3. create the juggler server
+	rc := prepareExec(t, conf)
+
 	var srvStats runStats
 	srv := &juggler.Server{
 		CallerBroker: brk,
 		PubSubBroker: brk,
 		LogFunc:      dbgl.Printf,
-		Handler:      serverHandler(&srvStats),
+		Handler:      serverHandler(t, brk, rc, &srvStats),
 
 		ReadLimit:               conf.ServerReadLimit,
 		ReadTimeout:             conf.ServerReadTimeout,
@@ -323,7 +349,6 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 	defer httpsrv.Close()
 
 	uris := conf.URIs()
-	rc := prepareExec(t, conf)
 	thunk := func(cp *msg.CallPayload) (interface{}, error) {
 		time.Sleep(conf.ThunkDelay)
 		return "ok", nil
@@ -378,6 +403,7 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 			clientStarted <- struct{}{}
 			dbgl.Printf("client %d started: %d messages, %s delay", i, len(rc.msgsPerClient[i]), conf.ClientMsgRate)
 			for _, m := range rc.msgsPerClient[i] {
+				incStats(&clientStats, m)
 				switch m := m.(type) {
 				case *msg.Call:
 					_, err := cli.Call(m.Payload.URI, m.Payload.Args, m.Payload.Timeout)
@@ -394,7 +420,9 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 				}
 				<-time.After(conf.ClientMsgRate)
 			}
-			// TODO : wait for results...
+			// wait some time for pending responses and potential EVNT messages
+			<-time.After(conf.Duration / 10)
+
 			require.NoError(t, cli.Close(), "Close client %d", i)
 			dbgl.Printf("client %d closed", i)
 		}(i)
@@ -404,9 +432,10 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 	for i, cnt := 0, conf.NCallees*conf.NWorkersPerCallee; i < cnt; i++ {
 		<-calleeStarted
 	}
-	// start clients
+	// start clients with some jitter
 	rc.start = time.Now()
 	for i := 0; i < conf.NClients; i++ {
+		<-time.After(time.Duration(rc.rnd.Intn(100)) * time.Millisecond)
 		<-clientStarted
 	}
 	// wait for completion
@@ -434,6 +463,7 @@ func checkAndPrintResults(t *testing.T, rc *runConfig, srv, cli *runStats) {
 			mpc = len(rc.msgsPerClient[0])
 		}
 		fmt.Fprintf(w, "Expected messages\t%d x %d\n", rc.conf.NClients, mpc)
+		fmt.Fprintf(w, "Expected expired calls\t%d\n", rc.expectedExp)
 		w.Flush()
 
 		fmt.Fprintln(os.Stdout)
