@@ -41,6 +41,11 @@ func main() {
 		CallCap:   100,
 		ResultCap: 100,
 	}
+	// test the connection so that it fails fast if redis is not available
+	c := pool.Get()
+	if _, err := c.Do("PING"); err != nil {
+		log.Fatalf("redis PING failed: %v", err)
+	}
 
 	if *allowEmptyProtoFlag {
 		juggler.Subprotocols = append(juggler.Subprotocols, "")

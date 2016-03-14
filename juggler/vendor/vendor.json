@@ -1,0 +1,46 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"path": "github.com/garyburd/redigo/internal",
+			"revision": "6ece6e0a09f28cc399b21550cbf37ab39ba63cce",
+			"revisionTime": "2015-10-29T16:55:27-07:00"
+		},
+		{
+			"path": "github.com/garyburd/redigo/redis",
+			"revision": "6ece6e0a09f28cc399b21550cbf37ab39ba63cce",
+			"revisionTime": "2015-10-29T16:55:27-07:00"
+		},
+		{
+			"path": "github.com/gorilla/websocket",
+			"revision": "5c91b59efa232fa9a87b705d54101832c498a172",
+			"revisionTime": "2016-02-21T13:34:30-08:00"
+		},
+		{
+			"path": "github.com/pborman/uuid",
+			"revision": "cccd189d45f7ac3368a0d127efb7f4d08ae0b655",
+			"revisionTime": "2015-08-24T14:28:02-07:00"
+		},
+		{
+			"path": "github.com/stretchr/testify/assert",
+			"revision": "f3960ab1f9664ecc4e27c78af27cc9063d745a43",
+			"revisionTime": "2015-10-08T01:55:03+01:00"
+		},
+		{
+			"path": "github.com/stretchr/testify/require",
+			"revision": "f3960ab1f9664ecc4e27c78af27cc9063d745a43",
+			"revisionTime": "2015-10-08T01:55:03+01:00"
+		},
+		{
+			"path": "golang.org/x/crypto/ssh/terminal",
+			"revision": "7b85b097bf7527677d54d3220065e966a0e3b613",
+			"revisionTime": "2015-11-30T17:07:01-05:00"
+		},
+		{
+			"path": "golang.org/x/net/context",
+			"revision": "b4e17d61b15679caf2335da776c614169a1b4643",
+			"revisionTime": "2015-10-28T13:07:21+01:00"
+		}
+	]
+}
