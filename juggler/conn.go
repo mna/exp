@@ -24,7 +24,7 @@ var ErrWriteLockTimeout = errors.New("juggler: timed out waiting for write lock"
 // ConnState represents the possible states of a connection.
 type ConnState int
 
-// List of possible connection states.
+// The list of possible connection states.
 const (
 	Unknown ConnState = iota
 	Connected
@@ -72,9 +72,9 @@ func newConn(c *websocket.Conn, srv *Server) *Conn {
 	}
 }
 
-// UnderlyingConn returns the underlying websocket connection. Great
-// care should be taken when using the websocket connection directly,
-// as it may interfere and create data races with the juggler connection.
+// UnderlyingConn returns the underlying websocket connection. Care
+// should be taken when using the websocket connection directly,
+// as it may interfere with the normal juggler connection behaviour.
 func (c *Conn) UnderlyingConn() *websocket.Conn {
 	return c.wsConn
 }
@@ -179,7 +179,7 @@ func (w *exclusiveWriter) Close() error {
 // release it only when Close is called. The timeout controls
 // the time to wait to acquire the lock on the first call to
 // Write. If the lock cannot be acquired within that time,
-// ErrLockWriterTimeout is returned and no write is performed.
+// ErrWriteLockTimeout is returned and no write is performed.
 //
 // It is possible to enter a deadlock state if Writer is called
 // with no timeout, an initial Write is executed, and Writer is
@@ -199,7 +199,7 @@ func (c *Conn) Writer(timeout time.Duration) io.WriteCloser {
 }
 
 // Send sends the msg to the client. It calls the Server's
-// WriteHandler if any, or ProcessMsg if nil.
+// Handler if any, or ProcessMsg if nil.
 func (c *Conn) Send(m msg.Msg) {
 	if h := c.srv.Handler; h != nil {
 		h.Handle(context.Background(), c, m)

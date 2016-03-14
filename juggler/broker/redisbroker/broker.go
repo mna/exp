@@ -1,4 +1,16 @@
-// TODO : document package.
+// Package redisbroker implements a juggler broker using Redis
+// as backend. RPC calls and results are stored in Redis lists
+// and queried via the BRPOP command, while pub-sub events
+// are handled using Redis' built-in pub-sub support.
+//
+// Call timeouts are handled by an expiring key associated
+// with each call request, and in a similar way for results.
+// Keys are named in such a way that the call request list
+// and associated expiring keys are in the same hash slot,
+// and the same is true for results and their expiring key,
+// so that using a redis cluster is supported. The call
+// requests are hashed on the call URI, and the results
+// are hashed on the calling connection's UUID.
 package redisbroker
 
 import (

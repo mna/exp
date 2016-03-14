@@ -1,4 +1,7 @@
-// TODO : document package.
+// Package callee implements the Callee type to use to listen for
+// and process call requests. A callee listens to some URIs using
+// a broker.CalleeBroker, and stores the result of the calls so that
+// the broker can send it back to the calling client.
 package callee
 
 import (
@@ -15,12 +18,13 @@ import (
 // call timeout is exceeded, meaning that the client is no longer
 // expecting the result. The result is dropped and this error is
 // returned from InvokeAndStoreResult.
-var ErrCallExpired = errors.New("call expired")
+var ErrCallExpired = errors.New("juggler/callee: call expired")
 
 // Thunk is the function signature for functions that handle calls
-// to a URI. Generally, they should be used to decode the arguments
-// to the type expected by the actual underlying function, and to
-// transfer the results back in the generic empty interface.
+// to a URI. Generally, it should be used to decode the arguments
+// to the type expected by the actual underlying function, call that
+// strongly-typed function, and transfer the results back in the
+// generic empty interface.
 type Thunk func(*msg.CallPayload) (interface{}, error)
 
 // Callee is a peer that handles call requests for some URIs.
@@ -47,9 +51,9 @@ func SplitByHashSlot(uris []string) [][]string {
 }
 
 // InvokeAndStoreResult processes the provided call payload by calling
-// fn with the payload's arguments, and storing the result so that
-// it can be sent back to the caller. If the call timeout is exceeded,
-// the result is dropped and ErrCallExpired is returned.
+// fn and storing the result so that it can be sent back to the caller.
+// If the call timeout is exceeded, the result is dropped and
+// ErrCallExpired is returned.
 func (c *Callee) InvokeAndStoreResult(cp *msg.CallPayload, fn Thunk) error {
 	ttl := cp.TTLAfterRead
 	start := time.Now()
@@ -73,7 +77,7 @@ func (c *Callee) InvokeAndStoreResult(cp *msg.CallPayload, fn Thunk) error {
 // The method implements a single-producer, single-consumer helper,
 // where a single redis connection is used to listen for call requests
 // on the URIs, and for each request, a single goroutine executes
-// the calls and stores the results. More powerful concurrency
+// the calls and stores the results. More advanced concurrency
 // patterns can be implemented using Callee.Broker.Calls directly,
 // and starting multiple consumer goroutines reading from the same calls
 // channel and calling InvokeAndStoreResult to process each call request.

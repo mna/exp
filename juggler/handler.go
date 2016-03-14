@@ -12,7 +12,7 @@ import (
 	"github.com/PuerkitoBio/exp/juggler/msg"
 )
 
-// Handler defines the method required to handle a send or receive
+// Handler defines the method required for a server to handle a send or receive
 // of a Msg over a connection.
 type Handler interface {
 	Handle(context.Context, *Conn, msg.Msg)
@@ -39,7 +39,7 @@ func Chain(hs ...Handler) Handler {
 }
 
 // PanicRecover returns a Handler that recovers from panics that
-// may happen in h and logs the panic to LogFunc. If close is true,
+// may happen in h and logs the panic to the server's LogFunc. If close is true,
 // the connection is closed on a panic.
 func PanicRecover(h Handler, closeConn bool, printStack bool) Handler {
 	return HandlerFunc(func(ctx context.Context, c *Conn, m msg.Msg) {
@@ -90,13 +90,12 @@ func LogMsg(ctx context.Context, c *Conn, m msg.Msg) {
 }
 
 // ProcessMsg is a HandlerFunc that implements the default message
-// processing. For client messages, it calls the appropriate RPC,
-// PUB-SUB or AUTH mechanisms. For server messages, it marshals
+// processing. For client messages, it calls the appropriate RPC
+// or pub-sub mechanisms. For server messages, it marshals
 // the message and sends it to the client.
 //
-// When a custom ReadHandler and/or WriterHandler is set on the Server,
-// it should at some point call ProcessMsg so the expected behaviour
-// happens.
+// When a custom Handler is set on the Server, it should at some
+// point call ProcessMsg so the expected behaviour happens.
 func ProcessMsg(ctx context.Context, c *Conn, m msg.Msg) {
 	switch m := m.(type) {
 	case *msg.Call:

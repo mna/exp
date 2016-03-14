@@ -23,7 +23,7 @@ type CallPayload struct {
 	// ReadTimestamp is the timestamp in UTC of the call request once it
 	// has been extracted from the connector and just before it is sent
 	// for processing to the callee. It should be treated as informational,
-	// as clocks may vary (sometimes wildly) between computers.
+	// as clocks may vary between nodes.
 	ReadTimestamp time.Time `json:"-"`
 }
 

@@ -1,3 +1,5 @@
+// Command juggler-server implements a juggler server that listens for
+// connections and serves the requests.
 package main
 
 import (

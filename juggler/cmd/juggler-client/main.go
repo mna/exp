@@ -1,3 +1,5 @@
+// Command juggler-client can be used to send commands to a juggler
+// server.
 package main
 
 import (

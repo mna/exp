@@ -5,23 +5,23 @@
 //
 //     - CALL : to call an RPC function
 //     - SUB  : to subscribe to a pub/sub channel
-//     - UNSB : to unsubscrube from a pub/sub channel
+//     - UNSB : to unsubscribe from a pub/sub channel
 //     - PUB  : to publish to a pub/sub channel
 //
 // And the following messages for the server:
 //
 //     - ERR  : failed CALL, SUB, UNSB or PUB
-//     - OK   : successful CALL, SUB, UNSB or PUB - but no result yet
+//     - OK   : successful CALL (but no result yet), SUB, UNSB or PUB
 //     - RES  : the result of a CALL message
 //     - EVNT : an event triggered on a channel that the client is subscribed to
 //
-// There's another message that is not sent by either end, but can be
-// triggered by the client for itself:
+// There's another message that is never sent by either end to a peer, but that
+// can be triggered by the client for itself:
 //
 //     - EXP  : expired CALL, meaning that no RES will be received for this call.
 //
 // Closing the communication is done via the standard websocket close
-// process.
+// process. TODO : support a "juggler.close" special CALL URI?
 //
 // All messages must be of type websocket.TextMessage. Failing to properly
 // speak the protocol terminates the connection without notice from the

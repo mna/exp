@@ -1,3 +1,9 @@
+// Command juggler-callee implements a testing callee that provides
+// simple URI functions:
+//     - test.echo (string) : returns the received string
+//     - test.reverse (string) : reverses each rune in the received string
+//     - test.delay (string) : sleeps for the duration received as string, converted to number (in ms)
+//
 package main
 
 import (

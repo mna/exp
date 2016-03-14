@@ -31,7 +31,8 @@ func isIn(list []string, v string) bool {
 
 // Server is a juggler server. Once a websocket handshake has been
 // established with a juggler subprotocol over a standard HTTP server,
-// the connections get served by this server.
+// the connections can get served by this server by calling
+// Server.ServeConn.
 //
 // The fields should not be updated once a server has started
 // serving connections.
@@ -133,8 +134,8 @@ func (srv *Server) ServeConn(conn *websocket.Conn) {
 // must be upgraded to a supported juggler subprotocol otherwise
 // the connection is dropped.
 //
-// Once connected, the websocket connection is served via srv. The
-// websocket connection is closed when the juggler connection is closed.
+// Once connected, the websocket connection is served via srv.ServeConn.
+// The websocket connection is closed when the juggler connection is closed.
 func Upgrade(upgrader *websocket.Upgrader, srv *Server) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// upgrade the HTTP connection to the websocket protocol

@@ -62,8 +62,6 @@ func SetLogFunc(fn func(string, ...interface{})) ClientOption {
 
 // Client is a juggler client based on a websocket connection. It can
 // be used to send and receive messages to and from a juggler server.
-// It is not safe to call Client methods concurrently. Exported fields
-// should be treated as read-only.
 type Client struct {
 	// ResponseHeader is the map of HTTP response headers returned
 	// from the initial websocket handshake.
@@ -82,7 +80,7 @@ type Client struct {
 
 // NewClient creates a juggler client using the provided websocket
 // connection and response header. Received messages are sent to
-// the handler set by the Handler option.
+// the handler set by the SetClientHandler option.
 func NewClient(conn *websocket.Conn, resHeader http.Header, opts ...ClientOption) *Client {
 	c := &Client{
 		ResponseHeader: resHeader,
@@ -184,9 +182,8 @@ func (c *Client) Close() error {
 }
 
 // UnderlyingConn returns the underlying websocket connection used by the
-// client. Great care should be taken when using the websocket connection
-// directly, as it can cause issues such as data races with the normal
-// behaviour of the client.
+// client. Care should be taken when using the websocket connection
+// directly, as it may interfere with the normal behaviour of the client.
 func (c *Client) UnderlyingConn() *websocket.Conn {
 	return c.conn
 }
@@ -246,7 +243,7 @@ func (c *Client) handleExpiredCall(m *msg.Call, timeout time.Duration) {
 }
 
 // Sub makes a subscription request to the server for the specified
-// channel, which is treated as a pattern if patter is true. It
+// channel, which is treated as a pattern if pattern is true. It
 // returns the UUID of the sub message on success, or an error if
 // the request could not be sent to the server.
 func (c *Client) Sub(channel string, pattern bool) (uuid.UUID, error) {
@@ -258,7 +255,7 @@ func (c *Client) Sub(channel string, pattern bool) (uuid.UUID, error) {
 }
 
 // Unsb makes an unsubscription request to the server for the specified
-// channel, which is treated as a pattern if patter is true. It
+// channel, which is treated as a pattern if pattern is true. It
 // returns the UUID of the unsb message on success, or an error if
 // the request could not be sent to the server.
 func (c *Client) Unsb(channel string, pattern bool) (uuid.UUID, error) {
