@@ -43,7 +43,7 @@ var (
 
 	nCalleesFlag          = flag.Int("intg.ncallees", 10, "number of registered callees")
 	nWorkersPerCalleeFlag = flag.Int("intg.nworkers-per-callee", 10, "number of workers per callee")
-	nClientsFlag          = flag.Int("intg.nclients", 100, "number of clients")
+	nClientsFlag          = flag.Int("intg.nclients", 10, "number of clients")
 
 	nURIsFlag          = flag.Int("intg.nuris", 10, "number of URIs")
 	nChannelsFlag      = flag.Int("intg.nchannels", 10, "number of pub-sub channels")
@@ -350,16 +350,33 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 			defer wg.Done()
 
 			cli, err := juggler.Dial(&websocket.Dialer{}, strings.Replace(httpsrv.URL, "http:", "ws:", 1), nil,
-				juggler.SetHandler(clientHandler(&clientStats)))
+				juggler.SetHandler(clientHandler(&clientStats)),
+				juggler.SetLogFunc(dbgl.Printf))
 			if err != nil {
 				t.Fatalf("Dial failed: %v", err)
 			}
 
 			clientStarted <- struct{}{}
+			dbgl.Printf("client %d started: %d messages, %s delay", i, len(rc.msgsPerClient[i]), conf.ClientMsgRate)
 			for _, m := range rc.msgsPerClient[i] {
-				_ = m
+				switch m := m.(type) {
+				case *msg.Call:
+					_, err := cli.Call(m.Payload.URI, m.Payload.Args, m.Payload.Timeout)
+					require.NoError(t, err, "Call")
+				case *msg.Sub:
+					_, err := cli.Sub(m.Payload.Channel, m.Payload.Pattern)
+					require.NoError(t, err, "Sub")
+				case *msg.Unsb:
+					_, err := cli.Unsb(m.Payload.Channel, m.Payload.Pattern)
+					require.NoError(t, err, "Unsb")
+				case *msg.Pub:
+					_, err := cli.Pub(m.Payload.Channel, m.Payload.Args)
+					require.NoError(t, err, "Pub")
+				}
+				<-time.After(conf.ClientMsgRate)
 			}
 			require.NoError(t, cli.Close(), "Close client %d", i)
+			dbgl.Printf("client %d closed", i)
 		}(i)
 	}
 
@@ -375,6 +392,7 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 	// wait for completion
 	wg.Wait()
 	rc.end = time.Now()
+	dbgl.Printf("done after %s", rc.end.Sub(rc.start))
 
 	checkAndPrintResults(t, rc, &srvStats, &clientStats)
 }
