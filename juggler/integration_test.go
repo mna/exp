@@ -25,6 +25,7 @@ import (
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -127,30 +128,32 @@ func (conf *IntgConfig) URIs() []string {
 }
 
 type runStats struct {
-	Call    int64
-	Pub     int64
-	Sub     int64
-	Unsb    int64
-	Exp     int64
-	OK      int64
-	Err     int64
-	Res     int64
-	Evnt    int64
-	Unknown int64
+	Call       int64
+	PubSrvSent int64
+	PubCliSent int64
+	Sub        int64
+	Unsb       int64
+	Exp        int64
+	OK         int64
+	Err        int64
+	Res        int64
+	Evnt       int64
+	Unknown    int64
 }
 
 func (s *runStats) clone() *runStats {
 	return &runStats{
-		Call:    atomic.LoadInt64(&s.Call),
-		Pub:     atomic.LoadInt64(&s.Pub),
-		Sub:     atomic.LoadInt64(&s.Sub),
-		Unsb:    atomic.LoadInt64(&s.Unsb),
-		Exp:     atomic.LoadInt64(&s.Exp),
-		OK:      atomic.LoadInt64(&s.OK),
-		Err:     atomic.LoadInt64(&s.Err),
-		Res:     atomic.LoadInt64(&s.Res),
-		Evnt:    atomic.LoadInt64(&s.Evnt),
-		Unknown: atomic.LoadInt64(&s.Unknown),
+		Call:       atomic.LoadInt64(&s.Call),
+		PubSrvSent: atomic.LoadInt64(&s.PubSrvSent),
+		PubCliSent: atomic.LoadInt64(&s.PubCliSent),
+		Sub:        atomic.LoadInt64(&s.Sub),
+		Unsb:       atomic.LoadInt64(&s.Unsb),
+		Exp:        atomic.LoadInt64(&s.Exp),
+		OK:         atomic.LoadInt64(&s.OK),
+		Err:        atomic.LoadInt64(&s.Err),
+		Res:        atomic.LoadInt64(&s.Res),
+		Evnt:       atomic.LoadInt64(&s.Evnt),
+		Unknown:    atomic.LoadInt64(&s.Unknown),
 	}
 }
 
@@ -161,12 +164,16 @@ func TestIntegration(t *testing.T) {
 	runIntegrationTest(t, getIntgConfig())
 }
 
-func incStats(stats *runStats, m msg.Msg) {
+func incStats(stats *runStats, m msg.Msg, fromSrv bool) {
 	switch m.Type() {
 	case msg.CallMsg:
 		atomic.AddInt64(&stats.Call, 1)
 	case msg.PubMsg:
-		atomic.AddInt64(&stats.Pub, 1)
+		if fromSrv {
+			atomic.AddInt64(&stats.PubSrvSent, 1)
+		} else {
+			atomic.AddInt64(&stats.PubCliSent, 1)
+		}
 	case msg.SubMsg:
 		atomic.AddInt64(&stats.Sub, 1)
 	case msg.UnsbMsg:
@@ -189,7 +196,7 @@ func incStats(stats *runStats, m msg.Msg) {
 func serverHandler(t *testing.T, brk broker.PubSubBroker, rc *runConfig, stats *runStats) juggler.Handler {
 	var once sync.Once
 	return juggler.HandlerFunc(func(ctx context.Context, c *juggler.Conn, m msg.Msg) {
-		incStats(stats, m)
+		incStats(stats, m, m.Type().IsWrite())
 		juggler.ProcessMsg(ctx, c, m)
 
 		// start sending PUB messages at the first received message
@@ -201,7 +208,7 @@ func serverHandler(t *testing.T, brk broker.PubSubBroker, rc *runConfig, stats *
 						Args:    m.Payload.Args,
 					})
 					require.NoError(t, err, "Publish failed")
-					incStats(stats, m)
+					incStats(stats, m, true)
 				}
 			}()
 		})
@@ -210,7 +217,7 @@ func serverHandler(t *testing.T, brk broker.PubSubBroker, rc *runConfig, stats *
 
 func clientHandler(stats *runStats) juggler.ClientHandler {
 	return juggler.ClientHandlerFunc(func(ctx context.Context, c *juggler.Client, m msg.Msg) {
-		incStats(stats, m)
+		incStats(stats, m, false)
 	})
 }
 
@@ -403,27 +410,37 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 			cli, err := juggler.Dial(&websocket.Dialer{}, strings.Replace(httpsrv.URL, "http:", "ws:", 1), nil,
 				juggler.SetHandler(clientHandler(&clientStats)),
 				juggler.SetLogFunc(dbgl.Printf))
-			if err != nil {
-				t.Fatalf("Dial failed: %v", err)
-			}
 
 			clientStarted <- struct{}{}
+			if err != nil {
+				t.Errorf("Dial failed: %v", err)
+				return
+			}
+
 			dbgl.Printf("client %d started: %d messages, %s delay", i, len(rc.msgsPerClient[i]), conf.ClientMsgRate)
 			for _, m := range rc.msgsPerClient[i] {
-				incStats(&clientStats, m)
+				incStats(&clientStats, m, false)
 				switch m := m.(type) {
 				case *msg.Call:
 					_, err := cli.Call(m.Payload.URI, m.Payload.Args, m.Payload.Timeout)
-					require.NoError(t, err, "Call")
+					if !assert.NoError(t, err, "Call") {
+						return
+					}
 				case *msg.Sub:
 					_, err := cli.Sub(m.Payload.Channel, m.Payload.Pattern)
-					require.NoError(t, err, "Sub")
+					if !assert.NoError(t, err, "Sub") {
+						return
+					}
 				case *msg.Unsb:
 					_, err := cli.Unsb(m.Payload.Channel, m.Payload.Pattern)
-					require.NoError(t, err, "Unsb")
+					if !assert.NoError(t, err, "Unsb") {
+						return
+					}
 				case *msg.Pub:
 					_, err := cli.Pub(m.Payload.Channel, m.Payload.Args)
-					require.NoError(t, err, "Pub")
+					if !assert.NoError(t, err, "Pub") {
+						return
+					}
 				}
 				<-time.After(conf.ClientMsgRate)
 			}
@@ -453,38 +470,69 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 }
 
 func checkAndPrintResults(t *testing.T, rc *runConfig, srv, cli *runStats) {
+	runTime := rc.end.Sub(rc.start)
+	assert.True(t, runTime > rc.conf.Duration, "Duration")
+
+	assert.Equal(t, cli.Call, srv.Call, "Call")
+	assert.Equal(t, cli.Sub, srv.Sub, "Sub")
+	assert.Equal(t, cli.Unsb, srv.Unsb, "Unsb")
+	assert.Equal(t, cli.PubCliSent, srv.PubCliSent, "Pub")
+	assert.Equal(t, len(rc.serverPubs), int(srv.PubSrvSent), "Pub (server)")
+
+	assert.Equal(t, rc.expectedExp, int(cli.Exp), "Exp (clients)")
+	assert.Equal(t, 0, int(srv.Exp), "Exp (server)")
+	expRes := int(cli.Call) - rc.expectedExp
+	assert.Equal(t, expRes, int(cli.Res), "Res (clients)")
+	assert.Equal(t, expRes, int(srv.Res), "Res (server)")
+
+	var cntMsgs int
+	for _, mpc := range rc.msgsPerClient {
+		cntMsgs += len(mpc)
+	}
+	assert.Equal(t, cntMsgs, int(cli.OK), "OK (clients)")
+	assert.Equal(t, cntMsgs, int(srv.OK), "OK (server)")
+
+	assert.Equal(t, 0, int(cli.Err), "Err (clients)")
+	assert.Equal(t, 0, int(srv.Err), "Err (server)")
+	assert.Equal(t, cli.Evnt, srv.Evnt, "Evnt")
+
+	assert.Equal(t, 0, int(cli.Unknown), "Unknown (clients)")
+	assert.Equal(t, 0, int(srv.Unknown), "Unknown (server)")
+
 	if testing.Verbose() {
 		fmt.Fprintln(os.Stdout)
-		fmt.Fprintln(os.Stdout, "--- Results")
+		fmt.Fprintln(os.Stdout, "--- RESULTS")
 		fmt.Fprintln(os.Stdout)
 
-		w := tabwriter.NewWriter(os.Stdout, 0, 8, 0, '\t', 0)
-		fmt.Fprintf(w, "Duration\t%s\n", rc.end.Sub(rc.start))
-		fmt.Fprintf(w, "Random seed\t%d\n", rc.randSeed)
-		fmt.Fprintf(w, "Callees\t%d x %d\n", rc.conf.NCallees, rc.conf.NWorkersPerCallee)
-		fmt.Fprintf(w, "URIs and Channels\t%d, %d\n", rc.conf.NURIs, rc.conf.NChannels)
-		fmt.Fprintf(w, "Clients\t%d\n", rc.conf.NClients)
+		w := tabwriter.NewWriter(os.Stdout, 0, 8, 1, ' ', 0)
+		fmt.Fprintf(w, "• Duration\t%s\n", runTime)
+		fmt.Fprintf(w, "• Random seed\t%d\n", rc.randSeed)
+		fmt.Fprintf(w, "• Callees\t%d x %d\n", rc.conf.NCallees, rc.conf.NWorkersPerCallee)
+		fmt.Fprintf(w, "• URIs\t%d\n", rc.conf.NURIs)
+		fmt.Fprintf(w, "• Channels\t%d\n", rc.conf.NChannels)
+		fmt.Fprintf(w, "• Clients\t%d\n", rc.conf.NClients)
 
 		mpc := 0
 		if len(rc.msgsPerClient) > 0 {
 			mpc = len(rc.msgsPerClient[0])
 		}
-		fmt.Fprintf(w, "Expected messages\t%d x %d\n", rc.conf.NClients, mpc)
-		fmt.Fprintf(w, "Expected expired calls\t%d\n", rc.expectedExp)
+		fmt.Fprintf(w, "• Expected messages\t%d x %d\n", rc.conf.NClients, mpc)
+		fmt.Fprintf(w, "• Expected expired calls\t%d\n", rc.expectedExp)
 		w.Flush()
 
 		fmt.Fprintln(os.Stdout)
 		fmt.Fprintf(w, "Stats\tServer\tClients\n")
-		fmt.Fprintf(w, "Calls\t%d\t%d\n", srv.Call, cli.Call)
-		fmt.Fprintf(w, "Sub\t%d\t%d\n", srv.Sub, cli.Sub)
-		fmt.Fprintf(w, "Unsb\t%d\t%d\n", srv.Unsb, cli.Unsb)
-		fmt.Fprintf(w, "Pub\t%d\t%d\n", srv.Pub, cli.Pub)
-		fmt.Fprintf(w, "Exp\t%d\t%d\n", srv.Exp, cli.Exp)
-		fmt.Fprintf(w, "Res\t%d\t%d\n", srv.Res, cli.Res)
-		fmt.Fprintf(w, "OK\t%d\t%d\n", srv.OK, cli.OK)
-		fmt.Fprintf(w, "Err\t%d\t%d\n", srv.Err, cli.Err)
-		fmt.Fprintf(w, "Evnt\t%d\t%d\n", srv.Evnt, cli.Evnt)
-		fmt.Fprintf(w, "Unknown\t%d\t%d\n", srv.Unknown, cli.Unknown)
+		fmt.Fprintf(w, "• Calls\t%d\t%d\n", srv.Call, cli.Call)
+		fmt.Fprintf(w, "• Sub\t%d\t%d\n", srv.Sub, cli.Sub)
+		fmt.Fprintf(w, "• Unsb\t%d\t%d\n", srv.Unsb, cli.Unsb)
+		fmt.Fprintf(w, "• Pub (from server)\t%d\t%d\n", srv.PubSrvSent, cli.PubSrvSent)
+		fmt.Fprintf(w, "• Pub (from client)\t%d\t%d\n", srv.PubCliSent, cli.PubCliSent)
+		fmt.Fprintf(w, "• Exp\t%d\t%d\n", srv.Exp, cli.Exp)
+		fmt.Fprintf(w, "• Res\t%d\t%d\n", srv.Res, cli.Res)
+		fmt.Fprintf(w, "• OK\t%d\t%d\n", srv.OK, cli.OK)
+		fmt.Fprintf(w, "• Err\t%d\t%d\n", srv.Err, cli.Err)
+		fmt.Fprintf(w, "• Evnt\t%d\t%d\n", srv.Evnt, cli.Evnt)
+		fmt.Fprintf(w, "• Unknown\t%d\t%d\n", srv.Unknown, cli.Unknown)
 		w.Flush()
 		fmt.Fprintln(os.Stdout)
 	}
