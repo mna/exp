@@ -45,12 +45,13 @@ var (
 	nWorkersPerCalleeFlag = flag.Int("intg.nworkers-per-callee", 10, "number of workers per callee")
 	nClientsFlag          = flag.Int("intg.nclients", 100, "number of clients")
 
-	nURIsFlag         = flag.Int("intg.nuris", 10, "number of URIs")
-	nChannelsFlag     = flag.Int("intg.nchannels", 10, "number of pub-sub channels")
-	durationFlag      = flag.Duration("intg.duration", 10*time.Second, "duration of the integration test")
-	clientMsgRateFlag = flag.Duration("intg.client-msg-rate", time.Second, "rate to send client message")
-	serverPubRateFlag = flag.Duration("intg.server-pub-rate", time.Second, "rate to send server publish message")
-	thunkDelayFlag    = flag.Duration("intg.thunk-delay", 100*time.Millisecond, "delay of a call")
+	nURIsFlag          = flag.Int("intg.nuris", 10, "number of URIs")
+	nChannelsFlag      = flag.Int("intg.nchannels", 10, "number of pub-sub channels")
+	durationFlag       = flag.Duration("intg.duration", 10*time.Second, "duration of the integration test")
+	clientMsgRateFlag  = flag.Duration("intg.client-msg-rate", time.Second, "rate to send client message")
+	serverPubRateFlag  = flag.Duration("intg.server-pub-rate", time.Second, "rate to send server publish message")
+	thunkDelayFlag     = flag.Duration("intg.thunk-delay", 100*time.Millisecond, "delay of a call")
+	callExpireOddsFlag = flag.Int("intg.call-expire-odds", 10, "one chance out of that value for a call to expire")
 )
 
 func getIntgConfig() *IntgConfig {
@@ -73,12 +74,13 @@ func getIntgConfig() *IntgConfig {
 		NWorkersPerCallee: *nWorkersPerCalleeFlag,
 		NClients:          *nClientsFlag,
 
-		NURIs:         *nURIsFlag,
-		NChannels:     *nChannelsFlag,
-		Duration:      *durationFlag,
-		ClientMsgRate: *clientMsgRateFlag,
-		ServerPubRate: *serverPubRateFlag,
-		ThunkDelay:    *thunkDelayFlag,
+		NURIs:          *nURIsFlag,
+		NChannels:      *nChannelsFlag,
+		Duration:       *durationFlag,
+		ClientMsgRate:  *clientMsgRateFlag,
+		ServerPubRate:  *serverPubRateFlag,
+		ThunkDelay:     *thunkDelayFlag,
+		CallExpireOdds: *callExpireOddsFlag,
 	}
 }
 
@@ -102,12 +104,13 @@ type IntgConfig struct {
 	NWorkersPerCallee int // number of workers per callee
 	NClients          int // number of clients generating calls
 
-	NURIs         int           // number of different URIs to pick from at random
-	NChannels     int           // number of different channels to pick from at random
-	Duration      time.Duration // duration of the test
-	ClientMsgRate time.Duration // send a message at this rate
-	ServerPubRate time.Duration // publish a server-side event at this rate
-	ThunkDelay    time.Duration // artificial delay of the call
+	NURIs          int           // number of different URIs to pick from at random
+	NChannels      int           // number of different channels to pick from at random
+	Duration       time.Duration // duration of the test
+	ClientMsgRate  time.Duration // send a message at this rate
+	ServerPubRate  time.Duration // publish a server-side event at this rate
+	ThunkDelay     time.Duration // artificial delay of the call
+	CallExpireOdds int           // one chance out of N that a call will expire (timeout < ThunkDelay)
 }
 
 func (conf *IntgConfig) URIs() []string {
@@ -133,9 +136,9 @@ type runStats struct {
 
 func TestIntegration(t *testing.T) {
 	if testing.Short() {
-		t.Skip("integration tests don't run with the -short flag")
+		t.Skip("skipping the integration test when the -short flag is set")
 	}
-	runIntegrationTest(t, &IntgConfig{}) // TODO : parse flags into IntgConfig
+	runIntegrationTest(t, getIntgConfig())
 }
 
 func incStats(stats *runStats, m msg.Msg) {
@@ -182,28 +185,27 @@ type runConfig struct {
 	randSeed      int64
 	msgsPerClient [][]msg.Msg
 	serverPubs    []msg.Msg
-	expected      [2]*runStats // [0]: server, [1]: clients
+
+	start, end time.Time
 }
 
-func prepareExec(conf *IntgConfig) *runConfig {
+func prepareExec(t *testing.T, conf *IntgConfig) *runConfig {
 	seed := time.Now().UnixNano()
 	rnd := rand.New(rand.NewSource(seed))
-
-	//var srvStats, cliStats runStats
 
 	nCliMsgs := int(conf.Duration / conf.ClientMsgRate)
 	mpc := make([][]msg.Msg, conf.NClients)
 	for i := 0; i < conf.NClients; i++ {
 		mpc[i] = make([]msg.Msg, nCliMsgs)
 		for j := 0; j < nCliMsgs; j++ {
-			mpc[i][j] = newClientMsg(rnd)
+			mpc[i][j] = newClientMsg(t, conf, rnd)
 		}
 	}
 
 	nSrvMsgs := int(conf.Duration / conf.ServerPubRate)
 	sps := make([]msg.Msg, nSrvMsgs)
 	for i := 0; i < nSrvMsgs; i++ {
-		sps[i] = newServerMsg(rnd)
+		sps[i] = newServerMsg(t, conf, rnd)
 	}
 
 	return &runConfig{
@@ -214,12 +216,44 @@ func prepareExec(conf *IntgConfig) *runConfig {
 	}
 }
 
-func newServerMsg(rnd *rand.Rand) msg.Msg {
-	return nil
+func newServerMsg(t *testing.T, conf *IntgConfig, rnd *rand.Rand) msg.Msg {
+	ch := strconv.Itoa(rnd.Intn(conf.NChannels))
+	pub, err := msg.NewPub(ch, "server event")
+	require.NoError(t, err, "NewPub failed")
+	return pub
 }
 
-func newClientMsg(rnd *rand.Rand) msg.Msg {
-	return nil
+func newClientMsg(t *testing.T, conf *IntgConfig, rnd *rand.Rand) msg.Msg {
+	var m msg.Msg
+
+	mt := msg.MessageType(rnd.Intn(int(msg.UnsbMsg)) + 1)
+	switch mt {
+	case msg.CallMsg:
+		uri := strconv.Itoa(rnd.Intn(conf.NURIs))
+		exp := rnd.Intn(conf.CallExpireOdds)
+		to := 10 * conf.ThunkDelay
+		if exp == 0 {
+			to = time.Millisecond
+		}
+		call, err := msg.NewCall(uri, "client call", to)
+		require.NoError(t, err, "NewCall failed")
+		m = call
+
+	case msg.SubMsg:
+		ch := strconv.Itoa(rnd.Intn(conf.NChannels))
+		m = msg.NewSub(ch, false)
+
+	case msg.UnsbMsg:
+		ch := strconv.Itoa(rnd.Intn(conf.NChannels))
+		m = msg.NewUnsb(ch, false)
+
+	case msg.PubMsg:
+		ch := strconv.Itoa(rnd.Intn(conf.NChannels))
+		pub, err := msg.NewPub(ch, "client pub")
+		require.NoError(t, err, "NewPub failed")
+		m = pub
+	}
+	return m
 }
 
 func runIntegrationTest(t *testing.T, conf *IntgConfig) {
@@ -270,7 +304,7 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 	defer httpsrv.Close()
 
 	uris := conf.URIs()
-	rc := prepareExec(conf)
+	rc := prepareExec(t, conf)
 	thunk := func(cp *msg.CallPayload) (interface{}, error) {
 		time.Sleep(conf.ThunkDelay)
 		return "ok", nil
@@ -334,9 +368,17 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 		<-calleeStarted
 	}
 	// start clients
+	rc.start = time.Now()
 	for i := 0; i < conf.NClients; i++ {
 		<-clientStarted
 	}
 	// wait for completion
 	wg.Wait()
+	rc.end = time.Now()
+
+	checkAndPrintResults(t, rc, &srvStats, &clientStats)
+}
+
+func checkAndPrintResults(t *testing.T, rc *runConfig, srv, cli *runStats) {
+
 }
