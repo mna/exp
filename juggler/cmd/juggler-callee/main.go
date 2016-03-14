@@ -9,6 +9,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"log"
 	"strconv"
 	"time"
@@ -19,12 +20,24 @@ import (
 	"github.com/garyburd/redigo/redis"
 )
 
+var (
+	redisAddrFlag             = flag.String("redis-addr", ":6379", "redis address to connect to")
+	redisPoolMaxActiveFlag    = flag.Int("redis-pool-max-active", 100, "redis pool max active connections")
+	redisPoolMaxIdleFlag      = flag.Int("redis-pool-max-idle", 10, "redis pool max idle connections")
+	redisPoolIdleTimeoutFlag  = flag.Duration("redis-pool-idle-timeout", time.Minute, "redis pool idle connection timeout")
+	brokerResultCapFlag       = flag.Int("broker-result-cap", 100, "broker result queue capacity")
+	brokerBlockingTimeoutFlag = flag.Duration("broker-blocking-timeout", 0, "broker blocking timeout")
+)
+
 func main() {
-	pool := newRedisPool(":6379")
+	flag.Parse()
+
+	pool := newRedisPool(*redisAddrFlag)
 	broker := &redisbroker.Broker{
-		Pool:      pool,
-		Dial:      pool.Dial,
-		ResultCap: 100,
+		Pool:            pool,
+		Dial:            pool.Dial,
+		BlockingTimeout: *brokerBlockingTimeoutFlag,
+		ResultCap:       *brokerResultCapFlag,
 	}
 
 	c := &callee.Callee{Broker: broker}
@@ -95,9 +108,9 @@ func echo(s string) string {
 
 func newRedisPool(addr string) *redis.Pool {
 	return &redis.Pool{
-		MaxIdle:     10,
-		MaxActive:   10000,
-		IdleTimeout: 2 * time.Minute,
+		MaxIdle:     *redisPoolMaxIdleFlag,
+		MaxActive:   *redisPoolMaxActiveFlag,
+		IdleTimeout: *redisPoolIdleTimeoutFlag,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", addr)
 			if err != nil {

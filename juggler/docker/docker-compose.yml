@@ -6,8 +6,12 @@ services:
 
     server:
         build:
-          context: ..
-          dockerfile: docker/Dockerfile.server
+            context: ..
+            dockerfile: docker/Dockerfile.server
         ports:
-          - 9000:9000
+            - 9000:9000
 
+    callee:
+        build:
+            context: ..
+            dockerfile: docker/Dockerfile.callee
