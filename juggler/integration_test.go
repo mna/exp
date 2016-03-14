@@ -357,7 +357,7 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 	// 4. start m callees
 	calleeStarted := make(chan struct{})
 	for i := 0; i < conf.NCallees; i++ {
-		go func() {
+		go func(i int) {
 			cle := callee.Callee{
 				Broker:  brk,
 				LogFunc: dbgl.Printf,
@@ -370,17 +370,24 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 			defer conn.Close()
 			ch := conn.Calls()
 
+			wg := sync.WaitGroup{}
+			wg.Add(conf.NWorkersPerCallee)
+			dbgl.Printf("starting callee %d", i)
 			for j := 0; j < conf.NWorkersPerCallee; j++ {
 				go func() {
+					defer wg.Done()
+
 					calleeStarted <- struct{}{}
 					for cp := range ch {
-						if err := cle.InvokeAndStoreResult(cp, thunk); err != nil {
+						if err := cle.InvokeAndStoreResult(cp, thunk); err != nil && err != callee.ErrCallExpired {
 							t.Fatalf("InvokeAndStoreResult failed: %v", err)
 						}
 					}
 				}()
 			}
-		}()
+			wg.Wait()
+			dbgl.Printf("stopping callee %d", i)
+		}(i)
 	}
 
 	// 5. start n clients
