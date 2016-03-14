@@ -17,6 +17,7 @@ import (
 
 var (
 	// TODO : work out a config file for all server and broker options
+	redisAddrFlag       = flag.String("redis-addr", ":6379", "redis address to connect to")
 	allowEmptyProtoFlag = flag.Bool("allow-empty-subprotocol", false, "if set, allow empty subprotocol handshake")
 	portFlag            = flag.Int("port", 9000, "port to listen on")
 	readLimitFlag       = flag.Int("read-limit", 4096, "read message size limit")
@@ -34,7 +35,7 @@ func main() {
 			juggler.HandlerFunc(juggler.ProcessMsg),
 		), true, true)
 
-	pool := newRedisPool(":6379")
+	pool := newRedisPool(*redisAddrFlag)
 	broker := &redisbroker.Broker{
 		Pool:      pool,
 		Dial:      pool.Dial,
