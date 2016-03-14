@@ -2,13 +2,16 @@ package juggler_test
 
 import (
 	"flag"
+	"fmt"
 	"math/rand"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"text/tabwriter"
 	"time"
 
 	"golang.org/x/net/context"
@@ -134,6 +137,21 @@ type runStats struct {
 	Unknown int64
 }
 
+func (s *runStats) clone() *runStats {
+	return &runStats{
+		Call:    atomic.LoadInt64(&s.Call),
+		Pub:     atomic.LoadInt64(&s.Pub),
+		Sub:     atomic.LoadInt64(&s.Sub),
+		Unsb:    atomic.LoadInt64(&s.Unsb),
+		Exp:     atomic.LoadInt64(&s.Exp),
+		OK:      atomic.LoadInt64(&s.OK),
+		Err:     atomic.LoadInt64(&s.Err),
+		Res:     atomic.LoadInt64(&s.Res),
+		Evnt:    atomic.LoadInt64(&s.Evnt),
+		Unknown: atomic.LoadInt64(&s.Unknown),
+	}
+}
+
 func TestIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping the integration test when the -short flag is set")
@@ -234,6 +252,7 @@ func newClientMsg(t *testing.T, conf *IntgConfig, rnd *rand.Rand) msg.Msg {
 		to := 10 * conf.ThunkDelay
 		if exp == 0 {
 			to = time.Millisecond
+			fmt.Println(">>> will expire")
 		}
 		call, err := msg.NewCall(uri, "client call", to)
 		require.NoError(t, err, "NewCall failed")
@@ -375,6 +394,7 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 				}
 				<-time.After(conf.ClientMsgRate)
 			}
+			// TODO : wait for results...
 			require.NoError(t, cli.Close(), "Close client %d", i)
 			dbgl.Printf("client %d closed", i)
 		}(i)
@@ -392,11 +412,43 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 	// wait for completion
 	wg.Wait()
 	rc.end = time.Now()
-	dbgl.Printf("done after %s", rc.end.Sub(rc.start))
 
-	checkAndPrintResults(t, rc, &srvStats, &clientStats)
+	checkAndPrintResults(t, rc, srvStats.clone(), clientStats.clone())
 }
 
 func checkAndPrintResults(t *testing.T, rc *runConfig, srv, cli *runStats) {
+	if testing.Verbose() {
+		fmt.Fprintln(os.Stdout)
+		fmt.Fprintln(os.Stdout, "--- Results")
+		fmt.Fprintln(os.Stdout)
 
+		w := tabwriter.NewWriter(os.Stdout, 0, 8, 0, '\t', 0)
+		fmt.Fprintf(w, "Duration\t%s\n", rc.end.Sub(rc.start))
+		fmt.Fprintf(w, "Random seed\t%d\n", rc.randSeed)
+		fmt.Fprintf(w, "Callees\t%d x %d\n", rc.conf.NCallees, rc.conf.NWorkersPerCallee)
+		fmt.Fprintf(w, "URIs and Channels\t%d, %d\n", rc.conf.NURIs, rc.conf.NChannels)
+		fmt.Fprintf(w, "Clients\t%d\n", rc.conf.NClients)
+
+		mpc := 0
+		if len(rc.msgsPerClient) > 0 {
+			mpc = len(rc.msgsPerClient[0])
+		}
+		fmt.Fprintf(w, "Expected messages\t%d x %d\n", rc.conf.NClients, mpc)
+		w.Flush()
+
+		fmt.Fprintln(os.Stdout)
+		fmt.Fprintf(w, "Stats\tServer\tClients\n")
+		fmt.Fprintf(w, "Calls\t%d\t%d\n", srv.Call, cli.Call)
+		fmt.Fprintf(w, "Sub\t%d\t%d\n", srv.Sub, cli.Sub)
+		fmt.Fprintf(w, "Unsb\t%d\t%d\n", srv.Unsb, cli.Unsb)
+		fmt.Fprintf(w, "Pub\t%d\t%d\n", srv.Pub, cli.Pub)
+		fmt.Fprintf(w, "Exp\t%d\t%d\n", srv.Exp, cli.Exp)
+		fmt.Fprintf(w, "Res\t%d\t%d\n", srv.Res, cli.Res)
+		fmt.Fprintf(w, "OK\t%d\t%d\n", srv.OK, cli.OK)
+		fmt.Fprintf(w, "Err\t%d\t%d\n", srv.Err, cli.Err)
+		fmt.Fprintf(w, "Evnt\t%d\t%d\n", srv.Evnt, cli.Evnt)
+		fmt.Fprintf(w, "Unknown\t%d\t%d\n", srv.Unknown, cli.Unknown)
+		w.Flush()
+		fmt.Fprintln(os.Stdout)
+	}
 }
