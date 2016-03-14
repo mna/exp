@@ -1,0 +1,25 @@
+FROM golang:1.6.0-alpine
+
+# Install netcat to wait for the dependencies to come up in
+# docker-compose (see start.sh).
+# RUN apt-get update && apt-get install -y netcat
+
+# Copy the app in its correct path in the container.
+RUN mkdir -p /go/src/github.com/PuerkitoBio/exp/juggler
+WORKDIR /go/src/github.com/PuerkitoBio/exp/juggler
+COPY . /go/src/github.com/PuerkitoBio/exp/juggler
+
+RUN go get github.com/garyburd/redigo/redis \
+        && github.com/gorilla/websocket \
+        && github.com/pborman/uuid \
+        && golang.org/x/net/context
+
+# Build and install in $GOBIN.
+RUN go build ./cmd/juggler-server/
+
+# Start via the script to wait for dependencies.
+# COPY docker/start.sh ./start.sh
+EXPOSE 9000
+ENTRYPOINT ["./juggler-server"]
+CMD []
+
