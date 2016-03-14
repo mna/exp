@@ -64,7 +64,7 @@ func TestExclusiveWriter(t *testing.T) {
 		<-syncE
 		_, err := fmt.Fprint(w, "e")
 		if assert.Error(t, err, "write e") {
-			assert.Equal(t, ErrLockWriterTimeout, err, "write e exceeded")
+			assert.Equal(t, ErrWriteLockTimeout, err, "write e exceeded")
 		}
 		require.NoError(t, w.Close(), "close e")
 	}()

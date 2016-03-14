@@ -91,7 +91,7 @@ var connectCmd = &cmd{
 		}
 
 		conn, err := juggler.Dial(&d, addr, head,
-			juggler.SetHandler(connMsgLogger(len(connections)+1)),
+			juggler.SetClientHandler(connMsgLogger(len(connections)+1)),
 			juggler.SetLogFunc(printErr))
 		if err != nil {
 			printErr("Dial failed: %v", err)

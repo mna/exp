@@ -40,11 +40,11 @@ func SetCallTimeout(timeout time.Duration) ClientOption {
 	}
 }
 
-// SetHandler sets the client handler that is called with each message
+// SetClientHandler sets the client handler that is called with each message
 // received from the server. Each invocation runs in its own
 // goroutine, so proper synchronization must be used when accessing
 // shared data.
-func SetHandler(h ClientHandler) ClientOption {
+func SetClientHandler(h ClientHandler) ClientOption {
 	return func(c *Client) {
 		c.handler = h
 	}

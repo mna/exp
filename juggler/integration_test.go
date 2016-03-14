@@ -408,7 +408,7 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 			defer wg.Done()
 
 			cli, err := juggler.Dial(&websocket.Dialer{}, strings.Replace(httpsrv.URL, "http:", "ws:", 1), nil,
-				juggler.SetHandler(clientHandler(&clientStats)),
+				juggler.SetClientHandler(clientHandler(&clientStats)),
 				juggler.SetLogFunc(dbgl.Printf))
 
 			clientStarted <- struct{}{}

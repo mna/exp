@@ -26,7 +26,7 @@ func TestClientClose(t *testing.T) {
 	defer srv.Close()
 
 	h := ClientHandlerFunc(func(ctx context.Context, cli *Client, m msg.Msg) {})
-	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetHandler(h), SetLogFunc((&jugglertest.DebugLog{T: t}).Printf))
+	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetClientHandler(h), SetLogFunc((&jugglertest.DebugLog{T: t}).Printf))
 	require.NoError(t, err, "Dial")
 
 	_, err = cli.Call("a", "b", 0)
@@ -65,7 +65,7 @@ func TestClient(t *testing.T) {
 		mu.Unlock()
 	})
 
-	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetHandler(h),
+	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetClientHandler(h),
 		SetCallTimeout(time.Millisecond),
 		SetLogFunc((&jugglertest.DebugLog{T: t}).Printf))
 	require.NoError(t, err, "Dial")

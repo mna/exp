@@ -16,10 +16,10 @@ import (
 	"github.com/pborman/uuid"
 )
 
-// ErrLockWriterTimeout is returned when a call to Write fails
+// ErrWriteLockTimeout is returned when a call to Write fails
 // because the write lock of the connection cannot be acquired before
 // the timeout.
-var ErrLockWriterTimeout = errors.New("juggler: timed out waiting for writer lock")
+var ErrWriteLockTimeout = errors.New("juggler: timed out waiting for write lock")
 
 // ConnState represents the possible states of a connection.
 type ConnState int
@@ -134,7 +134,7 @@ func (w *exclusiveWriter) Write(p []byte) (int, error) {
 		// try to acquire the write lock before the timeout
 		select {
 		case <-wait:
-			return 0, ErrLockWriterTimeout
+			return 0, ErrWriteLockTimeout
 
 		case <-w.writeLock:
 			// lock acquired, get next writer from the websocket connection

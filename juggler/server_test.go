@@ -92,7 +92,7 @@ func TestUpgrade(t *testing.T) {
 	h := ClientHandlerFunc(func(ctx context.Context, cli *Client, m msg.Msg) {})
 
 	// valid subprotocol - no protocol will be set to juggler automatically
-	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetHandler(h), SetLogFunc(dbgl.Printf))
+	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetClientHandler(h), SetLogFunc(dbgl.Printf))
 	require.NoError(t, err, "Dial 1")
 	cli.Close()
 	select {
@@ -102,7 +102,7 @@ func TestUpgrade(t *testing.T) {
 	}
 
 	// invalid subprotocol, websocket connection will be closed
-	cli, err = Dial(&websocket.Dialer{}, srv.URL, http.Header{"Sec-WebSocket-Protocol": {"test"}}, SetHandler(h), SetLogFunc(dbgl.Printf))
+	cli, err = Dial(&websocket.Dialer{}, srv.URL, http.Header{"Sec-WebSocket-Protocol": {"test"}}, SetClientHandler(h), SetLogFunc(dbgl.Printf))
 	require.NoError(t, err, "Dial 2")
 	// no need to call Close, Upgrade will refuse the connection
 	select {

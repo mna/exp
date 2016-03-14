@@ -69,7 +69,7 @@ func PanicRecover(h Handler, closeConn bool, printStack bool) Handler {
 }
 
 // LogConn is a function compatible with the Server.ConnState field
-// type that logs connections and disconnections to LogFunc.
+// type that logs connections and disconnections to the server's LogFunc.
 func LogConn(c *Conn, state ConnState) {
 	switch state {
 	case Connected:
@@ -80,7 +80,7 @@ func LogConn(c *Conn, state ConnState) {
 }
 
 // LogMsg is a HandlerFunc that logs messages received or sent on
-// c to LogFunc.
+// c to the server's LogFunc.
 func LogMsg(ctx context.Context, c *Conn, m msg.Msg) {
 	if m.Type().IsRead() {
 		logf(c.srv.LogFunc, "%v: received message %v %s", c.UUID, m.UUID(), m.Type())
@@ -89,9 +89,10 @@ func LogMsg(ctx context.Context, c *Conn, m msg.Msg) {
 	}
 }
 
-// ProcessMsg implements the default message processing. For client messages,
-// it calls the appropriate RPC, PUB-SUB or AUTH mechanisms. For server
-// messages, it marshals the message and sends it to the client.
+// ProcessMsg is a HandlerFunc that implements the default message
+// processing. For client messages, it calls the appropriate RPC,
+// PUB-SUB or AUTH mechanisms. For server messages, it marshals
+// the message and sends it to the client.
 //
 // When a custom ReadHandler and/or WriterHandler is set on the Server,
 // it should at some point call ProcessMsg so the expected behaviour
@@ -139,14 +140,14 @@ func ProcessMsg(ctx context.Context, c *Conn, m msg.Msg) {
 	case *msg.OK, *msg.Err, *msg.Evnt, *msg.Res:
 		if err := writeMsg(c, m); err != nil {
 			switch err {
-			case ErrLockWriterTimeout:
+			case ErrWriteLockTimeout:
 				c.Close(fmt.Errorf("writeMsg failed: %v; closing connection", err))
 
 			case errWriteLimitExceeded:
 				logf(c.srv.LogFunc, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
 				// no good http code for this case
 				if err := writeMsg(c, msg.NewErr(m, 599, err)); err != nil {
-					if err == ErrLockWriterTimeout {
+					if err == ErrWriteLockTimeout {
 						c.Close(fmt.Errorf("writeMsg failed: %v; closing connection", err))
 					} else {
 						logf(c.srv.LogFunc, "%v: writeMsg %v for write limit exceeded notification failed: %v", c.UUID, m.UUID(), err)
