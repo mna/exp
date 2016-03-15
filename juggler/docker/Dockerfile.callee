@@ -16,5 +16,5 @@ COPY        . $DIR
 RUN         go build ./cmd/juggler-callee/
 
 ENTRYPOINT  ["./docker_start.sh"]
-CMD         ["./juggler-callee", "--redis-addr", "redis:6379"]
+CMD         ["./juggler-callee", "--redis", "redis:6379"]
 
