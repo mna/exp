@@ -48,7 +48,7 @@ In order to keep the juggler core small and focused, this feature is not provide
 * a middleware handler on the server intercepts the CALL messages and checks if the key for that URI exists, returning an ERR if it doesn't.
 * a meta-callee listens for a discovery URI (e.g. com.example.ListURIs) and queries the existing keys (e.g. using SCAN), returning the live URIs.
 
-In the worst case, an inactive URI would be reported as "live" for the TTL of the key (if the callee dies just after having set the expiration of the key). Multiple callees can listen for the same URI without problem, and it would stop being reported as "live" only when the last callee stops listening.
+In the worst case, an inactive URI would be reported as "live" for the TTL of the key (if the callee dies just after having set the expiration of the key). Multiple callees can listen for the same URI without problem, and it would stop being reported as "live" only when the last callee stops listening. The dynamic discovery is somewhat more complex in a redis-cluster (it would require a SCAN on each node, see https://github.com/antirez/redis-doc/issues/286).
 
 The downside is that the dynamic reporting and whitelisting of calls only works if the calls go through the server's middleware handler, so internal components that make calls directly using a CallerBroker interface are not subject to those checks, but that's ok because internal components are presumed safe.
 

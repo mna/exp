@@ -348,6 +348,20 @@ type Res struct {
 	} `json:"payload"`
 }
 
+// ErrResult is the payload of a Res message when the call results in
+// an error (that is, the callee was invoked, and returned an error).
+// It marshals to {"error": {"message": "<error message>"}}, which is
+// similar to a standard Javascript error object.
+//
+// To return a custom payload for an error, implement json.Marshaler
+// for the error type. All errors that do not implement json.Marshaler
+// are returned using ErrResult.
+type ErrResult struct {
+	Error struct {
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
 // NewRes creates a new Res message corresponding to a call result.
 func NewRes(pld *ResPayload) *Res {
 	res := &Res{

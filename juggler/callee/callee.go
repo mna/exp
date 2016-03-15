@@ -113,18 +113,16 @@ func (c *Callee) Listen(m map[string]Thunk) error {
 	return conn.CallsErr()
 }
 
-type errResult struct {
-	Error struct {
-		Message string `json:"message"`
-	} `json:"error"`
-}
-
 func (c *Callee) storeResult(cp *msg.CallPayload, v interface{}, e error, timeout time.Duration) error {
 	// if there's an error, that's what gets stored
 	if e != nil {
-		var er errResult
-		er.Error.Message = e.Error()
-		v = er
+		if ms, ok := e.(json.Marshaler); ok {
+			v = ms
+		} else {
+			var er msg.ErrResult
+			er.Error.Message = e.Error()
+			v = er
+		}
 	}
 
 	b, err := json.Marshal(v)

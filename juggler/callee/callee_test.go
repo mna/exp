@@ -70,10 +70,10 @@ func TestCallee(t *testing.T) {
 		err: io.EOF,
 	}
 
-	var er errResult
+	var er msg.ErrResult
 	er.Error.Message = io.ErrUnexpectedEOF.Error()
 	b, err := json.Marshal(er)
-	require.NoError(t, err, "Marshal errResult")
+	require.NoError(t, err, "Marshal ErrResult")
 
 	exp := []*msg.ResPayload{
 		{ConnUUID: cuid, MsgUUID: brk.cps[0].MsgUUID, URI: "ok", Args: json.RawMessage(`"ok"`)},
