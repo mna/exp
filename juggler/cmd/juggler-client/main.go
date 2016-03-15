@@ -24,15 +24,20 @@ var (
 )
 
 var (
-	defaultConnFlag     = flag.String("addr", "ws://localhost:9000/ws", "default dial address to use in connect commands")
-	defaultSubprotoFlag = flag.String("subprotocol", "juggler.0", "default subprotocol to request in the websocket handshake")
-	timestampFmtFlag    = flag.String("timestamp", time.StampMilli, "format of the timestamp in the output, empty for none")
+	defaultConnFlag     = flag.String("addr", "ws://localhost:9000/ws", "Default server `address` used in connect command.")
+	defaultSubprotoFlag = flag.String("proto", "juggler.0", "Default `subprotocol` used in connect command.")
+	timestampFmtFlag    = flag.String("timestamp", time.StampMilli, "Timestamp `format`, using Go time format syntax.")
+	helpFlag            = flag.Bool("help", false, "Show help.")
 )
 
 func main() {
 	var exitCode int
 
 	flag.Parse()
+	if *helpFlag {
+		flag.Usage()
+		return
+	}
 
 	// call os.Exit in a defer, otherwise defer to reset the terminal
 	// will not be run.
