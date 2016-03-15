@@ -2,6 +2,7 @@
 package client
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"sync"
@@ -15,53 +16,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/pborman/uuid"
 )
-
-// Handler defines the method required to handle a message received
-// from the server.
-type Handler interface {
-	Handle(context.Context, *Client, msg.Msg)
-}
-
-// HandlerFunc is a function that implements the Handler interface.
-type HandlerFunc func(context.Context, *Client, msg.Msg)
-
-// Handle implements Handler for a HandlerFunc. It calls fn
-// with the parameters.
-func (fn HandlerFunc) Handle(ctx context.Context, cli *Client, m msg.Msg) {
-	fn(ctx, cli, m)
-}
-
-// Option sets an option on the Client.
-type Option func(*Client)
-
-// SetCallTimeout sets the time to wait for the result of a call request.
-// The zero value uses the default timeout of the server. Per-call
-// timeouts can also be specified, see Client.Call.
-func SetCallTimeout(timeout time.Duration) Option {
-	return func(c *Client) {
-		c.callTimeout = timeout
-	}
-}
-
-// SetHandler sets the handler that is called with each message
-// received from the server. Each invocation runs in its own
-// goroutine, so proper synchronization must be used when accessing
-// shared data.
-func SetHandler(h Handler) Option {
-	return func(c *Client) {
-		c.handler = h
-	}
-}
-
-// SetLogFunc sets the function used to log errors that occur outside
-// the handler calls, such as when a message fails to be unmarshaled.
-// If nil, it logs using log.Printf. It can be set to juggler.DiscardLog
-// to disable logging.
-func SetLogFunc(fn func(string, ...interface{})) Option {
-	return func(c *Client) {
-		c.logFunc = fn
-	}
-}
 
 // Client is a juggler client based on a websocket connection. It can
 // be used to send and receive messages to and from a juggler server.
@@ -225,7 +179,7 @@ func (c *Client) handleExpiredCall(m *msg.Call, timeout time.Duration) {
 	// check if still waiting for a result
 	if ok := c.deletePending(m.UUID().String()); ok {
 		// if so, send an Exp message
-		exp := msg.NewExp(m)
+		exp := newExp(m)
 		go c.handler.Handle(context.Background(), c, exp)
 	}
 }
@@ -284,6 +238,80 @@ func (c *Client) Pub(channel string, v interface{}) (uuid.UUID, error) {
 		return nil, err
 	}
 	return m.UUID(), nil
+}
+
+// Handler defines the method required to handle a message received
+// from the server.
+type Handler interface {
+	Handle(context.Context, *Client, msg.Msg)
+}
+
+// HandlerFunc is a function that implements the Handler interface.
+type HandlerFunc func(context.Context, *Client, msg.Msg)
+
+// Handle implements Handler for a HandlerFunc. It calls fn
+// with the parameters.
+func (fn HandlerFunc) Handle(ctx context.Context, cli *Client, m msg.Msg) {
+	fn(ctx, cli, m)
+}
+
+// Option sets an option on the Client.
+type Option func(*Client)
+
+// SetCallTimeout sets the time to wait for the result of a call request.
+// The zero value uses the default timeout of the server. Per-call
+// timeouts can also be specified, see Client.Call.
+func SetCallTimeout(timeout time.Duration) Option {
+	return func(c *Client) {
+		c.callTimeout = timeout
+	}
+}
+
+// SetHandler sets the handler that is called with each message
+// received from the server. Each invocation runs in its own
+// goroutine, so proper synchronization must be used when accessing
+// shared data.
+func SetHandler(h Handler) Option {
+	return func(c *Client) {
+		c.handler = h
+	}
+}
+
+// SetLogFunc sets the function used to log errors that occur outside
+// the handler calls, such as when a message fails to be unmarshaled.
+// If nil, it logs using log.Printf. It can be set to juggler.DiscardLog
+// to disable logging.
+func SetLogFunc(fn func(string, ...interface{})) Option {
+	return func(c *Client) {
+		c.logFunc = fn
+	}
+}
+
+// Exp is an expired call message. It is never sent over the network, but
+// it is raised by the client for itself, when the timeout for a call
+// result has expired. As such, its message type returns false for
+// both IsRead and IsWrite.
+type Exp struct {
+	msg.Meta `json:"meta"`
+	Payload  struct {
+		For  uuid.UUID       `json:"for"`           // no ForType, because always CALL
+		URI  string          `json:"uri,omitempty"` // URI of the CALL
+		Args json.RawMessage `json:"args"`
+	} `json:"payload"`
+}
+
+// ExpMsg is the message type of the call expiration message.
+const ExpMsg msg.MessageType = msg.CustomMsg + iota
+
+// newExp creates a new expired message for the provided call message.
+func newExp(m *msg.Call) *Exp {
+	exp := &Exp{
+		Meta: msg.NewMeta(ExpMsg),
+	}
+	exp.Payload.For = m.UUID()
+	exp.Payload.URI = m.Payload.URI
+	exp.Payload.Args = m.Payload.Args
+	return exp
 }
 
 func logf(fn func(string, ...interface{}), f string, args ...interface{}) {

@@ -63,13 +63,6 @@ func TestMarshalUnmarshal(t *testing.T) {
 		_, err = UnmarshalResponse(bytes.NewReader(b))
 		assert.Equal(t, m.Type().IsWrite(), err == nil, "UnmarshalResponse for %d", i)
 	}
-
-	exp := NewExp(call)
-	b, err := json.Marshal(exp)
-	require.NoError(t, err, "Marshal EXP")
-	_, err = Unmarshal(bytes.NewReader(b))
-	assert.Error(t, err, "Unmarshal not allowed for EXP")
-	assert.Contains(t, err.Error(), "unknown message EXP", "Unmarshal for EXP returns expected error")
 }
 
 func TestNewErrFromOK(t *testing.T) {

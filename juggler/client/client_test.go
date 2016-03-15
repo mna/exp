@@ -59,8 +59,8 @@ func TestClient(t *testing.T) {
 
 		mu.Lock()
 		cnt++
-		if assert.Equal(t, msg.ExpMsg, m.Type(), "Expects EXP message") {
-			expForUUID = m.(*msg.Exp).Payload.For
+		if assert.Equal(t, ExpMsg, m.Type(), "Expects EXP message") {
+			expForUUID = m.(*Exp).Payload.For
 		}
 		mu.Unlock()
 	})

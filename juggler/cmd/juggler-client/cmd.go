@@ -122,7 +122,7 @@ func (l connMsgLogger) Handle(ctx context.Context, cli *client.Client, m msg.Msg
 		}
 		val := string(m.Payload.Args[:n])
 		s = fmt.Sprintf("for %s %v (%s)", msg.CallMsg, m.Payload.For, val)
-	case *msg.Exp:
+	case *client.Exp:
 		s = fmt.Sprintf("for %s %v", msg.CallMsg, m.Payload.For)
 	case *msg.Evnt:
 		n := len(m.Payload.Args)

@@ -1,7 +1,7 @@
 // Package msg defines the supported types of messages in the juggler
 // protocol.
 //
-// The juggler.0 subprotocol defines the following messages for the client:
+// The juggler.0 protocol defines the following messages for the client:
 //
 //     - CALL : to call an RPC function
 //     - SUB  : to subscribe to a pub/sub channel
@@ -15,13 +15,8 @@
 //     - RES  : the result of a CALL message
 //     - EVNT : an event triggered on a channel that the client is subscribed to
 //
-// There's another message that is never sent by either end to a peer, but that
-// can be triggered by the client for itself:
-//
-//     - EXP  : expired CALL, meaning that no RES will be received for this call.
-//
 // Closing the communication is done via the standard websocket close
-// process. TODO : support a "juggler.close" special CALL URI?
+// process.
 //
 // All messages must be of type websocket.TextMessage. Failing to properly
 // speak the protocol terminates the connection without notice from the
@@ -58,9 +53,13 @@ const (
 	EvntMsg
 	endWrite
 
-	startMeta
-	ExpMsg
-	endMeta
+	// CustomMsg allows for definition of custom message types,
+	// starting at ID 256 (first 255 are reserved). Custom message
+	// types can be declared like this:
+	//
+	//     const SomeMsg msg.MessageType = msg.CustomMsg + iota
+	//
+	CustomMsg MessageType = (256 - endWrite) + iota
 )
 
 var lookupMessageType = []string{
@@ -72,7 +71,6 @@ var lookupMessageType = []string{
 	OKMsg:   "OK",
 	ResMsg:  "RES",
 	EvntMsg: "EVNT",
-	ExpMsg:  "EXP",
 }
 
 // String returns the human-readable representation of message types.
@@ -114,7 +112,8 @@ type Meta struct {
 	U uuid.UUID   `json:"uuid"`
 }
 
-func newMeta(t MessageType) Meta {
+// NewMeta returns a new, initialized Meta.
+func NewMeta(t MessageType) Meta {
 	return Meta{T: t, U: uuid.NewRandom()}
 }
 
@@ -160,7 +159,7 @@ func NewCall(uri string, args interface{}, timeout time.Duration) (*Call, error)
 	}
 
 	c := &Call{
-		Meta: newMeta(CallMsg),
+		Meta: NewMeta(CallMsg),
 	}
 	c.Payload.URI = uri
 	c.Payload.Timeout = timeout
@@ -184,7 +183,7 @@ type Sub struct {
 // treated as a pattern if pattern is true.
 func NewSub(channel string, pattern bool) *Sub {
 	sub := &Sub{
-		Meta: newMeta(SubMsg),
+		Meta: NewMeta(SubMsg),
 	}
 	sub.Payload.Channel = channel
 	sub.Payload.Pattern = pattern
@@ -201,7 +200,7 @@ type Unsb Sub
 // treated as a pattern if pattern is true.
 func NewUnsb(channel string, pattern bool) *Unsb {
 	un := &Unsb{
-		Meta: newMeta(UnsbMsg),
+		Meta: NewMeta(UnsbMsg),
 	}
 	un.Payload.Channel = channel
 	un.Payload.Pattern = pattern
@@ -229,7 +228,7 @@ func NewPub(channel string, args interface{}) (*Pub, error) {
 	}
 
 	p := &Pub{
-		Meta: newMeta(PubMsg),
+		Meta: NewMeta(PubMsg),
 	}
 	p.Payload.Channel = channel
 	p.Payload.Args = json.RawMessage(b)
@@ -258,7 +257,7 @@ type Err struct {
 // the from message.
 func NewErr(from Msg, code int, e error) *Err {
 	err := &Err{
-		Meta: newMeta(ErrMsg),
+		Meta: NewMeta(ErrMsg),
 	}
 	err.Payload.For = from.UUID()
 	err.Payload.ForType = from.Type()
@@ -319,7 +318,7 @@ type OK struct {
 // of the from message.
 func NewOK(from Msg) *OK {
 	ok := &OK{
-		Meta: newMeta(OKMsg),
+		Meta: NewMeta(OKMsg),
 	}
 	ok.Payload.For = from.UUID()
 	ok.Payload.ForType = from.Type()
@@ -365,7 +364,7 @@ type ErrResult struct {
 // NewRes creates a new Res message corresponding to a call result.
 func NewRes(pld *ResPayload) *Res {
 	res := &Res{
-		Meta: newMeta(ResMsg),
+		Meta: NewMeta(ResMsg),
 	}
 	res.Payload.For = pld.MsgUUID
 	res.Payload.URI = pld.URI
@@ -389,37 +388,13 @@ type Evnt struct {
 // occurred on a subscribed channel.
 func NewEvnt(pld *EvntPayload) *Evnt {
 	ev := &Evnt{
-		Meta: newMeta(EvntMsg),
+		Meta: NewMeta(EvntMsg),
 	}
 	ev.Payload.Channel = pld.Channel
 	ev.Payload.Pattern = pld.Pattern
 	ev.Payload.For = pld.MsgUUID
 	ev.Payload.Args = pld.Args
 	return ev
-}
-
-// Exp is an expired call message. It is never sent over the network, but
-// it can be raised by a client, for itself, when the timeout for a call
-// result has expired. As such, the ExpMsg message type returns false for
-// both IsRead and IsWrite.
-type Exp struct {
-	Meta    `json:"meta"`
-	Payload struct {
-		For  uuid.UUID       `json:"for"`           // no ForType, because always CALL
-		URI  string          `json:"uri,omitempty"` // URI of the CALL
-		Args json.RawMessage `json:"args"`
-	} `json:"payload"`
-}
-
-// NewExp creates a new expired message for the provided call message.
-func NewExp(m *Call) *Exp {
-	exp := &Exp{
-		Meta: newMeta(ExpMsg),
-	}
-	exp.Payload.For = m.UUID()
-	exp.Payload.URI = m.Payload.URI
-	exp.Payload.Args = m.Payload.Args
-	return exp
 }
 
 // UnmarshalRequest unmarshals a JSON-encoded message from r into the

@@ -179,7 +179,7 @@ func incStats(stats *runStats, m msg.Msg, fromSrv bool) {
 		atomic.AddInt64(&stats.Sub, 1)
 	case msg.UnsbMsg:
 		atomic.AddInt64(&stats.Unsb, 1)
-	case msg.ExpMsg:
+	case client.ExpMsg:
 		atomic.AddInt64(&stats.Exp, 1)
 	case msg.OKMsg:
 		atomic.AddInt64(&stats.OK, 1)
