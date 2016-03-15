@@ -13,11 +13,14 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"gopkg.in/yaml.v2"
 
 	"github.com/PuerkitoBio/exp/juggler"
 	"github.com/PuerkitoBio/exp/juggler/broker"
 	"github.com/PuerkitoBio/exp/juggler/broker/redisbroker"
+	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/websocket"
 )
@@ -64,6 +67,9 @@ type Server struct {
 	WriteTimeout            time.Duration `yaml:"write_timeout"`
 	AcquireWriteLockTimeout time.Duration `yaml:"acquire_write_lock_timeout"`
 	AllowEmptySubprotocol   bool          `yaml:"allow_empty_subprotocol"`
+
+	// handler options
+	CloseURI string `yaml:"close_uri"`
 }
 
 // Config defines the configuration options of the server.
@@ -94,6 +100,7 @@ func getDefaultConfig() *Config {
 			WriteTimeout:            0,
 			AcquireWriteLockTimeout: 0,
 			AllowEmptySubprotocol:   *allowEmptyProtoFlag,
+			CloseURI:                "",
 		},
 	}
 }
@@ -170,7 +177,7 @@ func main() {
 	psb := newPubSubBroker(pool)
 	cb := newCallerBroker(conf.CallerBroker, pool)
 	srv := newServer(conf.Server, psb, cb)
-	srv.Handler = newHandler()
+	srv.Handler = newHandler(conf.Server)
 	upg := newUpgrader(conf.Server) // must be after newServer, for Subprotocols
 
 	upgh := juggler.Upgrade(upg, srv)
@@ -186,11 +193,36 @@ func main() {
 	}
 }
 
-func newHandler() juggler.Handler {
+func newHandler(conf *Server) juggler.Handler {
+	closeURI := conf.CloseURI
+	writeTimeout := conf.WriteTimeout
+
+	process := juggler.HandlerFunc(func(ctx context.Context, c *juggler.Conn, m msg.Msg) {
+		if call, ok := m.(*msg.Call); ok {
+			if call.Payload.URI == closeURI {
+				wsc := c.UnderlyingConn()
+
+				deadline := time.Now().Add(writeTimeout)
+				if writeTimeout == 0 {
+					deadline = time.Time{}
+				}
+
+				if err := wsc.WriteControl(websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.CloseNormalClosure, "bye"),
+					deadline); err != nil {
+
+					log.Printf("WriteControl failed: %v", err)
+				}
+				return
+			}
+		}
+		juggler.ProcessMsg(ctx, c, m)
+	})
+
 	return juggler.PanicRecover(
 		juggler.Chain(
 			juggler.HandlerFunc(juggler.LogMsg),
-			juggler.HandlerFunc(juggler.ProcessMsg),
+			process,
 		), true, true)
 }
 

@@ -17,7 +17,5 @@ RUN         go build ./cmd/juggler-server/
 
 EXPOSE      9000
 ENTRYPOINT  ["./docker_start.sh"]
-
-# TODO : eventually run with -f CONFIG_FILE as default CMD? See how other servers-with-config-file do it.
-CMD         ["./juggler-server", "--redis", "redis:6379"]
+CMD         ["./juggler-server", "--redis", "redis:6379", "--config", "./server.config.yml"]
 
