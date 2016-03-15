@@ -1,4 +1,4 @@
-package juggler
+package juggler_test
 
 import (
 	"io/ioutil"
@@ -10,7 +10,9 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/PuerkitoBio/exp/juggler"
 	"github.com/PuerkitoBio/exp/juggler/broker/redisbroker"
+	"github.com/PuerkitoBio/exp/juggler/client"
 	"github.com/PuerkitoBio/exp/juggler/internal/jugglertest"
 	"github.com/PuerkitoBio/exp/juggler/internal/redistest"
 	"github.com/PuerkitoBio/exp/juggler/internal/wstest"
@@ -39,22 +41,22 @@ func TestServerServe(t *testing.T) {
 	conn := wstest.Dial(t, srv.URL)
 	defer conn.Close()
 
-	state := make(chan ConnState)
-	fn := func(c *Conn, cs ConnState) {
+	state := make(chan juggler.ConnState)
+	fn := func(c *juggler.Conn, cs juggler.ConnState) {
 		select {
 		case state <- cs:
 		case <-time.After(100 * time.Millisecond):
 			assert.Fail(t, "could not sent state %d", cs)
 		}
 	}
-	server := &Server{ConnState: fn, CallerBroker: broker, PubSubBroker: broker, LogFunc: dbgl.Printf}
+	server := &juggler.Server{ConnState: fn, CallerBroker: broker, PubSubBroker: broker, LogFunc: dbgl.Printf}
 
 	go server.ServeConn(conn)
 
-	var got ConnState
+	var got juggler.ConnState
 	select {
 	case got = <-state:
-		assert.Equal(t, Connected, got, "received connected connection state")
+		assert.Equal(t, juggler.Connected, got, "received connected connection state")
 	case <-time.After(100 * time.Millisecond):
 		assert.Fail(t, "no connected state received")
 	}
@@ -65,7 +67,7 @@ func TestServerServe(t *testing.T) {
 
 	select {
 	case got = <-state:
-		assert.Equal(t, Closing, got, "received closing connection state")
+		assert.Equal(t, juggler.Closing, got, "received closing connection state")
 	case <-time.After(100 * time.Millisecond):
 		assert.Fail(t, "no closing state received")
 	}
@@ -83,30 +85,30 @@ func TestUpgrade(t *testing.T) {
 		LogFunc: dbgl.Printf,
 	}
 
-	server := &Server{CallerBroker: broker, PubSubBroker: broker, LogFunc: dbgl.Printf}
-	upg := &websocket.Upgrader{Subprotocols: Subprotocols}
-	srv := httptest.NewServer(Upgrade(upg, server))
+	server := &juggler.Server{CallerBroker: broker, PubSubBroker: broker, LogFunc: dbgl.Printf}
+	upg := &websocket.Upgrader{Subprotocols: juggler.Subprotocols}
+	srv := httptest.NewServer(juggler.Upgrade(upg, server))
 	srv.URL = strings.Replace(srv.URL, "http:", "ws:", 1)
 	defer srv.Close()
 
-	h := ClientHandlerFunc(func(ctx context.Context, cli *Client, m msg.Msg) {})
+	h := client.HandlerFunc(func(ctx context.Context, cli *client.Client, m msg.Msg) {})
 
 	// valid subprotocol - no protocol will be set to juggler automatically
-	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetClientHandler(h), SetLogFunc(dbgl.Printf))
+	cli, err := client.Dial(&websocket.Dialer{}, srv.URL, nil, client.SetHandler(h), client.SetLogFunc(dbgl.Printf))
 	require.NoError(t, err, "Dial 1")
 	cli.Close()
 	select {
-	case <-cli.stop:
+	case <-cli.CloseNotify():
 	case <-time.After(100 * time.Millisecond):
 		assert.Fail(t, "no close signal received for Dial 1")
 	}
 
 	// invalid subprotocol, websocket connection will be closed
-	cli, err = Dial(&websocket.Dialer{}, srv.URL, http.Header{"Sec-WebSocket-Protocol": {"test"}}, SetClientHandler(h), SetLogFunc(dbgl.Printf))
+	cli, err = client.Dial(&websocket.Dialer{}, srv.URL, http.Header{"Sec-WebSocket-Protocol": {"test"}}, client.SetHandler(h), client.SetLogFunc(dbgl.Printf))
 	require.NoError(t, err, "Dial 2")
 	// no need to call Close, Upgrade will refuse the connection
 	select {
-	case <-cli.stop:
+	case <-cli.CloseNotify():
 	case <-time.After(100 * time.Millisecond):
 		assert.Fail(t, "no close signal received for Dial 2")
 	}

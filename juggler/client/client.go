@@ -172,6 +172,12 @@ func (c *Client) Close() error {
 	return err
 }
 
+// CloseNotify returns a channel that is closed when the client is
+// closed.
+func (c *Client) CloseNotify() <-chan struct{} {
+	return c.stop
+}
+
 // UnderlyingConn returns the underlying websocket connection used by the
 // client. Care should be taken when using the websocket connection
 // directly, as it may interfere with the normal behaviour of the client.

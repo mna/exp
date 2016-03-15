@@ -20,6 +20,7 @@ import (
 	"github.com/PuerkitoBio/exp/juggler/broker"
 	"github.com/PuerkitoBio/exp/juggler/broker/redisbroker"
 	"github.com/PuerkitoBio/exp/juggler/callee"
+	"github.com/PuerkitoBio/exp/juggler/client"
 	"github.com/PuerkitoBio/exp/juggler/internal/jugglertest"
 	"github.com/PuerkitoBio/exp/juggler/internal/redistest"
 	"github.com/PuerkitoBio/exp/juggler/msg"
@@ -215,8 +216,8 @@ func serverHandler(t *testing.T, brk broker.PubSubBroker, rc *runConfig, stats *
 	})
 }
 
-func clientHandler(stats *runStats) juggler.ClientHandler {
-	return juggler.ClientHandlerFunc(func(ctx context.Context, c *juggler.Client, m msg.Msg) {
+func clientHandler(stats *runStats) client.Handler {
+	return client.HandlerFunc(func(ctx context.Context, c *client.Client, m msg.Msg) {
 		incStats(stats, m, false)
 	})
 }
@@ -407,9 +408,9 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 		go func(i int) {
 			defer wg.Done()
 
-			cli, err := juggler.Dial(&websocket.Dialer{}, strings.Replace(httpsrv.URL, "http:", "ws:", 1), nil,
-				juggler.SetClientHandler(clientHandler(&clientStats)),
-				juggler.SetLogFunc(dbgl.Printf))
+			cli, err := client.Dial(&websocket.Dialer{}, strings.Replace(httpsrv.URL, "http:", "ws:", 1), nil,
+				client.SetHandler(clientHandler(&clientStats)),
+				client.SetLogFunc(dbgl.Printf))
 
 			clientStarted <- struct{}{}
 			if err != nil {
