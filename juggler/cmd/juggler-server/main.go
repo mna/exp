@@ -73,9 +73,8 @@ type Config struct {
 	Server       *Server       `yaml:"server"`
 }
 
-func getConfigFromReader(r io.Reader) (*Config, error) {
-	// set default values
-	conf := &Config{
+func getDefaultConfig() *Config {
+	return &Config{
 		Redis: &Redis{
 			Addr:        *redisAddrFlag,
 			MaxActive:   0,
@@ -97,7 +96,12 @@ func getConfigFromReader(r io.Reader) (*Config, error) {
 			AllowEmptySubprotocol:   *allowEmptyProtoFlag,
 		},
 	}
+}
 
+func getConfigFromReader(r io.Reader) (*Config, error) {
+	conf := getDefaultConfig()
+
+	// set default values
 	if r != nil {
 		b, err := ioutil.ReadAll(r)
 		if err != nil {
