@@ -11,3 +11,4 @@ COPY        . $DIR
 # Build the client
 RUN         go build ./cmd/juggler-client/
 CMD         ["./juggler-client", "--addr", "ws://docker_server_1:9000/ws"]
+

@@ -41,6 +41,11 @@
 			"path": "golang.org/x/net/context",
 			"revision": "b4e17d61b15679caf2335da776c614169a1b4643",
 			"revisionTime": "2015-10-28T13:07:21+01:00"
+		},
+		{
+			"path": "gopkg.in/yaml.v2",
+			"revision": "a83829b6f1293c91addabc89d0571c246397bbf4",
+			"revisionTime": "2016-03-01T17:40:22-03:00"
 		}
 	]
 }
