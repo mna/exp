@@ -12,14 +12,14 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/PuerkitoBio/exp/juggler"
+	"github.com/PuerkitoBio/exp/juggler/client"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
 )
 
 var (
 	commands    map[string]*cmd
-	connections []*juggler.Client
+	connections []*client.Client
 )
 
 func init() {
@@ -93,9 +93,9 @@ var connectCmd = &cmd{
 			head.Set("Sec-WebSocket-Protocol", args[1])
 		}
 
-		conn, err := juggler.Dial(&d, addr, head,
-			juggler.SetClientHandler(connMsgLogger(len(connections)+1)),
-			juggler.SetLogFunc(printErr))
+		conn, err := client.Dial(&d, addr, head,
+			client.SetHandler(connMsgLogger(len(connections)+1)),
+			client.SetLogFunc(printErr))
 		if err != nil {
 			printErr("Dial failed: %v", err)
 			return
@@ -108,7 +108,7 @@ var connectCmd = &cmd{
 
 type connMsgLogger int
 
-func (l connMsgLogger) Handle(ctx context.Context, cli *juggler.Client, m msg.Msg) {
+func (l connMsgLogger) Handle(ctx context.Context, cli *client.Client, m msg.Msg) {
 	var s string
 	switch m := m.(type) {
 	case *msg.Err:
@@ -345,7 +345,7 @@ var randCmd = &cmd{
 	},
 }
 
-func getConn(arg string) (*juggler.Client, int) {
+func getConn(arg string) (*client.Client, int) {
 	ix, err := strconv.Atoi(arg)
 	if err != nil {
 		printErr("argument error: %v", err)
