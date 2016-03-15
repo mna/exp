@@ -52,7 +52,7 @@ func main() {
 	pool := newRedisPool(*redisAddrFlag)
 	c := &callee.Callee{Broker: newBroker(pool)}
 
-	log.Printf("listening for call requests on %s", *redisAddrFlag)
+	log.Printf("listening for call requests on %s with %d workers", *redisAddrFlag, *workersFlag)
 
 	keys := make([]string, 0, len(uris))
 	for k := range uris {
