@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/rand"
 	"fmt"
+	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -35,6 +37,7 @@ func init() {
 		"psub":       psubCmd,
 		"unsb":       unsbCmd,
 		"punsb":      punsbCmd,
+		"rand":       randCmd,
 	}
 }
 
@@ -308,6 +311,38 @@ func getUnsbFunc(pattern bool) func(*cmd, ...string) {
 			printErr("invalid connection ID: %s", args[0])
 		}
 	}
+}
+
+var randCmd = &cmd{
+	Usage:   "usage: rand CONN_ID [N_BYTES]",
+	MinArgs: 1,
+	Help:    "send random bytes to the connection identified by CONN_ID",
+
+	Run: func(_ *cmd, args ...string) {
+		if c, ix := getConn(args[0]); c != nil {
+			conn := c.UnderlyingConn()
+			w, err := conn.NextWriter(websocket.TextMessage)
+			if err != nil {
+				printErr("[%d] rand failed to get writer: %v", ix+1, err)
+				return
+			}
+			n := 20
+			if len(args) > 1 {
+				i, err := strconv.Atoi(args[1])
+				if err != nil {
+					printErr("[%d] invalid number: %v", ix+1, err)
+					return
+				}
+				n = i
+			}
+			if _, err := io.Copy(w, io.LimitReader(rand.Reader, int64(n))); err != nil {
+				printErr("[%d] write failed: %v", ix+1, err)
+				return
+			}
+		} else {
+			printErr("invalid connection ID: %s", args[0])
+		}
+	},
 }
 
 func getConn(arg string) (*juggler.Client, int) {
