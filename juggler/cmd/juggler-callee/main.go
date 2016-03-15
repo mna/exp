@@ -12,8 +12,10 @@ import (
 	"flag"
 	"log"
 	"strconv"
+	"sync"
 	"time"
 
+	"github.com/PuerkitoBio/exp/juggler/broker"
 	"github.com/PuerkitoBio/exp/juggler/broker/redisbroker"
 	"github.com/PuerkitoBio/exp/juggler/callee"
 	"github.com/PuerkitoBio/exp/juggler/msg"
@@ -27,8 +29,15 @@ var (
 	redisPoolIdleTimeoutFlag  = flag.Duration("redis-idle-timeout", time.Minute, "Redis idle connection `timeout`.")
 	brokerResultCapFlag       = flag.Int("broker-result-cap", 100, "Capacity of the `results` queue.")
 	brokerBlockingTimeoutFlag = flag.Duration("broker-blocking-timeout", 0, "Blocking `timeout` when polling for call requests.")
+	workersFlag               = flag.Int("workers", 1, "Number of concurrent `workers` processing call requests.")
 	helpFlag                  = flag.Bool("help", false, "Show help.")
 )
+
+var uris = map[string]callee.Thunk{
+	"test.echo":    echoThunk,
+	"test.reverse": reverseThunk,
+	"test.delay":   delayThunk,
+}
 
 func main() {
 	flag.Parse()
@@ -36,25 +45,43 @@ func main() {
 		flag.Usage()
 		return
 	}
+	if *workersFlag <= 0 {
+		*workersFlag = 1
+	}
 
 	pool := newRedisPool(*redisAddrFlag)
-	broker := &redisbroker.Broker{
-		Pool:            pool,
-		Dial:            pool.Dial,
-		BlockingTimeout: *brokerBlockingTimeoutFlag,
-		ResultCap:       *brokerResultCapFlag,
-	}
-
-	c := &callee.Callee{Broker: broker}
+	c := &callee.Callee{Broker: newBroker(pool)}
 
 	log.Printf("listening for call requests on %s", *redisAddrFlag)
-	if err := c.Listen(map[string]callee.Thunk{
-		"test.echo":    logWrapThunk(echoThunk),
-		"test.reverse": logWrapThunk(reverseThunk),
-		"test.delay":   logWrapThunk(delayThunk),
-	}); err != nil {
-		log.Fatalf("Listen failed: %v", err)
+
+	keys := make([]string, 0, len(uris))
+	for k := range uris {
+		keys = append(keys, k)
 	}
+
+	cc, err := c.Broker.Calls(keys...)
+	if err != nil {
+		log.Fatalf("Calls failed: %v", err)
+	}
+	defer cc.Close()
+
+	wg := sync.WaitGroup{}
+	wg.Add(*workersFlag)
+	for i := 0; i < *workersFlag; i++ {
+		go func() {
+			defer wg.Done()
+
+			ch := cc.Calls()
+			for cp := range ch {
+				if err := c.InvokeAndStoreResult(cp, uris[cp.URI]); err != nil {
+					if err != callee.ErrCallExpired {
+						log.Printf("InvokeAndStoreResult failed: %v", err)
+					}
+				}
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 func logWrapThunk(t callee.Thunk) callee.Thunk {
@@ -109,6 +136,15 @@ func echoThunk(cp *msg.CallPayload) (interface{}, error) {
 
 func echo(s string) string {
 	return s
+}
+
+func newBroker(pool *redis.Pool) broker.CalleeBroker {
+	return &redisbroker.Broker{
+		Pool:            pool,
+		Dial:            pool.Dial,
+		BlockingTimeout: *brokerBlockingTimeoutFlag,
+		ResultCap:       *brokerResultCapFlag,
+	}
 }
 
 func newRedisPool(addr string) *redis.Pool {

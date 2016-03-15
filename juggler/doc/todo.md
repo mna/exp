@@ -2,6 +2,7 @@
 
 TODO :
 * benchmarking tool (docker-based?)
+* add Close URI to server, test it with client
 * redis cluster support and tests
 * metrics (expvar?)
 * move juggler client to its own package?
