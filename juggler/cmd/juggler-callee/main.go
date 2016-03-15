@@ -21,16 +21,21 @@ import (
 )
 
 var (
-	redisAddrFlag             = flag.String("redis-addr", ":6379", "redis address to connect to")
-	redisPoolMaxActiveFlag    = flag.Int("redis-pool-max-active", 100, "redis pool max active connections")
-	redisPoolMaxIdleFlag      = flag.Int("redis-pool-max-idle", 10, "redis pool max idle connections")
-	redisPoolIdleTimeoutFlag  = flag.Duration("redis-pool-idle-timeout", time.Minute, "redis pool idle connection timeout")
-	brokerResultCapFlag       = flag.Int("broker-result-cap", 100, "broker result queue capacity")
-	brokerBlockingTimeoutFlag = flag.Duration("broker-blocking-timeout", 0, "broker blocking timeout")
+	redisAddrFlag             = flag.String("redis", ":6379", "Redis `address`.")
+	redisPoolMaxActiveFlag    = flag.Int("redis-max-active", 100, "Maximum active redis `connections`.")
+	redisPoolMaxIdleFlag      = flag.Int("redis-max-idle", 10, "Maximum idle redis `connections`.")
+	redisPoolIdleTimeoutFlag  = flag.Duration("redis-idle-timeout", time.Minute, "Redis idle connection `timeout`.")
+	brokerResultCapFlag       = flag.Int("broker-result-cap", 100, "Capacity of the `results` queue.")
+	brokerBlockingTimeoutFlag = flag.Duration("broker-blocking-timeout", 0, "Blocking `timeout` when polling for call requests.")
+	helpFlag                  = flag.Bool("help", false, "Show help.")
 )
 
 func main() {
 	flag.Parse()
+	if *helpFlag {
+		flag.Usage()
+		return
+	}
 
 	pool := newRedisPool(*redisAddrFlag)
 	broker := &redisbroker.Broker{
