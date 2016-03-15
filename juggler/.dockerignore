@@ -1,3 +1,4 @@
 docker/
 doc/
 misc/
+.envrc

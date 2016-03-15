@@ -1,6 +1,12 @@
+# direnv runconfig
+.envrc
+
+# binaries
 juggler-server
 juggler-client
 juggler-callee
+
+# but do not ignore command source directories
 !cmd/juggler-server/
 !cmd/juggler-client/
 !cmd/juggler-callee/
