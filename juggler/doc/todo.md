@@ -4,7 +4,6 @@ TODO :
 * benchmarking tool (docker-based?)
 * redis cluster support and tests
 * metrics (expvar?)
-* move the msg.Exp pseudo-message to the client package?
 
 ## Rationale behind design decisions
 
