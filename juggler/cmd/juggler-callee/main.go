@@ -47,7 +47,7 @@ func main() {
 
 	c := &callee.Callee{Broker: broker}
 
-	log.Printf("listening for call requests")
+	log.Printf("listening for call requests on %s", *redisAddrFlag)
 	if err := c.Listen(map[string]callee.Thunk{
 		"test.echo":    logWrapThunk(echoThunk),
 		"test.reverse": logWrapThunk(reverseThunk),

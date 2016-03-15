@@ -180,7 +180,7 @@ func main() {
 
 	httpSrv := newHTTPServer(conf.Server)
 
-	log.Printf("listening on %s", conf.Server.Addr)
+	log.Printf("listening for connections on %s", conf.Server.Addr)
 	if err := httpSrv.ListenAndServe(); err != nil {
 		log.Fatalf("ListenAndServe failed: %v", err)
 	}
