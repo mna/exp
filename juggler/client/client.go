@@ -1,50 +1,53 @@
-package juggler
+// Package client implements a juggler client.
+package client
 
 import (
+	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"golang.org/x/net/context"
 
+	"github.com/PuerkitoBio/exp/juggler"
 	"github.com/PuerkitoBio/exp/juggler/broker"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
 	"github.com/pborman/uuid"
 )
 
-// ClientHandler defines the method required to handle a message received
+// Handler defines the method required to handle a message received
 // from the server.
-type ClientHandler interface {
+type Handler interface {
 	Handle(context.Context, *Client, msg.Msg)
 }
 
-// ClientHandlerFunc is a function that implements the ClientHandler interface.
-type ClientHandlerFunc func(context.Context, *Client, msg.Msg)
+// HandlerFunc is a function that implements the Handler interface.
+type HandlerFunc func(context.Context, *Client, msg.Msg)
 
-// Handle implements ClientHandler for a ClientHandlerFunc. It calls fn
+// Handle implements Handler for a HandlerFunc. It calls fn
 // with the parameters.
-func (fn ClientHandlerFunc) Handle(ctx context.Context, cli *Client, m msg.Msg) {
+func (fn HandlerFunc) Handle(ctx context.Context, cli *Client, m msg.Msg) {
 	fn(ctx, cli, m)
 }
 
-// ClientOption sets an option on the Client.
-type ClientOption func(*Client)
+// Option sets an option on the Client.
+type Option func(*Client)
 
 // SetCallTimeout sets the time to wait for the result of a call request.
 // The zero value uses the default timeout of the server. Per-call
 // timeouts can also be specified, see Client.Call.
-func SetCallTimeout(timeout time.Duration) ClientOption {
+func SetCallTimeout(timeout time.Duration) Option {
 	return func(c *Client) {
 		c.callTimeout = timeout
 	}
 }
 
-// SetClientHandler sets the client handler that is called with each message
+// SetHandler sets the handler that is called with each message
 // received from the server. Each invocation runs in its own
 // goroutine, so proper synchronization must be used when accessing
 // shared data.
-func SetClientHandler(h ClientHandler) ClientOption {
+func SetHandler(h Handler) Option {
 	return func(c *Client) {
 		c.handler = h
 	}
@@ -54,7 +57,7 @@ func SetClientHandler(h ClientHandler) ClientOption {
 // the handler calls, such as when a message fails to be unmarshaled.
 // If nil, it logs using log.Printf. It can be set to juggler.DiscardLog
 // to disable logging.
-func SetLogFunc(fn func(string, ...interface{})) ClientOption {
+func SetLogFunc(fn func(string, ...interface{})) Option {
 	return func(c *Client) {
 		c.logFunc = fn
 	}
@@ -68,7 +71,7 @@ type Client struct {
 	ResponseHeader http.Header
 
 	callTimeout time.Duration
-	handler     ClientHandler
+	handler     Handler
 	logFunc     func(string, ...interface{})
 
 	wg      sync.WaitGroup // wait for handleMessages goroutine
@@ -80,8 +83,8 @@ type Client struct {
 
 // NewClient creates a juggler client using the provided websocket
 // connection and response header. Received messages are sent to
-// the handler set by the SetClientHandler option.
-func NewClient(conn *websocket.Conn, resHeader http.Header, opts ...ClientOption) *Client {
+// the handler set by the SetHandler option.
+func NewClient(conn *websocket.Conn, resHeader http.Header, opts ...Option) *Client {
 	c := &Client{
 		ResponseHeader: resHeader,
 		conn:           conn,
@@ -118,30 +121,18 @@ func (c *Client) handleMessages() {
 		switch m := m.(type) {
 		case *msg.Res:
 			// got the result, do not trigger an expired message
-			k := m.Payload.For.String()
-			c.mu.Lock()
-			_, ok := c.results[k]
-			delete(c.results, k)
-			c.mu.Unlock()
-
-			// if an expired message got here first, then drop the
-			// result, client treated this call as expired already.
-			if !ok {
+			if ok := c.deletePending(m.Payload.For.String()); !ok {
+				// if an expired message got here first, then drop the
+				// result, client treated this call as expired already.
 				continue
 			}
 
 		case *msg.Err:
 			if m.Payload.ForType == msg.CallMsg {
 				// won't get any result for this call
-				k := m.Payload.For.String()
-				c.mu.Lock()
-				_, ok := c.results[k]
-				delete(c.results, k)
-				c.mu.Unlock()
-
-				// if an expired message got here first, then drop the
-				// result, client treated this call as expired already.
-				if !ok {
+				if ok := c.deletePending(m.Payload.For.String()); !ok {
+					// if an expired message got here first, then drop the
+					// result, client treated this call as expired already.
 					continue
 				}
 			}
@@ -160,12 +151,12 @@ func (c *Client) handleMessages() {
 //
 // If the request header doesn't have a Sec-WebSocket-Protocol header,
 // it is set to the last entry of juggler.Subprotocols.
-func Dial(d *websocket.Dialer, urlStr string, reqHeader http.Header, opts ...ClientOption) (*Client, error) {
+func Dial(d *websocket.Dialer, urlStr string, reqHeader http.Header, opts ...Option) (*Client, error) {
 	if reqHeader == nil {
 		reqHeader = http.Header{}
 	}
-	if v := reqHeader["Sec-WebSocket-Protocol"]; (len(v) == 0 || v[0] == "") && len(Subprotocols) > 0 {
-		reqHeader["Sec-WebSocket-Protocol"] = []string{Subprotocols[len(Subprotocols)-1]}
+	if v := reqHeader["Sec-WebSocket-Protocol"]; (len(v) == 0 || v[0] == "") && len(juggler.Subprotocols) > 0 {
+		reqHeader["Sec-WebSocket-Protocol"] = []string{juggler.Subprotocols[len(juggler.Subprotocols)-1]}
 	}
 	conn, res, err := d.Dial(urlStr, reqHeader)
 	if err != nil {
@@ -208,12 +199,9 @@ func (c *Client) Call(uri string, v interface{}, timeout time.Duration) (uuid.UU
 	}
 
 	// add the expected result
-	c.mu.Lock()
-	c.results[m.UUID().String()] = struct{}{}
-	c.mu.Unlock()
+	c.addPending(m.UUID().String())
 
 	go c.handleExpiredCall(m, timeout)
-
 	return m.UUID(), nil
 }
 
@@ -229,17 +217,28 @@ func (c *Client) handleExpiredCall(m *msg.Call, timeout time.Duration) {
 	}
 
 	// check if still waiting for a result
-	k := m.UUID().String()
-	c.mu.Lock()
-	_, ok := c.results[k]
-	delete(c.results, k)
-	c.mu.Unlock()
-
-	if ok {
+	if ok := c.deletePending(m.UUID().String()); ok {
 		// if so, send an Exp message
 		exp := msg.NewExp(m)
 		go c.handler.Handle(context.Background(), c, exp)
 	}
+}
+
+// add a pending call.
+func (c *Client) addPending(key string) {
+	c.mu.Lock()
+	c.results[key] = struct{}{}
+	c.mu.Unlock()
+}
+
+// delete the pending call, returning true if it was still pending.
+func (c *Client) deletePending(key string) bool {
+	c.mu.Lock()
+	_, ok := c.results[key]
+	delete(c.results, key)
+	c.mu.Unlock()
+
+	return ok
 }
 
 // Sub makes a subscription request to the server for the specified
@@ -279,4 +278,12 @@ func (c *Client) Pub(channel string, v interface{}) (uuid.UUID, error) {
 		return nil, err
 	}
 	return m.UUID(), nil
+}
+
+func logf(fn func(string, ...interface{}), f string, args ...interface{}) {
+	if fn != nil {
+		fn(f, args...)
+	} else {
+		log.Printf(f, args...)
+	}
 }

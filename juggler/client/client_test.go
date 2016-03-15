@@ -1,4 +1,4 @@
-package juggler
+package client
 
 import (
 	"bytes"
@@ -25,8 +25,8 @@ func TestClientClose(t *testing.T) {
 	srv := wstest.StartRecordingServer(t, done, ioutil.Discard)
 	defer srv.Close()
 
-	h := ClientHandlerFunc(func(ctx context.Context, cli *Client, m msg.Msg) {})
-	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetClientHandler(h), SetLogFunc((&jugglertest.DebugLog{T: t}).Printf))
+	h := HandlerFunc(func(ctx context.Context, cli *Client, m msg.Msg) {})
+	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetHandler(h), SetLogFunc((&jugglertest.DebugLog{T: t}).Printf))
 	require.NoError(t, err, "Dial")
 
 	_, err = cli.Call("a", "b", 0)
@@ -54,7 +54,7 @@ func TestClient(t *testing.T) {
 		expForUUID uuid.UUID
 		wg         sync.WaitGroup
 	)
-	h := ClientHandlerFunc(func(ctx context.Context, cli *Client, m msg.Msg) {
+	h := HandlerFunc(func(ctx context.Context, cli *Client, m msg.Msg) {
 		defer wg.Done()
 
 		mu.Lock()
@@ -65,7 +65,7 @@ func TestClient(t *testing.T) {
 		mu.Unlock()
 	})
 
-	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetClientHandler(h),
+	cli, err := Dial(&websocket.Dialer{}, srv.URL, nil, SetHandler(h),
 		SetCallTimeout(time.Millisecond),
 		SetLogFunc((&jugglertest.DebugLog{T: t}).Printf))
 	require.NoError(t, err, "Dial")
