@@ -61,9 +61,7 @@ func (c *Callee) InvokeAndStoreResult(cp *msg.CallPayload, fn Thunk) error {
 	v, err := fn(cp)
 	if remain := ttl - time.Now().Sub(start); remain > 0 {
 		// register the result
-		if err := c.storeResult(cp, v, err, remain); err != nil {
-			return err
-		}
+		return c.storeResult(cp, v, err, remain)
 	}
 	return ErrCallExpired
 }

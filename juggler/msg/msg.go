@@ -59,7 +59,7 @@ const (
 	//
 	//     const SomeMsg msg.MessageType = msg.CustomMsg + iota
 	//
-	CustomMsg MessageType = (256 - endWrite) + iota
+	CustomMsg MessageType = (255 - endWrite) + iota
 )
 
 var lookupMessageType = []string{

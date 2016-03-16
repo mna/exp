@@ -73,11 +73,16 @@ func main() {
 
 			ch := cc.Calls()
 			for cp := range ch {
+				log.Printf("received request %v %s", cp.MsgUUID, cp.URI)
 				if err := c.InvokeAndStoreResult(cp, uris[cp.URI]); err != nil {
 					if err != callee.ErrCallExpired {
 						log.Printf("InvokeAndStoreResult failed: %v", err)
+						continue
 					}
+					log.Printf("expired request %v %s", cp.MsgUUID, cp.URI)
+					continue
 				}
+				log.Printf("sent result %v %s", cp.MsgUUID, cp.URI)
 			}
 		}()
 	}
