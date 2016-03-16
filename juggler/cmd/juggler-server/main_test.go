@@ -10,6 +10,55 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestCheckRedisConfig(t *testing.T) {
+	cases := []struct {
+		in  string
+		err bool
+	}{
+		{"", false},
+		{`redis:
+    MaxActive: 2
+    pubsub:
+        addr: :1234
+`, true},
+		{`redis:
+    MaxActive: 2
+    pubsub:
+        addr: :1234
+    caller:
+        idle_timeout: 1s
+`, true},
+		{`redis:
+    pubsub:
+        addr: :1234
+    caller:
+        idle_timeout: 1s
+`, true},
+		{`redis:
+    pubsub:
+        addr: :1234
+    caller:
+        addr: :1235
+        idle_timeout: 1s
+`, false},
+		{`redis:
+    addr: :9876
+    pubsub:
+        addr: :1234
+    caller:
+        addr: :1235
+        idle_timeout: 1s
+`, true},
+	}
+	for i, c := range cases {
+		conf, err := getConfigFromReader(strings.NewReader(c.in))
+		require.NoError(t, err, "%d", i)
+		err = checkRedisConfig(conf.Redis)
+		assert.Equal(t, c.err, err != nil, "%d: %v", err)
+		t.Logf("%d %v", i, err)
+	}
+}
+
 func TestConfig(t *testing.T) {
 	cases := []struct {
 		in  string
@@ -22,6 +71,30 @@ redis:
     addr: localhost:1234
 `, &Config{
 				Redis:        &Redis{Addr: "localhost:1234"},
+				Server:       &Server{Addr: ":9000", Paths: []string{"/ws"}},
+				CallerBroker: &CallerBroker{},
+			},
+		},
+		{
+			`
+redis:
+    pubsub:
+        addr: :6666
+
+    caller:
+        addr: :6667
+        max_active: 123
+`, &Config{
+				Redis: &Redis{
+					Addr: ":6379",
+					PubSub: &Redis{
+						Addr: ":6666",
+					},
+					Caller: &Redis{
+						Addr:      ":6667",
+						MaxActive: 123,
+					},
+				},
 				Server:       &Server{Addr: ":9000", Paths: []string{"/ws"}},
 				CallerBroker: &CallerBroker{},
 			},

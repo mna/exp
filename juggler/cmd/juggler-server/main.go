@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -138,6 +139,10 @@ func getConfigFromFile(file string) (*Config, error) {
 var zeroRedis = Redis{}
 
 func isZeroRedis(rc *Redis) bool {
+	if rc == nil {
+		return true
+	}
+
 	// nil the pubsub and caller
 	copy := *rc
 	copy.PubSub = nil
@@ -145,10 +150,24 @@ func isZeroRedis(rc *Redis) bool {
 	return copy == zeroRedis
 }
 
-// TODO : check redis configuration: use Config.Redis to use the same pool
+// check redis configuration: use Config.Redis to use the same pool
 // for pubsub and caller, or use Config.Redis.PubSub and Config.Redis.Caller.
 // No other combination is accepted.
 func checkRedisConfig(conf *Redis) error {
+	// if either PubSub or Caller is set, then both must be set
+	if !isZeroRedis(conf.PubSub) || !isZeroRedis(conf.Caller) {
+		if (conf.PubSub == nil || conf.PubSub.Addr == "") || (conf.Caller == nil || conf.Caller.Addr == "") {
+			return errors.New("both redis.pubsub and redis.caller sections must be configured")
+		}
+
+		// and the generic redis must not be set
+		if conf.Addr == *redisAddrFlag {
+			conf.Addr = ""
+		}
+		if !isZeroRedis(conf) {
+			return errors.New("redis must not be configured if redis.pubsub and redis.caller are configured")
+		}
+	}
 	return nil
 }
 
@@ -173,11 +192,23 @@ func main() {
 	}
 
 	// create pool, brokers, server, upgrader, HTTP server
-	pool := newRedisPool(conf.Redis)
-	psb := newPubSubBroker(pool)
-	cb := newCallerBroker(conf.CallerBroker, pool)
+	var poolp, poolc *redis.Pool
+	if conf.Redis.Addr != "" {
+		pool := newRedisPool(conf.Redis)
+		poolp, poolc = pool, pool
+		log.Printf("redis pool configured on %s", conf.Redis.Addr)
+	} else {
+		poolp = newRedisPool(conf.Redis.PubSub)
+		poolc = newRedisPool(conf.Redis.Caller)
+		log.Printf("redis pool configured on %s (pubsub) and %s (caller)", conf.Redis.PubSub.Addr, conf.Redis.Caller.Addr)
+	}
+
+	psb := newPubSubBroker(poolp)
+	cb := newCallerBroker(conf.CallerBroker, poolc)
+
 	srv := newServer(conf.Server, psb, cb)
 	srv.Handler = newHandler(conf.Server)
+
 	upg := newUpgrader(conf.Server) // must be after newServer, for Subprotocols
 
 	upgh := juggler.Upgrade(upg, srv)
