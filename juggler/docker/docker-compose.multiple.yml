@@ -1,0 +1,31 @@
+version: '2'
+services:
+    # redis pubsub and redis caller
+    redisp:
+        image: redis:3.0-alpine
+        container_name: "redisp"
+    redisc:
+        image: redis:3.0-alpine
+        container_name: "redisc"
+
+    server:
+        build:
+            context: ..
+            dockerfile: docker/Dockerfile.server
+        command: ["./juggler-server", "--config", "./server.multiple.config.yml"]
+        entrypoint: ./docker_start.2.sh
+        ports:
+            - 9000:9000
+
+    callee:
+        build:
+            context: ..
+            dockerfile: docker/Dockerfile.callee
+        command: ["./juggler-callee", "--redis", "redisc:6379", "--workers", "10"]
+        entrypoint: ./docker_start.2.sh
+
+    client:
+        build:
+            context: ..
+            dockerfile: docker/Dockerfile.client
+

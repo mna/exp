@@ -1,0 +1,9 @@
+server:
+    close_uri: test.close
+
+redis:
+    pubsub:
+        addr: redisp:6379
+    caller:
+        addr: redisc:6379
+
