@@ -209,6 +209,7 @@ func main() {
 
 	srv := newServer(conf.Server, psb, cb)
 	srv.Handler = newHandler(conf.Server)
+	srv.PublishVars("juggler")
 
 	upg := newUpgrader(conf.Server) // must be after newServer, for Subprotocols
 

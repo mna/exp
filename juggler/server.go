@@ -1,6 +1,7 @@
 package juggler
 
 import (
+	"expvar"
 	"log"
 	"net/http"
 	"time"
@@ -88,12 +89,32 @@ type Server struct {
 	// CallerBroker is the broker to use for caller messages. It must be
 	// set before the server can be used.
 	CallerBroker broker.CallerBroker
+
+	// list of expvars for this server, lazily created when PublishVars
+	// is called.
+	vars *expvar.Map
+}
+
+// PublishVars initializes the expvars for the server and publishes
+// them. It should be called in the main of the server, before
+// starting to listen for connections. It panics if it is called
+// more than once or if the name is already registered.
+func (srv *Server) PublishVars(name string) {
+	if srv.vars != nil {
+		panic("juggler: PublishVars called twice")
+	}
+	srv.vars = expvar.NewMap(name)
 }
 
 // ServeConn serves the websocket connection as a juggler connection. It
 // blocks until the juggler connection is closed, leaving the websocket
 // connection open.
 func (srv *Server) ServeConn(conn *websocket.Conn) {
+	if srv.vars != nil {
+		srv.vars.Add("ActiveConns", 1)
+		defer srv.vars.Add("ActiveConns", -1)
+	}
+
 	conn.SetReadLimit(srv.ReadLimit)
 	c := newConn(conn, srv)
 	resConn, err := srv.CallerBroker.Results(c.UUID)
