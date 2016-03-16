@@ -1,6 +1,7 @@
 package juggler_test
 
 import (
+	"expvar"
 	"flag"
 	"fmt"
 	"math/rand"
@@ -352,6 +353,7 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 		WriteTimeout:            conf.ServerWriteTimeout,
 		AcquireWriteLockTimeout: conf.ServerAcquireWriteLockTimeout,
 	}
+	srv.Vars = expvar.NewMap("juggler")
 	upg := &websocket.Upgrader{Subprotocols: juggler.Subprotocols}
 	httpsrv := httptest.NewServer(juggler.Upgrade(upg, srv))
 	defer httpsrv.Close()

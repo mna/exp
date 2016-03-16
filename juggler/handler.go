@@ -45,6 +45,10 @@ func PanicRecover(h Handler, closeConn bool, printStack bool) Handler {
 	return HandlerFunc(func(ctx context.Context, c *Conn, m msg.Msg) {
 		defer func() {
 			if e := recover(); e != nil {
+				if c.srv.Vars != nil {
+					c.srv.Vars.Add("RecoveredPanics", 1)
+				}
+
 				if closeConn {
 					var err error
 					switch e := e.(type) {

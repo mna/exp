@@ -4,7 +4,7 @@ package main
 
 import (
 	"errors"
-	_ "expvar"
+	"expvar"
 	"flag"
 	"fmt"
 	"io"
@@ -209,7 +209,7 @@ func main() {
 
 	srv := newServer(conf.Server, psb, cb)
 	srv.Handler = newHandler(conf.Server)
-	srv.PublishVars("juggler")
+	srv.Vars = expvar.NewMap("juggler")
 
 	upg := newUpgrader(conf.Server) // must be after newServer, for Subprotocols
 
