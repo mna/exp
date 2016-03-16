@@ -4,6 +4,7 @@ package main
 
 import (
 	"errors"
+	_ "expvar"
 	"flag"
 	"fmt"
 	"io"
