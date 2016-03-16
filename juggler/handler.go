@@ -101,8 +101,22 @@ func LogMsg(ctx context.Context, c *Conn, m msg.Msg) {
 // When a custom Handler is set on the Server, it should at some
 // point call ProcessMsg so the expected behaviour happens.
 func ProcessMsg(ctx context.Context, c *Conn, m msg.Msg) {
+	addFn := func(string, int64) {}
+	if c.srv.Vars != nil {
+		addFn = c.srv.Vars.Add
+		addFn("Msgs", 1)
+		if m.Type().IsRead() {
+			addFn("ReadMsgs", 1)
+		}
+		if m.Type().IsWrite() {
+			addFn("WriteMsgs", 1)
+		}
+	}
+
 	switch m := m.(type) {
 	case *msg.Call:
+		addFn("CallMsgs", 1)
+
 		cp := &msg.CallPayload{
 			ConnUUID: c.UUID,
 			MsgUUID:  m.UUID(),
@@ -116,6 +130,8 @@ func ProcessMsg(ctx context.Context, c *Conn, m msg.Msg) {
 		c.Send(msg.NewOK(m))
 
 	case *msg.Pub:
+		addFn("PubMsgs", 1)
+
 		pp := &msg.PubPayload{
 			MsgUUID: m.UUID(),
 			Args:    m.Payload.Args,
@@ -127,6 +143,8 @@ func ProcessMsg(ctx context.Context, c *Conn, m msg.Msg) {
 		c.Send(msg.NewOK(m))
 
 	case *msg.Sub:
+		addFn("SubMsgs", 1)
+
 		if err := c.psc.Subscribe(m.Payload.Channel, m.Payload.Pattern); err != nil {
 			c.Send(msg.NewErr(m, 500, err))
 			return
@@ -134,37 +152,58 @@ func ProcessMsg(ctx context.Context, c *Conn, m msg.Msg) {
 		c.Send(msg.NewOK(m))
 
 	case *msg.Unsb:
+		addFn("UnsbMsgs", 1)
+
 		if err := c.psc.Unsubscribe(m.Payload.Channel, m.Payload.Pattern); err != nil {
 			c.Send(msg.NewErr(m, 500, err))
 			return
 		}
 		c.Send(msg.NewOK(m))
 
-	case *msg.OK, *msg.Err, *msg.Evnt, *msg.Res:
-		if err := writeMsg(c, m); err != nil {
-			switch err {
-			case ErrWriteLockTimeout:
-				c.Close(fmt.Errorf("writeMsg failed: %v; closing connection", err))
-
-			case errWriteLimitExceeded:
-				logf(c.srv.LogFunc, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
-				// no good http code for this case
-				if err := writeMsg(c, msg.NewErr(m, 599, err)); err != nil {
-					if err == ErrWriteLockTimeout {
-						c.Close(fmt.Errorf("writeMsg failed: %v; closing connection", err))
-					} else {
-						logf(c.srv.LogFunc, "%v: writeMsg %v for write limit exceeded notification failed: %v", c.UUID, m.UUID(), err)
-					}
-					return
-				}
-
-			default:
-				logf(c.srv.LogFunc, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
-			}
-		}
+	case *msg.OK:
+		addFn("OKMsgs", 1)
+		doWrite(c, m, addFn)
+	case *msg.Err:
+		addFn("ErrMsgs", 1)
+		doWrite(c, m, addFn)
+	case *msg.Evnt:
+		addFn("EvntMsgs", 1)
+		doWrite(c, m, addFn)
+	case *msg.Res:
+		addFn("ResMsgs", 1)
+		doWrite(c, m, addFn)
 
 	default:
+		addFn("UnknownMsgs", 1)
 		logf(c.srv.LogFunc, "unknown message in ProcessMsg: %T", m)
+	}
+}
+
+func doWrite(c *Conn, m msg.Msg, addFn func(string, int64)) {
+	if err := writeMsg(c, m); err != nil {
+		switch err {
+		case ErrWriteLockTimeout:
+			addFn("WriteLockTimeouts", 1)
+			c.Close(fmt.Errorf("writeMsg failed: %v; closing connection", err))
+
+		case errWriteLimitExceeded:
+			addFn("WriteLimitExceeded", 1)
+			logf(c.srv.LogFunc, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
+
+			// no good http code for this case
+			if err := writeMsg(c, msg.NewErr(m, 599, err)); err != nil {
+				if err == ErrWriteLockTimeout {
+					addFn("WriteLockTimeouts", 1)
+					c.Close(fmt.Errorf("writeMsg failed: %v; closing connection", err))
+				} else {
+					logf(c.srv.LogFunc, "%v: writeMsg %v for write limit exceeded notification failed: %v", c.UUID, m.UUID(), err)
+				}
+				return
+			}
+
+		default:
+			logf(c.srv.LogFunc, "%v: writeMsg %v failed: %v", c.UUID, m.UUID(), err)
+		}
 	}
 }
 
