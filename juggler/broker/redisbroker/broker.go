@@ -77,7 +77,8 @@ const (
 		local res = redis.call("LPUSH", KEYS[2], ARGV[2])
 		local limit = tonumber(ARGV[3])
 		if res > limit and limit > 0 then
-			redis.call("LTRIM", KEYS[2], 1, limit + 1)
+			local diff = res - limit
+			redis.call("LTRIM", KEYS[2], diff, limit + diff)
 			return redis.error_reply("list capacity exceeded")
 		end
 		return res
