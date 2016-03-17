@@ -294,7 +294,7 @@ type Exp struct {
 }
 
 // ExpMsg is the message type of the call expiration message.
-const ExpMsg msg.MessageType = msg.CustomMsg + iota
+var ExpMsg = msg.RegisterCustomMsg("EXP")
 
 // newExp creates a new expired message for the provided call message.
 func newExp(m *msg.Call) *Exp {

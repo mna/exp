@@ -53,16 +53,14 @@ const (
 	EvntMsg
 	endWrite
 
-	// CustomMsg allows for definition of custom message types,
-	// starting at ID 256 (first 255 are reserved). Custom message
-	// types can be declared like this:
-	//
-	//     const SomeMsg msg.MessageType = msg.CustomMsg + iota
-	//
-	CustomMsg MessageType = (255 - endWrite) + iota
+	// customMsg allows for definition of custom message types,
+	// starting at ID 256 (first 255 are reserved).
+	customMsg MessageType = 256
 )
 
-var lookupMessageType = []string{
+var nextCustomMsg = customMsg
+
+var lookupMessageType = map[MessageType]string{
 	CallMsg: "CALL",
 	PubMsg:  "PUB",
 	SubMsg:  "SUB",
@@ -71,6 +69,35 @@ var lookupMessageType = []string{
 	OKMsg:   "OK",
 	ResMsg:  "RES",
 	EvntMsg: "EVNT",
+}
+
+// RegisterCustomMsg registers a new custom message having the
+// provided name for its string representation (typically 2-4 letters,
+// in uppercase). It returns the MessageType of that message.
+//
+// Custom messages may not be unmarshaled and should not be
+// sent over the network to any peer - only the predefined
+// standard messages can do that. Custom messages can still
+// be useful though, as evidenced by the client package that
+// defines an EXP expiration message that is sent to the
+// client itself when a CALL has expired and no result will
+// be returned.
+//
+// RegisterCustomMsg should be called in the init function of
+// the package that needs the message, to guarantee all custom
+// messages are registered before use. It panics if a message
+// by that name has already been registered.
+func RegisterCustomMsg(name string) MessageType {
+	for _, v := range lookupMessageType {
+		if v == name {
+			panic("RegisterCustomMsg called twice for " + name)
+		}
+	}
+
+	mt := nextCustomMsg
+	nextCustomMsg++
+	lookupMessageType[mt] = name
+	return mt
 }
 
 // String returns the human-readable representation of message types.
