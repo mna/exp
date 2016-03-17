@@ -58,8 +58,8 @@ type Conn struct {
 }
 
 func newConn(c *websocket.Conn, srv *Server) *Conn {
-	// wmu is the write lock, used as a semaphore of 1, so start with
-	// an available slot (initialize with a sent value).
+	// wmu is the write lock, used as mutex so it can be select'ed upon.
+	// start with an available slot (initialize with a sent value).
 	wmu := make(chan struct{}, 1)
 	wmu <- struct{}{}
 
@@ -208,8 +208,15 @@ func (c *Conn) Send(m msg.Msg) {
 	}
 }
 
-// results is the loop that looks for call results.
+// results is the loop that looks for call results, started in its own
+// goroutine.
 func (c *Conn) results() {
+	if c.srv.Vars != nil {
+		c.srv.Vars.Add("TotalConnGoros", 1)
+		c.srv.Vars.Add("ActiveConnGoros", 1)
+		defer c.srv.Vars.Add("ActiveConnGoros", -1)
+	}
+
 	ch := c.resc.Results()
 	for res := range ch {
 		c.Send(msg.NewRes(res))
@@ -221,8 +228,14 @@ func (c *Conn) results() {
 }
 
 // pubSub is the loop that receives events that the connection is subscribed
-// to.
+// to, started in its own goroutine.
 func (c *Conn) pubSub() {
+	if c.srv.Vars != nil {
+		c.srv.Vars.Add("TotalConnGoros", 1)
+		c.srv.Vars.Add("ActiveConnGoros", 1)
+		defer c.srv.Vars.Add("ActiveConnGoros", -1)
+	}
+
 	ch := c.psc.Events()
 	for ev := range ch {
 		c.Send(msg.NewEvnt(ev))
@@ -235,6 +248,12 @@ func (c *Conn) pubSub() {
 
 // receive is the read loop, started in its own goroutine.
 func (c *Conn) receive() {
+	if c.srv.Vars != nil {
+		c.srv.Vars.Add("TotalConnGoros", 1)
+		c.srv.Vars.Add("ActiveConnGoros", 1)
+		defer c.srv.Vars.Add("ActiveConnGoros", -1)
+	}
+
 	for {
 		c.wsConn.SetReadDeadline(time.Time{})
 
