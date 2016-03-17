@@ -1,5 +1,9 @@
 server:
     close_uri: test.close
+    panic_uri: test.panic
+
+caller_broker:
+    call_cap: 100
 
 redis:
     pubsub:
