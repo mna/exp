@@ -1,5 +1,7 @@
 // Command juggler-server implements a juggler server that listens for
-// connections and serves the requests.
+// connections and serves the requests. It is mostly useful as a testing
+// and debugging tool, typical applications will use the juggler package
+// as a library in their own main command.
 package main
 
 import (

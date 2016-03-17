@@ -1,6 +1,6 @@
 // Command juggler-load is a juggler load generator. It runs a
-// number of client connections to a juggler server, and for a
-// given duration, makes calls and collects results.
+// number of client connections to a server, and for a
+// given duration, makes calls and collects results and statistics.
 package main
 
 import (
