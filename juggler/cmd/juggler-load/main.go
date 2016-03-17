@@ -4,9 +4,12 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"math/rand"
+	"net/http"
+	"net/url"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -33,27 +36,59 @@ var (
 	helpFlag        = flag.Bool("help", false, "Show help.")
 )
 
-var tpl = template.Must(template.New("output").Parse(`
---- RESULTS
+var (
+	fnMap = template.FuncMap{
+		"sub": subFn,
+	}
 
-Address:    {{ .Addr }}
-Protocol:   {{ .Protocol }}
-URI:        {{ .URI }}
-Call Delay: {{ .Payload }}
+	tpl = template.Must(template.New("output").Funcs(fnMap).Parse(`
+--- CONFIGURATION
 
-Connections:     {{ .Conns }}
-Rate:            {{ .Rate | printf "%s" }}
-Timeout:         {{ .Timeout | printf "%s" }}
-Duration:        {{ .Duration | printf "%s" }}
-Actual Duration: {{ .ActualDuration | printf "%s" }}
+Address:    {{ .Run.Addr }}
+Protocol:   {{ .Run.Protocol }}
+URI:        {{ .Run.URI }}
+Call Delay: {{ .Run.Payload }}
 
-Calls:   {{ .Calls }}
-OK:      {{ .OK }}
-Errors:  {{ .Err }}
-Results: {{ .Res }}
-Expired: {{ .Exp }}
+Connections: {{ .Run.Conns }}
+Rate:        {{ .Run.Rate | printf "%s" }}
+Timeout:     {{ .Run.Timeout | printf "%s" }}
+Duration:    {{ .Run.Duration | printf "%s" }}
+
+--- STATISTICS
+
+Actual Duration: {{ .Run.ActualDuration | printf "%s" }}
+Calls:           {{ .Run.Calls }}
+OK:              {{ .Run.OK }}
+Errors:          {{ .Run.Err }}
+Results:         {{ .Run.Res }}
+Expired:         {{ .Run.Exp }}
+
+--- SERVER STATISTICS
+
+                Before          After          Diff.
+Alloc:         {{ .Before.Memstats.Alloc | printf "% -15d" }} {{ .After.Memstats.Alloc | printf "% -15d" }} {{ sub .After.Memstats.Alloc .Before.Memstats.Alloc }}
+TotalAlloc:    {{ .Before.Memstats.TotalAlloc | printf "% -15d" }} {{ .After.Memstats.TotalAlloc | printf "% -15d" }} {{ sub .After.Memstats.TotalAlloc .Before.Memstats.TotalAlloc }}
+Mallocs:       {{ .Before.Memstats.Mallocs | printf "% -15d" }} {{ .After.Memstats.Mallocs | printf "% -15d" }} {{ sub .After.Memstats.Mallocs .Before.Memstats.Mallocs }} 
+Frees:         {{ .Before.Memstats.Frees | printf "% -15d" }} {{ .After.Memstats.Frees | printf "% -15d" }} {{ sub .After.Memstats.Frees .Before.Memstats.Frees }}
+HeapAlloc:     {{ .Before.Memstats.HeapAlloc | printf "% -15d" }} {{ .After.Memstats.HeapAlloc | printf "% -15d" }} {{ sub .After.Memstats.HeapAlloc .Before.Memstats.HeapAlloc }}
+HeapInuse:     {{ .Before.Memstats.HeapInuse | printf "% -15d" }} {{ .After.Memstats.HeapInuse | printf "% -15d" }} {{ sub .After.Memstats.HeapInuse .Before.Memstats.HeapInuse }}
+HeapObjects:   {{ .Before.Memstats.HeapObjects | printf "% -15d" }} {{ .After.Memstats.HeapObjects | printf "% -15d" }} {{ sub .After.Memstats.HeapObjects .Before.Memstats.HeapObjects }}
+StackInuse:    {{ .Before.Memstats.StackInuse | printf "% -15d" }} {{ .After.Memstats.StackInuse | printf "% -15d" }} {{ sub .After.Memstats.StackInuse .Before.Memstats.StackInuse }}
+NumGC:         {{ .Before.Memstats.NumGC | printf "% -15d" }} {{ .After.Memstats.NumGC | printf "% -15d" }} {{ sub .After.Memstats.NumGC .Before.Memstats.NumGC }}
+PauseTotalNs:  {{ .Before.Memstats.PauseTotalNs | printf "% -15d" }} {{ .After.Memstats.PauseTotalNs | printf "% -15d" }} {{ sub .After.Memstats.PauseTotalNs .Before.Memstats.PauseTotalNs }}
 
 `))
+)
+
+func subFn(a, b int) int {
+	return a - b
+}
+
+type templateStats struct {
+	Run    *runStats
+	Before *expVars
+	After  *expVars
+}
 
 type runStats struct {
 	Addr     string
@@ -72,6 +107,36 @@ type runStats struct {
 	Err   int64
 	Res   int64
 	Exp   int64
+}
+
+type expVars struct {
+	Juggler struct {
+		ActiveConnGoros int
+		ActiveConns     int
+		CallMsgs        int
+		ErrMsgs         int
+		Msgs            int
+		OKMsgs          int
+		ReadMsgs        int
+		RecoveredPanics int
+		ResMsgs         int
+		TotalConnGoros  int
+		TotalConns      int
+		WriteMsgs       int
+	}
+
+	Memstats struct {
+		Alloc        int
+		TotalAlloc   int
+		Mallocs      int
+		Frees        int
+		HeapAlloc    int
+		HeapInuse    int
+		HeapObjects  int
+		StackInuse   int
+		NumGC        int
+		PauseTotalNs int
+	}
 }
 
 func main() {
@@ -99,6 +164,13 @@ func main() {
 	}
 
 	// TODO : collect expvars before and after if flag is set
+	parsed, err := url.Parse(stats.Addr)
+	if err != nil {
+		log.Fatalf("failed to parse --addr: %v", err)
+	}
+	parsed.Scheme = "http"
+	parsed.Path = "/debug/vars"
+	before := getExpVars(parsed)
 
 	clientStarted := make(chan struct{})
 	wg := sync.WaitGroup{}
@@ -128,7 +200,7 @@ func main() {
 		select {
 		case <-done:
 			return
-		case <-time.After(time.Second):
+		case <-time.After(5 * time.Second):
 			log.Fatalf("failed to stop clients")
 		}
 	}()
@@ -136,11 +208,31 @@ func main() {
 	close(done)
 	end := time.Now()
 	stats.ActualDuration = end.Sub(start)
-
 	log.Printf("stopped.")
-	if err := tpl.Execute(os.Stdout, stats); err != nil {
+
+	after := getExpVars(parsed)
+
+	ts := templateStats{Run: stats, Before: before, After: after}
+	if err := tpl.Execute(os.Stdout, ts); err != nil {
 		log.Fatalf("template.Execute failed: %v", err)
 	}
+}
+
+func getExpVars(u *url.URL) *expVars {
+	res, err := http.Get(u.String())
+	if err != nil {
+		log.Fatalf("failed to fetch /debug/vars: %v", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode >= 300 {
+		log.Fatalf("failed to fetch /debug/vars: %d %s", res.StatusCode, res.Status)
+	}
+
+	var ev expVars
+	if err := json.NewDecoder(res.Body).Decode(&ev); err != nil {
+		log.Fatalf("failed to decode expvars: %v", err)
+	}
+	return &ev
 }
 
 func runClient(stats *runStats, wg *sync.WaitGroup, started chan<- struct{}, stop <-chan struct{}) {

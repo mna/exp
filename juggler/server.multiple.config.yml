@@ -3,7 +3,7 @@ server:
     panic_uri: test.panic
 
 caller_broker:
-    call_cap: 100
+    call_cap: 1000
 
 redis:
     pubsub:
