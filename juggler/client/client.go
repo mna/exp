@@ -10,7 +10,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/PuerkitoBio/exp/juggler"
 	"github.com/PuerkitoBio/exp/juggler/broker"
 	"github.com/PuerkitoBio/exp/juggler/msg"
 	"github.com/gorilla/websocket"
@@ -103,15 +102,9 @@ func (c *Client) handleMessages() {
 // control over the connection, directly use the *websocket.Dialer and
 // create the client once the connection is established, using NewClient.
 //
-// If the request header doesn't have a Sec-WebSocket-Protocol header,
-// it is set to the last entry of juggler.Subprotocols.
+// The Dialer's Subprotocols field should be set to one of (or any/all of)
+// juggler.Subprotocol.
 func Dial(d *websocket.Dialer, urlStr string, reqHeader http.Header, opts ...Option) (*Client, error) {
-	if reqHeader == nil {
-		reqHeader = http.Header{}
-	}
-	if v := reqHeader["Sec-WebSocket-Protocol"]; (len(v) == 0 || v[0] == "") && len(juggler.Subprotocols) > 0 {
-		reqHeader["Sec-WebSocket-Protocol"] = []string{juggler.Subprotocols[len(juggler.Subprotocols)-1]}
-	}
 	conn, res, err := d.Dial(urlStr, reqHeader)
 	if err != nil {
 		return nil, err
