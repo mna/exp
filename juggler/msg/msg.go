@@ -102,10 +102,8 @@ func RegisterCustomMsg(name string) MessageType {
 
 // String returns the human-readable representation of message types.
 func (mt MessageType) String() string {
-	if mt >= 0 && int(mt) < len(lookupMessageType) {
-		if s := lookupMessageType[mt]; s != "" {
-			return lookupMessageType[mt]
-		}
+	if s := lookupMessageType[mt]; s != "" {
+		return lookupMessageType[mt]
 	}
 	return fmt.Sprintf("<unknown: %d>", mt)
 }
