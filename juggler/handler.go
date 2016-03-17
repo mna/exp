@@ -39,9 +39,9 @@ func Chain(hs ...Handler) Handler {
 }
 
 // PanicRecover returns a Handler that recovers from panics that
-// may happen in h and logs the panic to the server's LogFunc. If close is true,
-// the connection is closed on a panic.
-func PanicRecover(h Handler, closeConn bool, printStack bool) Handler {
+// may happen in h and logs the panic to the server's LogFunc. The
+// connection is closed on a panic.
+func PanicRecover(h Handler) Handler {
 	return HandlerFunc(func(ctx context.Context, c *Conn, m msg.Msg) {
 		defer func() {
 			if e := recover(); e != nil {
@@ -49,23 +49,19 @@ func PanicRecover(h Handler, closeConn bool, printStack bool) Handler {
 					c.srv.Vars.Add("RecoveredPanics", 1)
 				}
 
-				if closeConn {
-					var err error
-					switch e := e.(type) {
-					case error:
-						err = e
-					default:
-						err = fmt.Errorf("%v", e)
-					}
-					c.Close(err)
+				var err error
+				switch e := e.(type) {
+				case error:
+					err = e
+				default:
+					err = fmt.Errorf("%v", e)
 				}
+				c.Close(err)
 
 				logf(c.srv.LogFunc, "%v: recovered from panic %v; serving message %v %s", c.UUID, e, m.UUID(), m.Type())
-				if printStack {
-					b := make([]byte, 4096)
-					n := runtime.Stack(b, false)
-					logf(c.srv.LogFunc, string(b[:n]))
-				}
+				var b [4096]byte
+				n := runtime.Stack(b[:], false)
+				logf(c.srv.LogFunc, string(b[:n]))
 			}
 		}()
 		h.Handle(ctx, c, m)

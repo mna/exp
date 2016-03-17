@@ -73,6 +73,7 @@ type Server struct {
 
 	// handler options
 	CloseURI string `yaml:"close_uri"`
+	PanicURI string `yaml:"panic_uri"`
 }
 
 // Config defines the configuration options of the server.
@@ -229,11 +230,13 @@ func main() {
 
 func newHandler(conf *Server) juggler.Handler {
 	closeURI := conf.CloseURI
+	panicURI := conf.PanicURI
 	writeTimeout := conf.WriteTimeout
 
 	process := juggler.HandlerFunc(func(ctx context.Context, c *juggler.Conn, m msg.Msg) {
 		if call, ok := m.(*msg.Call); ok {
-			if call.Payload.URI == closeURI {
+			switch call.Payload.URI {
+			case closeURI:
 				wsc := c.UnderlyingConn()
 
 				deadline := time.Now().Add(writeTimeout)
@@ -248,6 +251,9 @@ func newHandler(conf *Server) juggler.Handler {
 					log.Printf("WriteControl failed: %v", err)
 				}
 				return
+
+			case panicURI:
+				panic("called panic URI")
 			}
 		}
 		juggler.ProcessMsg(ctx, c, m)
@@ -257,7 +263,7 @@ func newHandler(conf *Server) juggler.Handler {
 		juggler.Chain(
 			juggler.HandlerFunc(juggler.LogMsg),
 			process,
-		), true, true)
+		))
 }
 
 func newPubSubBroker(pool *redis.Pool) broker.PubSubBroker {

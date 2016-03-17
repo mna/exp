@@ -55,7 +55,7 @@ func TestPanicRecover(t *testing.T) {
 	panicer := HandlerFunc(func(ctx context.Context, c *Conn, m msg.Msg) {
 		panic("a")
 	})
-	ph := PanicRecover(panicer, true, true)
+	ph := PanicRecover(panicer)
 
 	dbgl := &jugglertest.DebugLog{T: t}
 	srv := &Server{LogFunc: dbgl.Printf}
