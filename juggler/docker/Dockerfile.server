@@ -16,6 +16,6 @@ COPY        . $DIR
 RUN         go build ./cmd/juggler-server/
 
 EXPOSE      9000
-ENTRYPOINT  ["./docker_start.sh"]
-CMD         ["./juggler-server", "--redis", "redis:6379", "--config", "./server.config.yml"]
+ENTRYPOINT  ["./docker/docker_start.1.sh"]
+CMD         ["./juggler-server", "--redis", "redis:6379", "--config", "./docker/server.config.1.yml"]
 

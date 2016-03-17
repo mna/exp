@@ -1,4 +1,5 @@
-docker/
+docker/Dockerfile*
+docker/docker-compose*
 doc/
 misc/
 .envrc

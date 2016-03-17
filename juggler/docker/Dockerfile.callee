@@ -15,6 +15,6 @@ COPY        . $DIR
 # Build the callee
 RUN         go build ./cmd/juggler-callee/
 
-ENTRYPOINT  ["./docker_start.sh"]
+ENTRYPOINT  ["./docker/docker_start.1.sh"]
 CMD         ["./juggler-callee", "--redis", "redis:6379"]
 
