@@ -6,6 +6,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -26,19 +27,21 @@ import (
 
 var (
 	addrFlag        = flag.String("addr", "ws://localhost:9000/ws", "Server `address`.")
-	subprotoFlag    = flag.String("proto", "juggler.0", "Websocket `subprotocol`.")
 	connFlag        = flag.Int("c", 100, "Number of `connections`.")
 	durationFlag    = flag.Duration("d", 10*time.Second, "Run `duration`.")
+	helpFlag        = flag.Bool("help", false, "Show help.")
+	payloadFlag     = flag.String("p", "100", "Call `payload`.")
+	subprotoFlag    = flag.String("proto", "juggler.0", "Websocket `subprotocol`.")
 	callRateFlag    = flag.Duration("r", 100*time.Millisecond, "Call `rate` per connection.")
 	callTimeoutFlag = flag.Duration("t", time.Second, "Call `timeout`.")
 	uriFlag         = flag.String("u", "test.delay", "Call `URI`.")
-	payloadFlag     = flag.String("p", "100", "Call `payload`.")
-	helpFlag        = flag.Bool("help", false, "Show help.")
 )
 
 var (
 	fnMap = template.FuncMap{
-		"sub": subFn,
+		"subi": subiFn,
+		"subd": subdFn,
+		"subf": subfFn,
 	}
 
 	tpl = template.Must(template.New("output").Funcs(fnMap).Parse(`
@@ -65,23 +68,76 @@ Expired:         {{ .Run.Exp }}
 
 --- SERVER STATISTICS
 
-                Before          After          Diff.
-Alloc:         {{ .Before.Memstats.Alloc | printf "% -15d" }} {{ .After.Memstats.Alloc | printf "% -15d" }} {{ sub .After.Memstats.Alloc .Before.Memstats.Alloc }}
-TotalAlloc:    {{ .Before.Memstats.TotalAlloc | printf "% -15d" }} {{ .After.Memstats.TotalAlloc | printf "% -15d" }} {{ sub .After.Memstats.TotalAlloc .Before.Memstats.TotalAlloc }}
-Mallocs:       {{ .Before.Memstats.Mallocs | printf "% -15d" }} {{ .After.Memstats.Mallocs | printf "% -15d" }} {{ sub .After.Memstats.Mallocs .Before.Memstats.Mallocs }} 
-Frees:         {{ .Before.Memstats.Frees | printf "% -15d" }} {{ .After.Memstats.Frees | printf "% -15d" }} {{ sub .After.Memstats.Frees .Before.Memstats.Frees }}
-HeapAlloc:     {{ .Before.Memstats.HeapAlloc | printf "% -15d" }} {{ .After.Memstats.HeapAlloc | printf "% -15d" }} {{ sub .After.Memstats.HeapAlloc .Before.Memstats.HeapAlloc }}
-HeapInuse:     {{ .Before.Memstats.HeapInuse | printf "% -15d" }} {{ .After.Memstats.HeapInuse | printf "% -15d" }} {{ sub .After.Memstats.HeapInuse .Before.Memstats.HeapInuse }}
-HeapObjects:   {{ .Before.Memstats.HeapObjects | printf "% -15d" }} {{ .After.Memstats.HeapObjects | printf "% -15d" }} {{ sub .After.Memstats.HeapObjects .Before.Memstats.HeapObjects }}
-StackInuse:    {{ .Before.Memstats.StackInuse | printf "% -15d" }} {{ .After.Memstats.StackInuse | printf "% -15d" }} {{ sub .After.Memstats.StackInuse .Before.Memstats.StackInuse }}
-NumGC:         {{ .Before.Memstats.NumGC | printf "% -15d" }} {{ .After.Memstats.NumGC | printf "% -15d" }} {{ sub .After.Memstats.NumGC .Before.Memstats.NumGC }}
-PauseTotalNs:  {{ .Before.Memstats.PauseTotalNs | printf "% -15d" }} {{ .After.Memstats.PauseTotalNs | printf "% -15d" }} {{ sub .After.Memstats.PauseTotalNs .Before.Memstats.PauseTotalNs }}
+                Before          After           Diff.
+Alloc:          {{.Before.Memstats.Alloc | printf "%-15v"}} {{.After.Memstats.Alloc | printf "%-15v"}} {{subf .After.Memstats.Alloc .Before.Memstats.Alloc | printf "%v" }}
+TotalAlloc:     {{.Before.Memstats.TotalAlloc | printf "%-15v"}} {{.After.Memstats.TotalAlloc | printf "%-15v"}} {{subf .After.Memstats.TotalAlloc .Before.Memstats.TotalAlloc | printf "%v" }}
+Mallocs:        {{.Before.Memstats.Mallocs | printf "%-15d"}} {{.After.Memstats.Mallocs | printf "%-15d"}} {{subi .After.Memstats.Mallocs .Before.Memstats.Mallocs }}
+Frees:          {{.Before.Memstats.Frees | printf "%-15d"}} {{.After.Memstats.Frees | printf "%-15d"}} {{subi .After.Memstats.Frees .Before.Memstats.Frees }}
+HeapAlloc:      {{.Before.Memstats.HeapAlloc | printf "%-15v"}} {{.After.Memstats.HeapAlloc | printf "%-15v"}} {{subf .After.Memstats.HeapAlloc .Before.Memstats.HeapAlloc | printf "%v" }}
+HeapInuse:      {{.Before.Memstats.HeapInuse | printf "%-15v"}} {{.After.Memstats.HeapInuse | printf "%-15v"}} {{subf .After.Memstats.HeapInuse .Before.Memstats.HeapInuse | printf "%v" }}
+HeapObjects:    {{.Before.Memstats.HeapObjects | printf "%-15d"}} {{.After.Memstats.HeapObjects | printf "%-15d"}} {{subi .After.Memstats.HeapObjects .Before.Memstats.HeapObjects }}
+StackInuse:     {{.Before.Memstats.StackInuse | printf "%-15v"}} {{.After.Memstats.StackInuse | printf "%-15v"}} {{subf .After.Memstats.StackInuse .Before.Memstats.StackInuse | printf "%v" }}
+NumGC:          {{.Before.Memstats.NumGC | printf "%-15d"}} {{.After.Memstats.NumGC | printf "%-15d"}} {{subi .After.Memstats.NumGC .Before.Memstats.NumGC }}
+PauseTotalNs:   {{.Before.Memstats.PauseTotalNs | printf "%-15v"}} {{.After.Memstats.PauseTotalNs | printf "%-15v"}} {{subd .After.Memstats.PauseTotalNs .Before.Memstats.PauseTotalNs | printf "%v" }}
 
 `))
 )
 
-func subFn(a, b int) int {
+func subiFn(a, b int) int {
 	return a - b
+}
+
+func subdFn(a, b time.Duration) time.Duration {
+	return a - b
+}
+
+func subfFn(a, b byteSize) byteSize {
+	return a - b
+}
+
+// Copied from effective Go : https://golang.org/doc/effective_go.html#constants
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+type byteSize float64
+
+const (
+	_           = iota // ignore first value by assigning to blank identifier
+	kb byteSize = 1 << (10 * iota)
+	mb
+	gb
+	tb
+	pb
+	eb
+	zb
+	yb
+)
+
+func (b byteSize) String() string {
+	cmp := b
+	if b < 0 {
+		cmp = -cmp
+	}
+	switch {
+	case cmp >= yb:
+		return fmt.Sprintf("%.2fYB", b/yb)
+	case cmp >= zb:
+		return fmt.Sprintf("%.2fZB", b/zb)
+	case cmp >= eb:
+		return fmt.Sprintf("%.2fEB", b/eb)
+	case cmp >= pb:
+		return fmt.Sprintf("%.2fPB", b/pb)
+	case cmp >= tb:
+		return fmt.Sprintf("%.2fTB", b/tb)
+	case cmp >= gb:
+		return fmt.Sprintf("%.2fGB", b/gb)
+	case cmp >= mb:
+		return fmt.Sprintf("%.2fMB", b/mb)
+	case cmp >= kb:
+		return fmt.Sprintf("%.2fKB", b/kb)
+	}
+	return fmt.Sprintf("%.2fB", b)
 }
 
 type templateStats struct {
@@ -126,16 +182,16 @@ type expVars struct {
 	}
 
 	Memstats struct {
-		Alloc        int
-		TotalAlloc   int
+		Alloc        byteSize
+		TotalAlloc   byteSize
 		Mallocs      int
 		Frees        int
-		HeapAlloc    int
-		HeapInuse    int
+		HeapAlloc    byteSize
+		HeapInuse    byteSize
 		HeapObjects  int
-		StackInuse   int
+		StackInuse   byteSize
 		NumGC        int
-		PauseTotalNs int
+		PauseTotalNs time.Duration
 	}
 }
 
