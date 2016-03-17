@@ -30,11 +30,17 @@ var (
 	callTimeoutFlag = flag.Duration("t", time.Second, "Call `timeout`.")
 	uriFlag         = flag.String("u", "test.delay", "Call `URI`.")
 	payloadFlag     = flag.String("p", "100", "Call `payload`.")
-	collectVarsFlag = flag.Bool("vars", false, "Collect expvars before and after execution.")
 	helpFlag        = flag.Bool("help", false, "Show help.")
 )
 
 var tpl = template.Must(template.New("output").Parse(`
+--- RESULTS
+
+Address:    {{ .Addr }}
+Protocol:   {{ .Protocol }}
+URI:        {{ .URI }}
+Call Delay: {{ .Payload }}
+
 Connections:     {{ .Conns }}
 Rate:            {{ .Rate | printf "%s" }}
 Timeout:         {{ .Timeout | printf "%s" }}
@@ -50,6 +56,11 @@ Expired: {{ .Exp }}
 `))
 
 type runStats struct {
+	Addr     string
+	Protocol string
+	URI      string
+	Payload  string
+
 	Conns          int
 	Rate           time.Duration
 	Timeout        time.Duration
@@ -77,6 +88,10 @@ func main() {
 	}
 
 	stats := &runStats{
+		Addr:     *addrFlag,
+		Protocol: *subprotoFlag,
+		URI:      *uriFlag,
+		Payload:  *payloadFlag,
 		Conns:    *connFlag,
 		Rate:     *callRateFlag,
 		Timeout:  *callTimeoutFlag,
@@ -134,8 +149,8 @@ func runClient(stats *runStats, wg *sync.WaitGroup, started chan<- struct{}, sto
 	var wgResults sync.WaitGroup
 
 	cli, err := client.Dial(
-		&websocket.Dialer{Subprotocols: []string{*subprotoFlag}},
-		*addrFlag, nil,
+		&websocket.Dialer{Subprotocols: []string{stats.Protocol}},
+		stats.Addr, nil,
 		client.SetLogFunc(juggler.DiscardLog),
 		client.SetHandler(client.HandlerFunc(func(ctx context.Context, c *client.Client, m msg.Msg) {
 			switch m.Type() {
@@ -170,7 +185,7 @@ loop:
 
 		wgResults.Add(1)
 		atomic.AddInt64(&stats.Calls, 1)
-		_, err := cli.Call(*uriFlag, *payloadFlag, stats.Timeout)
+		_, err := cli.Call(stats.URI, stats.Payload, stats.Timeout)
 		if err != nil {
 			log.Fatalf("Call failed: %v", err)
 		}
