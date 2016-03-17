@@ -11,6 +11,7 @@
 // so that using a redis cluster is supported. The call
 // requests are hashed on the call URI, and the results
 // are hashed on the calling connection's UUID.
+//
 package redisbroker
 
 import (

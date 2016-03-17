@@ -1,4 +1,15 @@
-// Package client implements a juggler client.
+// Package client implements a juggler client. Once a Client value is
+// obtained via a call to Dial, it can be used to make calls to an
+// RPC function identified by a URI, to subscribe to and unsubscribe
+// from pub-sub channels, and to publish events to a pub-sub channel.
+//
+// Received replies and pub-sub events are handled by a Handler.
+// Each received message is sent to the Handler in a separate
+// goroutine. RPC calls that did not return a result before the
+// call timeout expired generate a custom ExpMsg message type, so an
+// RPC call that succeeded (that is, for which the server returned
+// an OK message, not an ERR) either generates a RES or an EXP,
+// but never both or none.
 package client
 
 import (
@@ -82,12 +93,8 @@ func (c *Client) handleMessages() {
 
 		case *msg.Err:
 			if m.Payload.ForType == msg.CallMsg {
-				// won't get any result for this call
-				if ok := c.deletePending(m.Payload.For.String()); !ok {
-					// if an expired message got here first, then drop the
-					// result, client treated this call as expired already.
-					continue
-				}
+				// won't get any result for this call (unless already expired)
+				c.deletePending(m.Payload.For.String())
 			}
 		}
 
