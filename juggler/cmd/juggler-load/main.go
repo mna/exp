@@ -68,7 +68,8 @@ Expired:         {{ .Run.Exp }}
 
 --- SERVER STATISTICS
 
-                Before          After           Diff.
+Memory          Before          After           Diff.
+---------------------------------------------------------------
 Alloc:          {{.Before.Memstats.Alloc | printf "%-15v"}} {{.After.Memstats.Alloc | printf "%-15v"}} {{subf .After.Memstats.Alloc .Before.Memstats.Alloc | printf "%v" }}
 TotalAlloc:     {{.Before.Memstats.TotalAlloc | printf "%-15v"}} {{.After.Memstats.TotalAlloc | printf "%-15v"}} {{subf .After.Memstats.TotalAlloc .Before.Memstats.TotalAlloc | printf "%v" }}
 Mallocs:        {{.Before.Memstats.Mallocs | printf "%-15d"}} {{.After.Memstats.Mallocs | printf "%-15d"}} {{subi .After.Memstats.Mallocs .Before.Memstats.Mallocs }}
@@ -79,6 +80,21 @@ HeapObjects:    {{.Before.Memstats.HeapObjects | printf "%-15d"}} {{.After.Memst
 StackInuse:     {{.Before.Memstats.StackInuse | printf "%-15v"}} {{.After.Memstats.StackInuse | printf "%-15v"}} {{subf .After.Memstats.StackInuse .Before.Memstats.StackInuse | printf "%v" }}
 NumGC:          {{.Before.Memstats.NumGC | printf "%-15d"}} {{.After.Memstats.NumGC | printf "%-15d"}} {{subi .After.Memstats.NumGC .Before.Memstats.NumGC }}
 PauseTotalNs:   {{.Before.Memstats.PauseTotalNs | printf "%-15v"}} {{.After.Memstats.PauseTotalNs | printf "%-15v"}} {{subd .After.Memstats.PauseTotalNs .Before.Memstats.PauseTotalNs | printf "%v" }}
+
+Counter          Before          After           Diff.
+----------------------------------------------------------------
+ActiveConnGoros: {{.Before.Juggler.ActiveConnGoros | printf "%-15d"}} {{.After.Juggler.ActiveConnGoros | printf "%-15d"}} {{subi .After.Juggler.ActiveConnGoros .Before.Juggler.ActiveConnGoros }}
+ActiveConns:     {{.Before.Juggler.ActiveConns | printf "%-15d"}} {{.After.Juggler.ActiveConns | printf "%-15d"}} {{subi .After.Juggler.ActiveConns .Before.Juggler.ActiveConns }}
+CallMsgs:        {{.Before.Juggler.CallMsgs | printf "%-15d"}} {{.After.Juggler.CallMsgs | printf "%-15d"}} {{subi .After.Juggler.CallMsgs .Before.Juggler.CallMsgs }}
+ErrMsgs:         {{.Before.Juggler.ErrMsgs | printf "%-15d"}} {{.After.Juggler.ErrMsgs | printf "%-15d"}} {{subi .After.Juggler.ErrMsgs .Before.Juggler.ErrMsgs }}
+Msgs:            {{.Before.Juggler.Msgs | printf "%-15d"}} {{.After.Juggler.Msgs | printf "%-15d"}} {{subi .After.Juggler.Msgs .Before.Juggler.Msgs }}
+OKMsgs:          {{.Before.Juggler.OKMsgs | printf "%-15d"}} {{.After.Juggler.OKMsgs | printf "%-15d"}} {{subi .After.Juggler.OKMsgs .Before.Juggler.OKMsgs }}
+ReadMsgs:        {{.Before.Juggler.ReadMsgs | printf "%-15d"}} {{.After.Juggler.ReadMsgs | printf "%-15d"}} {{subi .After.Juggler.ReadMsgs .Before.Juggler.ReadMsgs }}
+RecoveredPanics: {{.Before.Juggler.RecoveredPanics | printf "%-15d"}} {{.After.Juggler.RecoveredPanics | printf "%-15d"}} {{subi .After.Juggler.RecoveredPanics .Before.Juggler.RecoveredPanics }}
+ResMsgs:         {{.Before.Juggler.ResMsgs | printf "%-15d"}} {{.After.Juggler.ResMsgs | printf "%-15d"}} {{subi .After.Juggler.ResMsgs .Before.Juggler.ResMsgs }}
+TotalConnGoros:  {{.Before.Juggler.TotalConnGoros | printf "%-15d"}} {{.After.Juggler.TotalConnGoros | printf "%-15d"}} {{subi .After.Juggler.TotalConnGoros .Before.Juggler.TotalConnGoros }}
+TotalConns:      {{.Before.Juggler.TotalConns | printf "%-15d"}} {{.After.Juggler.TotalConns | printf "%-15d"}} {{subi .After.Juggler.TotalConns .Before.Juggler.TotalConns }}
+WriteMsgs:       {{.Before.Juggler.WriteMsgs | printf "%-15d"}} {{.After.Juggler.WriteMsgs | printf "%-15d"}} {{subi .After.Juggler.WriteMsgs .Before.Juggler.WriteMsgs }}
 
 `))
 )
@@ -266,6 +282,8 @@ func main() {
 	stats.ActualDuration = end.Sub(start)
 	log.Printf("stopped.")
 
+	// wait a bit for server counters to settle
+	time.Sleep(time.Second)
 	after := getExpVars(parsed)
 
 	ts := templateStats{Run: stats, Before: before, After: after}
