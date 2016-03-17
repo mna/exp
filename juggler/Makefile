@@ -1,4 +1,4 @@
-cmdnames = server client callee
+cmdnames = server client callee load
 cmds = $(addprefix juggler-, $(cmdnames))
 
 # run `make` to build all commands.
