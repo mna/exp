@@ -148,7 +148,6 @@ func runClient(stats *runStats, wg *sync.WaitGroup, started chan<- struct{}, sto
 				return
 			case msg.ErrMsg:
 				atomic.AddInt64(&stats.Err, 1)
-				return
 			default:
 				log.Fatalf("unexpected message type %s", m.Type())
 			}
