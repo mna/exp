@@ -12,3 +12,7 @@ juggler-load
 !cmd/juggler-client/
 !cmd/juggler-callee/
 !cmd/juggler-load/
+
+# ignore the vendoring directories, only used to build docker images
+vendor/
+Godeps/
