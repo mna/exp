@@ -410,7 +410,7 @@ func runIntegrationTest(t *testing.T, conf *IntgConfig) {
 		go func(i int) {
 			defer wg.Done()
 
-			cli, err := client.Dial(&websocket.Dialer{}, strings.Replace(httpsrv.URL, "http:", "ws:", 1), nil,
+			cli, err := client.Dial(&websocket.Dialer{Subprotocols: juggler.Subprotocols}, strings.Replace(httpsrv.URL, "http:", "ws:", 1), nil,
 				client.SetHandler(clientHandler(&clientStats)),
 				client.SetLogFunc(dbgl.Printf))
 
