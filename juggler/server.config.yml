@@ -1,3 +1,5 @@
 server:
     close_uri: test.close
 
+caller_broker:
+    call_cap: 100

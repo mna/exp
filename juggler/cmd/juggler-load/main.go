@@ -108,7 +108,17 @@ func main() {
 	log.Printf("stopping...")
 
 	// wait for completion
+	done := make(chan struct{})
+	go func() {
+		select {
+		case <-done:
+			return
+		case <-time.After(time.Second):
+			log.Fatalf("failed to stop clients")
+		}
+	}()
 	wg.Wait()
+	close(done)
 	end := time.Now()
 	stats.ActualDuration = end.Sub(start)
 
